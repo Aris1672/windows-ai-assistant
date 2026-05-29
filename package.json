@@ -1,0 +1,14 @@
+{
+  "name": "windows-ai-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "web",
+    "app"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=web",
+    "dev:app": "npm run dev --workspace=app",
+    "install:all": "npm install --workspaces"
+  }
+}
