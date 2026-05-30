@@ -195,7 +195,7 @@ export default function LandingPage() {
           height: '56px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span className="wordmark">co<span>·</span>pilot</span>
+          <span className="wordmark">ASSISTANT<span> </span>24</span>
 
           <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
             {/* Language switcher */}
@@ -392,7 +392,7 @@ export default function LandingPage() {
 
         {/* ── Footer ───────────────────────────────────────────────────────── */}
         <footer style={{ borderTop: '1px solid var(--border-subtle)', padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '1100px', margin: '0 auto' }}>
-          <span className="wordmark">co<span>·</span>pilot</span>
+          <span className="wordmark">ASSISTANT <span style={{ color: 'var(--accent)', whiteSpace: 'nowrap' }}>24 </span></span>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t.footerSub}</p>
         </footer>
 
