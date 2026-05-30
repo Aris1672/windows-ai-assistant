@@ -1,3 +1,209 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --bg:              #070709;
+  --surface-1:       #0D0D11;
+  --surface-2:       #141419;
+  --surface-3:       #1C1C23;
+  --border:          #24242C;
+  --border-subtle:   #18181E;
+  --text-primary:    #F0EFF2;
+  --text-secondary:  #86869A;
+  --text-muted:      #4A4A5C;
+  --accent:          #0FFFD4;
+  --accent-hover:    #00E8BF;
+  --accent-dim:      rgba(15, 255, 212, 0.07);
+  --accent-border:   rgba(15, 255, 212, 0.18);
+  --error:           #FF5252;
+  --error-dim:       rgba(255, 82, 82, 0.08);
+  --success:         #22C55E;
+  --radius:          8px;
+  --radius-lg:       14px;
+  --font-display:    var(--font-syne);
+  --font-body:       var(--font-manrope);
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html {
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Dot grid background ───────────────────────────────────────────────────── */
+.bg-grid {
+  background-image: radial-gradient(circle, #2A2A36 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── Auth card ─────────────────────────────────────────────────────────────── */
+.auth-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.02) inset,
+    0 32px 64px rgba(0,0,0,0.6);
+}
+
+/* ── Form input ────────────────────────────────────────────────────────────── */
+.form-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.9rem;
+  padding: 0.65rem 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-input::placeholder { color: var(--text-muted); }
+.form-input:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.form-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Primary button ────────────────────────────────────────────────────────── */
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #070709;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.7rem 1.25rem;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s, transform 0.1s;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-primary:active:not(:disabled) { transform: scale(0.99); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Ghost button ──────────────────────────────────────────────────────────── */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-ghost:hover { border-color: var(--accent-border); color: var(--text-primary); }
+
+/* ── Error / success banners ───────────────────────────────────────────────── */
+.error-banner {
+  background: var(--error-dim);
+  border: 1px solid rgba(255, 82, 82, 0.2);
+  border-radius: var(--radius);
+  color: var(--error);
+  font-size: 0.825rem;
+  padding: 0.6rem 0.875rem;
+}
+.success-banner {
+  background: rgba(34, 197, 94, 0.07);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: var(--radius);
+  color: var(--success);
+  font-size: 0.825rem;
+  padding: 0.6rem 0.875rem;
+}
+
+/* ── Form label ────────────────────────────────────────────────────────────── */
+.form-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+/* ── Wordmark ──────────────────────────────────────────────────────────────── */
+.wordmark {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.wordmark span { color: var(--accent); }
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+  width: 220px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* ── Nav item ──────────────────────────────────────────────────────────────── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  cursor: pointer;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text-primary); }
+.nav-item.active { background: var(--accent-dim); color: var(--accent); }
+
+/* ── Card ──────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+}
+
+/* ── Badge ─────────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+.badge-accent { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+.badge-muted  { background: var(--surface-3); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* ── Divider ───────────────────────────────────────────────────────────────── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
+}
