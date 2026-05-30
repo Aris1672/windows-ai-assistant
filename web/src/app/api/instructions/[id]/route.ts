@@ -8,7 +8,7 @@ import { requireAuth, jsonError, jsonOk } from '@/lib/auth'
 import { createUserClient } from '@/lib/supabase'
 
 interface Params {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export async function GET(request: Request, { params }: Params) {
@@ -19,12 +19,13 @@ export async function GET(request: Request, { params }: Params) {
     return response as Response
   }
 
+  const { id } = await params
   const supabase = createUserClient(accessToken)
 
   const { data, error } = await supabase
     .from('instructions')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .single()
 
@@ -55,12 +56,13 @@ export async function PUT(request: Request, { params }: Params) {
     return jsonError('Invalid JSON body', 400)
   }
 
+  const { id } = await params
   const supabase = createUserClient(accessToken)
 
   const { data, error } = await supabase
     .from('instructions')
     .update(body)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .select()
     .single()
@@ -78,12 +80,13 @@ export async function DELETE(request: Request, { params }: Params) {
     return response as Response
   }
 
+  const { id } = await params
   const supabase = createUserClient(accessToken)
 
   const { error } = await supabase
     .from('instructions')
     .delete()
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
 
   if (error) return jsonError(error.message, 500)
