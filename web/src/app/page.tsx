@@ -127,7 +127,7 @@ const CONTENT = {
     ctaSignIn:   'Уже есть аккаунт?',
     ctaSignInLk: 'Войти →',
 
-    footerSub:  'Только для Windows · Бета · Создано с Claude',
+    footerSub:  'Только для Windows · © 2025 - 2026 Assistant24. Все права защищены.',
 
     paletteContext: 'Microsoft Excel · Отчёт Q3.xlsx',
     paletteFolder:  '/Работа/Финансы',
