@@ -1,17 +1,12 @@
-import { createBrowserClient, createServerClient } from '@supabase/ssr'
+// ── Server-side Supabase clients ──────────────────────────────────────────────
+// None of these are safe to use in client components ('use client')
+// For client components, import from '@/lib/supabase-browser' instead
+
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-// ── Browser client ────────────────────────────────────────────────────────────
-// Use in client components ('use client')
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
-
 // ── Server client ─────────────────────────────────────────────────────────────
-// Use in API routes and server components
+// Use in server components — reads session from cookies
 // Respects RLS — scoped to the authenticated user
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies()

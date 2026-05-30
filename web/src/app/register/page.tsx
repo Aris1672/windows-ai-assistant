@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 
 export default function RegisterPage() {
