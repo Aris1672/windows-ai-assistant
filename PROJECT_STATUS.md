@@ -1,4 +1,4 @@
-# Windows AI Assistant — Project Status
+ # Windows AI Assistant — Project Status
 
 ## ⚡ Quick Resume (read this first after a break)
 
