@@ -59,7 +59,7 @@ const CONTENT = {
     ctaSignIn:   'Already have an account?',
     ctaSignInLk: 'Sign in →',
 
-    footerSub:  'Windows only · © 2025 - 2026 Assistant24. Все права защищены.',
+    footerSub:  'Windows only · © 2025 - 2026 Assistant24. All rights reserved..',
 
     paletteContext: 'Microsoft Excel · Q3 Report.xlsx',
     paletteFolder:  '/Work/Finance',
