@@ -1,6 +1,6 @@
 /**
- * GET  /api/instructions        — list all instructions for the current user
- * POST /api/instructions        — create a new instruction
+ * GET  /api/instructions   — list all instructions for the current user
+ * POST /api/instructions   — create a new instruction
  */
 
 import { requireAuth, jsonError, jsonOk } from '@/lib/auth'
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from('instructions')
-    .select('*')
+    .select('id, label, instruction_text, context_app, context_folder, is_active, sort_order, created_at, updated_at')
     .eq('user_id', user.id)
     .order('sort_order', { ascending: true })
 
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     instruction_text: string
     context_app?: string | null
     context_folder?: string | null
+    is_active?: boolean
     sort_order?: number
   }
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     return jsonError('Invalid JSON body', 400)
   }
 
-  if (!body.label?.trim()) return jsonError('label is required', 400)
+  if (!body.label?.trim())            return jsonError('label is required', 400)
   if (!body.instruction_text?.trim()) return jsonError('instruction_text is required', 400)
 
   const supabase = createUserClient(accessToken)
@@ -56,14 +57,15 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from('instructions')
     .insert({
-      user_id: user.id,
-      label: body.label.trim(),
+      user_id:          user.id,
+      label:            body.label.trim(),
       instruction_text: body.instruction_text.trim(),
-      context_app: body.context_app ?? null,
-      context_folder: body.context_folder ?? null,
-      sort_order: body.sort_order ?? 0,
+      context_app:      body.context_app    ?? null,
+      context_folder:   body.context_folder ?? null,
+      is_active:        body.is_active      ?? true,
+      sort_order:       body.sort_order     ?? 0,
     })
-    .select()
+    .select('id, label, instruction_text, context_app, context_folder, is_active, sort_order, created_at, updated_at')
     .single()
 
   if (error) return jsonError(error.message, 500)

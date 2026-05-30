@@ -1,6 +1,6 @@
 /**
- * GET  /api/skills        — list all skills for the current user
- * POST /api/skills        — create a new skill
+ * GET  /api/skills   — list all skills for the current user
+ * POST /api/skills   — create a new skill
  */
 
 import { requireAuth, jsonError, jsonOk } from '@/lib/auth'
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from('skills')
-    .select('*')
+    .select('id, name, description, prompt, context_app, context_folder, is_destructive, is_active, sort_order, created_at, updated_at')
     .eq('user_id', user.id)
     .order('sort_order', { ascending: true })
 
@@ -36,11 +36,12 @@ export async function POST(request: Request) {
 
   let body: {
     name: string
-    description?: string | null
+    description?: string
     prompt: string
     context_app?: string | null
     context_folder?: string | null
     is_destructive?: boolean
+    is_active?: boolean
     sort_order?: number
   }
 
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     return jsonError('Invalid JSON body', 400)
   }
 
-  if (!body.name?.trim()) return jsonError('name is required', 400)
+  if (!body.name?.trim())   return jsonError('name is required', 400)
   if (!body.prompt?.trim()) return jsonError('prompt is required', 400)
 
   const supabase = createUserClient(accessToken)
@@ -58,16 +59,17 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from('skills')
     .insert({
-      user_id: user.id,
-      name: body.name.trim(),
-      description: body.description?.trim() ?? null,
-      prompt: body.prompt.trim(),
-      context_app: body.context_app ?? null,
+      user_id:        user.id,
+      name:           body.name.trim(),
+      description:    body.description?.trim() ?? null,
+      prompt:         body.prompt.trim(),
+      context_app:    body.context_app    ?? null,
       context_folder: body.context_folder ?? null,
       is_destructive: body.is_destructive ?? false,
-      sort_order: body.sort_order ?? 0,
+      is_active:      body.is_active      ?? true,
+      sort_order:     body.sort_order     ?? 0,
     })
-    .select()
+    .select('id, name, description, prompt, context_app, context_folder, is_destructive, is_active, sort_order, created_at, updated_at')
     .single()
 
   if (error) return jsonError(error.message, 500)
