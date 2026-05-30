@@ -38,6 +38,28 @@ export async function createServerSupabaseClient() {
   )
 }
 
+// ── User client ───────────────────────────────────────────────────────────────
+// Use in API routes called by the Electron app
+// Authenticates via a Bearer token (JWT) rather than cookies
+// Respects RLS — scoped to the token owner
+export function createUserClient(accessToken: string) {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+      cookies: {
+        getAll() { return [] },
+        setAll() {},
+      },
+    }
+  )
+}
+
 // ── Admin client ──────────────────────────────────────────────────────────────
 // Uses service role key — bypasses RLS entirely
 // NEVER use in client components or expose to the browser
