@@ -6,9 +6,9 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** All API routes done and deployed. Next: write `lib/assembler.ts` (the instruction + skill assembler), then `/api/context/route.ts` (the Claude proxy). This is the most critical backend piece — the heart of the product.
+**Current status:** Phase 1 fully complete. Phase 2 landing page done. Dashboard pages exist as UI shells — next step is wiring them to real API data (instructions, skills, history, user profile). Admin panel is empty. Electron app not started.
 
-**Next immediate step:** Write `web/src/lib/assembler.ts`, then `/api/context/route.ts`.
+**Next immediate step:** Wire dashboard pages to real API data — start with `/dashboard/instructions`, then `/dashboard/skills`, then `/dashboard` home, then `/dashboard/history`.
 
 **Monorepo structure:**
 ```
@@ -21,8 +21,8 @@ root/                          ← npm workspaces root
 │       │   │   ├── user/      ← ✅ GET + PUT (done)
 │       │   │   ├── instructions/  ← ✅ GET + POST + PATCH + DELETE (done)
 │       │   │   ├── skills/    ← ✅ GET + POST + PATCH + DELETE (done)
-│       │   │   └── context/   ← Stubbed — write next
-│       │   ├── dashboard/     ← ✅ All UI pages done (shells)
+│       │   │   └── context/   ← ✅ Done — streaming SSE, auth, skill injection
+│       │   ├── dashboard/     ← ✅ All UI pages done (shells — need data wiring)
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
 │       │   └── admin/         ← Empty
@@ -32,7 +32,7 @@ root/                          ← npm workspaces root
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
 │           ├── supabase-browser.ts ← ✅ Done (browser client)
 │           ├── auth.ts            ← ✅ Done (requireAuth, jsonError, jsonOk)
-│           └── assembler.ts       ← Stubbed — write next
+│           └── assembler.ts       ← ✅ Done (instruction + skill assembler)
 └── app/                       ← Electron app (Windows desktop) — not started yet
     └── src/
         ├── main/
@@ -250,8 +250,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] `/api/instructions/[id]/route.ts` — PATCH, DELETE
 - [x] `/api/skills/route.ts` — GET all, POST new
 - [x] `/api/skills/[id]/route.ts` — PATCH, DELETE
-- [ ] `web/src/lib/assembler.ts` — instruction + skill assembler ← **START HERE**
-- [ ] `/api/context/route.ts` — context bundle receiver, calls Claude
+- [x] `web/src/lib/assembler.ts` — instruction + skill assembler (context filtering, system prompt builder)
+- [x] `/api/context/route.ts` — streaming SSE proxy to Claude, auth, skill injection
 
 ### Phase 2 — Web (Vercel / Next.js)
 - [x] `/register` page — Supabase `signUp` + email confirmation flow
@@ -262,9 +262,9 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] `/dashboard/skills` — skill manager UI (shell)
 - [x] `/dashboard/skills/new` — skill builder (shell)
 - [x] `/dashboard/history` — action history view (shell)
-- [ ] Wire dashboard pages to real API data (once assembler + context done)
+- [ ] Wire dashboard pages to real API data ← **START HERE**
 - [ ] `/admin` — admin panel with login protection
-- [ ] Landing page `/` — marketing, features, download button
+- [x] Landing page `/` — marketing, features, download button (bilingual EN/RU)
 
 ### Phase 3 — Windows App (Electron) — CORE PRODUCT
 - [ ] Electron shell setup (React + TypeScript)
@@ -303,9 +303,9 @@ When `Ctrl + Space` fires, the Electron app captures:
 7. ✅ Dashboard UI shells (all pages)
 8. ✅ `/api/instructions` + `/api/instructions/[id]`
 9. ✅ `/api/skills` + `/api/skills/[id]`
-10. → `lib/assembler.ts` + `/api/context` ← **NOW**
-11. → Wire dashboard pages to real API data
-12. → Landing page
+10. ✅ `lib/assembler.ts` + `/api/context` — done
+11. ✅ Landing page `/` — done (bilingual EN/RU)
+12. → Wire dashboard pages to real API data ← **NOW**
 13. → Admin panel
 14. → Electron shell — system tray + global hotkey
 15. → Command palette overlay UI
@@ -342,8 +342,8 @@ ANTHROPIC_API_KEY=
 - The instruction + skill assembler on Vercel is the most critical backend function
 - Context conditions are invisible infrastructure — users never think in terms of scopes
 - `supabase.ts` exports three clients: `createServerSupabaseClient` (cookies/SSR), `createUserClient` (Bearer token for Electron), `createAdminClient` (service role, server-only)
-- Dashboard pages are UI shells — they need wiring to real API data after assembler + context are written
+- Dashboard pages are UI shells — they need wiring to real API data (instructions list, skills list, history, user profile) — this is the next task
 
 ---
 
-*Last updated: All API routes complete and deployed (user, instructions, skills). Next: assembler.ts + /api/context — the Claude proxy and the heart of the product.*
+*Last updated: Phase 1 fully complete (all API routes, assembler, context proxy). Landing page done (bilingual EN/RU with command palette mockup, comparison, features, CTA). Next: wire dashboard pages to real API data — instructions, skills, history, user profile.*
