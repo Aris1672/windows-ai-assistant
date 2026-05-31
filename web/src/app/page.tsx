@@ -44,6 +44,55 @@ const CONTENT = {
     vsGood:     ['Always one keystroke away', 'Context-aware actions', 'It already knows', 'Reads AND executes', 'Personalised to you'],
     vsLabelBad: 'Typical AI chatbot',
     vsLabelGood:'This',
+    competitorEyebrow: 'VS THE COMPETITION',
+competitorTitle: 'Why users choose us over ZupFlash',
+
+competitorTable: [
+  {
+    feature: 'Core Experience',
+    zup: 'Floating chat overlay',
+    you: 'Focused Command Palette with smart suggestions',
+  },
+  {
+    feature: 'Personalization',
+    zup: 'Basic memory',
+    you: 'Deep Instructions + Reusable Skills with context rules',
+  },
+  {
+    feature: 'Context Awareness',
+    zup: 'App + screenshots + clipboard',
+    you: 'App + file/folder path + selected text + smart matching',
+  },
+  {
+    feature: 'Management',
+    zup: 'None (local only)',
+    you: 'Full web dashboard (Skills, History, Analytics)',
+  },
+  {
+    feature: 'Setup',
+    zup: 'BYO API keys',
+    you: 'Simple login + zero key management',
+  },
+  {
+    feature: 'Action Safety',
+    zup: 'Consent-based tools',
+    you: 'Clear read vs destructive + confirmation flow',
+  },
+  {
+    feature: 'Multi-device Sync',
+    zup: 'None',
+    you: 'Full sync via Supabase',
+  },
+  {
+    feature: 'Long-term Value',
+    zup: 'Lightweight agent',
+    you: 'Personal AI co-worker that gets smarter',
+  },
+],
+
+competitorFooter: 'ZupFlash is a fast, lightweight AI agent.',
+competitorFooterStrong:
+  'Assistant24 is the personal co-worker that deeply understands your workflows.',
 
     howEyebrow: 'How it works',
     howTitle:   'Three seconds from thought to done',
@@ -407,27 +456,28 @@ export default function LandingPage() {
         {/* ── Competitor Comparison ───────────────────────────────────────────── */}
 <section style={{ borderTop: '1px solid var(--border)', background: 'var(--surface-1)', padding: '100px 2rem' }}>
   <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-    
+
     <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-      <p style={{ 
-        fontSize: '0.75rem', 
-        fontWeight: 600, 
-        letterSpacing: '0.1em', 
-        textTransform: 'uppercase', 
-        color: 'var(--accent)', 
-        marginBottom: '0.875rem' 
+      <p style={{
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        color: 'var(--accent)',
+        marginBottom: '0.875rem'
       }}>
-        VS THE COMPETITION
+        {t.competitorEyebrow}
       </p>
-      <h2 style={{ 
-        fontFamily: 'var(--font-display), system-ui, sans-serif', 
-        fontSize: 'clamp(1.7rem, 3vw, 2.4rem)', 
-        fontWeight: 700, 
-        letterSpacing: '-0.025em', 
-        color: 'var(--text-primary)', 
-        lineHeight: 1.15 
+
+      <h2 style={{
+        fontFamily: 'var(--font-display), system-ui, sans-serif',
+        fontSize: 'clamp(1.7rem, 3vw, 2.4rem)',
+        fontWeight: 700,
+        letterSpacing: '-0.025em',
+        color: 'var(--text-primary)',
+        lineHeight: 1.15
       }}>
-        Why users choose us over ZupFlash
+        {t.competitorTitle}
       </h2>
     </div>
 
@@ -435,100 +485,68 @@ export default function LandingPage() {
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '920px', background: 'var(--surface-1)' }}>
         <thead>
           <tr style={{ borderBottom: '2px solid var(--border)' }}>
-            <th style={{ 
-              textAlign: 'left', 
-              padding: '1.25rem 1.75rem', 
-              fontWeight: 600, 
-              color: 'var(--text-muted)', 
+            <th style={{
+              textAlign: 'left',
+              padding: '1.25rem 1.75rem',
+              fontWeight: 600,
+              color: 'var(--text-muted)',
               fontSize: '0.8rem',
               width: '28%'
             }}></th>
-            <th style={{ 
-              textAlign: 'center', 
-              padding: '1.25rem 1rem', 
-              fontWeight: 600, 
-              color: 'var(--text-muted)', 
+
+            <th style={{
+              textAlign: 'center',
+              padding: '1.25rem 1rem',
+              fontWeight: 600,
+              color: 'var(--text-muted)',
               fontSize: '0.82rem',
               borderBottom: '3px solid #555'
-            }}>ZupFlash</th>
-            <th style={{ 
-              textAlign: 'center', 
-              padding: '1.25rem 1rem', 
-              fontWeight: 700, 
-              color: 'var(--accent)', 
+            }}>
+              ZupFlash
+            </th>
+
+            <th style={{
+              textAlign: 'center',
+              padding: '1.25rem 1rem',
+              fontWeight: 700,
+              color: 'var(--accent)',
               fontSize: '0.95rem',
               borderBottom: '3px solid var(--accent)'
             }}>
-              Assistant24 <span style={{ fontSize: '0.75rem', fontWeight: 500, opacity: 0.9 }}>(This)</span>
+              Assistant24 <span style={{ fontSize: '0.75rem', fontWeight: 500, opacity: 0.9 }}>
+                ({lang === 'ru' ? 'Это' : 'This'})
+              </span>
             </th>
           </tr>
         </thead>
+
         <tbody>
-          {[
-            { 
-              feature: "Core Experience", 
-              zup: "Floating chat overlay", 
-              you: "Focused Command Palette with smart suggestions" 
-            },
-            { 
-              feature: "Personalization", 
-              zup: "Basic memory", 
-              you: "Deep Instructions + Reusable Skills with context rules" 
-            },
-            { 
-              feature: "Context Awareness", 
-              zup: "App + screenshots + clipboard", 
-              you: "App + file/folder path + selected text + smart matching" 
-            },
-            { 
-              feature: "Management", 
-              zup: "None (local only)", 
-              you: "Full web dashboard (Skills, History, Analytics)" 
-            },
-            { 
-              feature: "Setup", 
-              zup: "BYO API keys", 
-              you: "Simple login + zero key management" 
-            },
-            { 
-              feature: "Action Safety", 
-              zup: "Consent-based tools", 
-              you: "Clear read vs destructive + confirmation flow" 
-            },
-            { 
-              feature: "Multi-device Sync", 
-              zup: "None", 
-              you: "Full sync via Supabase" 
-            },
-            { 
-              feature: "Long-term Value", 
-              zup: "Lightweight agent", 
-              you: "Personal AI co-worker that gets smarter" 
-            },
-          ].map((row, i) => (
+          {t.competitorTable.map((row, i) => (
             <tr key={i} style={{ borderBottom: i < 7 ? '1px solid var(--border-subtle)' : 'none' }}>
-              <td style={{ 
-                padding: '1.35rem 1.75rem', 
-                fontWeight: 600, 
+              <td style={{
+                padding: '1.35rem 1.75rem',
+                fontWeight: 600,
                 color: 'var(--text-primary)',
                 fontSize: '0.95rem'
               }}>
                 {row.feature}
               </td>
-              <td style={{ 
-                padding: '1.35rem 1rem', 
-                textAlign: 'center', 
-                color: 'var(--text-secondary)', 
+
+              <td style={{
+                padding: '1.35rem 1rem',
+                textAlign: 'center',
+                color: 'var(--text-secondary)',
                 fontSize: '0.9rem',
                 borderLeft: '1px solid var(--border)'
               }}>
                 {row.zup}
               </td>
-              <td style={{ 
-                padding: '1.35rem 1rem', 
-                textAlign: 'center', 
-                color: 'var(--accent)', 
-                fontWeight: 500, 
+
+              <td style={{
+                padding: '1.35rem 1rem',
+                textAlign: 'center',
+                color: 'var(--accent)',
+                fontWeight: 500,
                 fontSize: '0.9rem',
                 borderLeft: '1px solid var(--border)'
               }}>
@@ -541,17 +559,18 @@ export default function LandingPage() {
     </div>
 
     <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-      <p style={{ 
-        fontSize: '1.05rem', 
-        color: 'var(--text-secondary)', 
-        maxWidth: '620px', 
+      <p style={{
+        fontSize: '1.05rem',
+        color: 'var(--text-secondary)',
+        maxWidth: '620px',
         margin: '0 auto',
         lineHeight: 1.6
       }}>
-        ZupFlash is a fast, lightweight AI agent.<br />
-        <strong>Assistant24 is the personal co-worker that deeply understands your workflows.</strong>
+        {t.competitorFooter}<br />
+        <strong>{t.competitorFooterStrong}</strong>
       </p>
     </div>
+
   </div>
 </section>
 
