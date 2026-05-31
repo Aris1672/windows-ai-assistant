@@ -6,7 +6,7 @@ import Link from 'next/link'
 // ── Content ───────────────────────────────────────────────────────────────────
 const CONTENT = {
   en: {
-    badge:      'Windows · Beta',
+    badge:      'Windows',
     headline1:  'Your co-worker',
     headline2:  'lives in',
     sub:        "A contextual AI command palette for Windows. Hit the shortcut from any app — it sees what you're doing, surfaces the right actions, and gets it done. Not a chatbot. A co-worker.",
@@ -123,7 +123,7 @@ competitorFooterStrong:
   },
 
   ru: {
-    badge:      'Windows · Бета',
+    badge:      'Windows',
     headline1:  'Ваш умный-помощник',
     headline2:  'живёт в',
     sub:        'Контекстная AI-палитра команд для Windows. Нажмите горячую клавишу из любого приложения — она видит, что вы делаете, предлагает нужные действия и выполняет их. Не чат-бот. умный помощник.',
