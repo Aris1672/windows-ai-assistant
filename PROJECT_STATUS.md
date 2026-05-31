@@ -262,8 +262,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] `/dashboard/skills` — full CRUD: list, inline edit, toggle active, delete confirm, destructive flag
 - [x] `/dashboard/skills/new` — create form with prompt, context conditions, destructive flag
 - [x] `/dashboard/history` — action log with search, status filter (All/Done/Error/Pending), pagination, relative timestamps
-- [x] Wire dashboard pages to real API data ← **DONE**
-- [ ] `/admin` — admin panel with login protection ← **START HERE**
+- [x] Wire dashboard pages to real API data 
+- [x] `/admin` — admin panel with login protection 
 - [x] Landing page `/` — marketing, features, download button (bilingual EN/RU)
 
 ### Phase 3 — Windows App (Electron) — CORE PRODUCT
@@ -306,8 +306,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 10. ✅ `lib/assembler.ts` + `/api/context` — done
 11. ✅ Landing page `/` — done (bilingual EN/RU)
 12. ✅ Wire dashboard pages to real API data — done
-13. → Admin panel ← **NOW**
-14. → Electron shell — system tray + global hotkey
+13. ✅Admin panel 
+14. → Electron shell — system tray + global hotkey ← **NOW**
 15. → Command palette overlay UI
 16. → Context detection (active window + folder + selected text)
 17. → Screenshot + Claude Vision
