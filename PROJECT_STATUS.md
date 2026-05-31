@@ -6,9 +6,9 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phase 1 fully complete. Phase 2 landing page done. Dashboard pages exist as UI shells — next step is wiring them to real API data (instructions, skills, history, user profile). Admin panel is empty. Electron app not started.
+**Current status:** Phase 1 fully complete. Phase 2 almost complete — all dashboard pages are fully wired to real data, landing page done. Only remaining Phase 2 items: admin panel (empty) and billing page (future). Electron app not started.
 
-**Next immediate step:** Wire dashboard pages to real API data — start with `/dashboard/instructions`, then `/dashboard/skills`, then `/dashboard` home, then `/dashboard/history`.
+**Next immediate step:** Build the admin panel — `/admin` dashboard, `/admin/users`, `/admin/analytics`, `/admin/settings`.
 
 **Monorepo structure:**
 ```
@@ -22,7 +22,7 @@ root/                          ← npm workspaces root
 │       │   │   ├── instructions/  ← ✅ GET + POST + PATCH + DELETE (done)
 │       │   │   ├── skills/    ← ✅ GET + POST + PATCH + DELETE (done)
 │       │   │   └── context/   ← ✅ Done — streaming SSE, auth, skill injection
-│       │   ├── dashboard/     ← ✅ All UI pages done (shells — need data wiring)
+│       │   ├── dashboard/     ← ✅ All pages fully wired to real data
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
 │       │   └── admin/         ← Empty
@@ -256,14 +256,14 @@ When `Ctrl + Space` fires, the Electron app captures:
 ### Phase 2 — Web (Vercel / Next.js)
 - [x] `/register` page — Supabase `signUp` + email confirmation flow
 - [x] `/login` page — Supabase `signInWithPassword` + redirect to dashboard
-- [x] `/dashboard` — user home area (UI shell, not yet wired to real API data)
-- [x] `/dashboard/instructions` — instruction manager UI (shell)
-- [x] `/dashboard/instructions/new` — instruction creator (shell)
-- [x] `/dashboard/skills` — skill manager UI (shell)
-- [x] `/dashboard/skills/new` — skill builder (shell)
-- [x] `/dashboard/history` — action history view (shell)
-- [ ] Wire dashboard pages to real API data ← **START HERE**
-- [ ] `/admin` — admin panel with login protection
+- [x] `/dashboard` — overview with real instruction/skill/action counts (bug fixed: actions total was hardcoded to 0)
+- [x] `/dashboard/instructions` — full CRUD: list, inline edit, toggle active, delete confirm, context badges
+- [x] `/dashboard/instructions/new` — create form with context conditions
+- [x] `/dashboard/skills` — full CRUD: list, inline edit, toggle active, delete confirm, destructive flag
+- [x] `/dashboard/skills/new` — create form with prompt, context conditions, destructive flag
+- [x] `/dashboard/history` — action log with search, status filter (All/Done/Error/Pending), pagination, relative timestamps
+- [x] Wire dashboard pages to real API data ← **DONE**
+- [ ] `/admin` — admin panel with login protection ← **START HERE**
 - [x] Landing page `/` — marketing, features, download button (bilingual EN/RU)
 
 ### Phase 3 — Windows App (Electron) — CORE PRODUCT
@@ -305,8 +305,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 9. ✅ `/api/skills` + `/api/skills/[id]`
 10. ✅ `lib/assembler.ts` + `/api/context` — done
 11. ✅ Landing page `/` — done (bilingual EN/RU)
-12. → Wire dashboard pages to real API data ← **NOW**
-13. → Admin panel
+12. ✅ Wire dashboard pages to real API data — done
+13. → Admin panel ← **NOW**
 14. → Electron shell — system tray + global hotkey
 15. → Command palette overlay UI
 16. → Context detection (active window + folder + selected text)
@@ -342,8 +342,8 @@ ANTHROPIC_API_KEY=
 - The instruction + skill assembler on Vercel is the most critical backend function
 - Context conditions are invisible infrastructure — users never think in terms of scopes
 - `supabase.ts` exports three clients: `createServerSupabaseClient` (cookies/SSR), `createUserClient` (Bearer token for Electron), `createAdminClient` (service role, server-only)
-- Dashboard pages are UI shells — they need wiring to real API data (instructions list, skills list, history, user profile) — this is the next task
+- Dashboard pages are fully wired to real Supabase data via the browser client (RLS handles auth); API routes are for the Electron app (Bearer token auth)
 
 ---
 
-*Last updated: Phase 1 fully complete (all API routes, assembler, context proxy). Landing page done (bilingual EN/RU with command palette mockup, comparison, features, CTA). Next: wire dashboard pages to real API data — instructions, skills, history, user profile.*
+*Last updated: Phase 2 dashboard fully wired. All pages real data: instructions (full CRUD), skills (full CRUD), history (search + filter + pagination), overview (counts fixed). Landing page done. Next: admin panel (/admin, /admin/users, /admin/analytics, /admin/settings).*
