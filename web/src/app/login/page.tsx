@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -17,20 +16,27 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
 
-    const supabase = createClient()
+    try {
+      // POST to our own Vercel API route — never touches Supabase directly from the browser.
+      // Traffic path: browser → Vercel (/api/auth/signin) → Supabase ✓
+      const res = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // ensures session cookies are stored
+        body: JSON.stringify({ email, password })
+      })
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    setLoading(false)
-
-    if (signInError) {
-      setError('Invalid email or password.')
-    } else {
-      router.push('/dashboard')
-      router.refresh()
+      if (res.ok) {
+        router.push('/dashboard')
+        router.refresh()
+      } else {
+        const data = await res.json()
+        setError(data.error || 'Invalid email or password.')
+      }
+    } catch {
+      setError('Unable to connect. Check your internet connection.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -48,7 +54,6 @@ export default function LoginPage() {
     >
       <div style={{ width: '100%', maxWidth: '400px' }}>
 
-        {/* Wordmark */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <div className="wordmark" style={{ fontSize: '1.4rem', marginBottom: '0.375rem' }}>
             Windows <span>AI</span>
@@ -100,13 +105,9 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Link to register */}
         <p style={{ textAlign: 'center', marginTop: '1.25rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
           No account yet?{' '}
-          <Link
-            href="/register"
-            style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}
-          >
+          <Link href="/register" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
             Create one
           </Link>
         </p>
