@@ -83,10 +83,46 @@ ipcMain.on('open-dashboard', () => {
   )
 })
 
+// ─── Generic API Request Proxy ───────────────────────────────────────────────
+// Handles simple JSON request/response calls (e.g. login).
+// The renderer cannot fetch external URLs without CORS headers, so all
+// HTTP calls are routed through the main process via net.fetch (no CORS).
+
+ipcMain.handle(
+  'api-request',
+  async (
+    _event,
+    {
+      url,
+      method = 'POST',
+      headers = {},
+      body
+    }: {
+      url: string
+      method?: string
+      headers?: Record<string, string>
+      body?: object
+    }
+  ) => {
+    try {
+      const res = await net.fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: body !== undefined ? JSON.stringify(body) : undefined
+      })
+
+      const data = await res.json()
+      return { ok: res.ok, status: res.status, data }
+    } catch (err: unknown) {
+      console.error('[api-request] error:', err)
+      return { ok: false, status: 0, data: null }
+    }
+  }
+)
+
 // ─── Streaming API Proxy ──────────────────────────────────────────────────────
-// The renderer (Chromium) can't fetch external URLs without CORS headers.
-// Moving the fetch here (Node.js / net.fetch) completely bypasses CORS.
-// We stream chunks back to the renderer via IPC events.
+// Handles SSE streaming responses (e.g. the context/AI call).
+// Chunks are forwarded to the renderer via 'stream-event' IPC messages.
 
 let streamAbort: AbortController | null = null
 
@@ -96,7 +132,6 @@ ipcMain.on(
     event,
     { url, token, body }: { url: string; token: string; body: object }
   ) => {
-    // Cancel any previously in-flight stream
     streamAbort?.abort()
     streamAbort = new AbortController()
 

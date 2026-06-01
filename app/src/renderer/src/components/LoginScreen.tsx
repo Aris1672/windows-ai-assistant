@@ -21,21 +21,22 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
     setError(null)
 
     try {
-      const res = await fetch(`${WEB_URL}/api/auth/login`, {
+      // Route through main process — renderer fetch() is blocked by CORS
+      const result = await window.electronAPI.apiRequest({
+        url: `${WEB_URL}/api/auth/login`,
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password })
+        body: { email: email.trim(), password }
       })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error ?? 'Login failed. Check your credentials.')
+      if (!result.ok || result.data === null) {
+        const errData = result.data as { error?: string } | null
+        setError(errData?.error ?? 'Login failed. Check your credentials.')
         emailRef.current?.focus()
         return
       }
 
-      onLogin(data.access_token as string)
+      const successData = result.data as { access_token: string }
+      onLogin(successData.access_token)
     } catch {
       setError('Unable to connect. Check your internet connection.')
     } finally {
@@ -48,7 +49,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
       <div className="login">
 
         <div className="login-header">
-          {/* Logo mark */}
           <svg className="login-logo" width="32" height="32" viewBox="0 0 32 32" fill="none">
             <rect width="32" height="32" rx="9" fill="url(#logoGrad)" />
             <path d="M10 16l4.5 4.5 8-9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />

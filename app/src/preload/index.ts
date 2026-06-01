@@ -18,6 +18,12 @@ export type StreamEvent =
   | { type: 'http-error'; status: number }
   | { type: 'error' }
 
+export interface ApiResponse {
+  ok: boolean
+  status: number
+  data: unknown
+}
+
 export interface ElectronAPI {
   // Window control
   hidePalette: () => void
@@ -32,10 +38,18 @@ export interface ElectronAPI {
   // Navigation
   openDashboard: () => void
 
-  // ── Streaming API proxy ──────────────────────────────────────────────────
-  // fetch() in the renderer is blocked by CORS. These methods route the
-  // request through the main process (Node.js / net.fetch) which has no
-  // CORS restrictions, and stream chunks back via IPC.
+  // ── Generic API proxy (JSON request/response) ────────────────────────────
+  // Use for any non-streaming call (login, etc.).
+  // Runs in the main process — no CORS restrictions.
+  apiRequest: (params: {
+    url: string
+    method?: string
+    headers?: Record<string, string>
+    body?: object
+  }) => Promise<ApiResponse>
+
+  // ── Streaming API proxy (SSE) ────────────────────────────────────────────
+  // Use for the context/AI streaming call.
   streamContext: (params: { url: string; token: string; body: object }) => void
   cancelStream: () => void
   onStreamEvent: (callback: (ev: StreamEvent) => void) => () => void
@@ -58,7 +72,10 @@ const api: ElectronAPI = {
 
   openDashboard: () => ipcRenderer.send('open-dashboard'),
 
-  // ── Streaming API proxy ────────────────────────────────────────────────────
+  // ── Generic API proxy ─────────────────────────────────────────────────────
+  apiRequest: (params) => ipcRenderer.invoke('api-request', params),
+
+  // ── Streaming API proxy ───────────────────────────────────────────────────
   streamContext: (params) => ipcRenderer.send('stream-context', params),
   cancelStream: () => ipcRenderer.send('cancel-stream'),
   onStreamEvent: (cb) => {
