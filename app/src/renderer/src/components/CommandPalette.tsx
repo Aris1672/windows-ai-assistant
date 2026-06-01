@@ -1,0 +1,244 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import type { ContextBundle } from '../types/electron'
+
+const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
+
+type Mode = 'idle' | 'thinking' | 'streaming' | 'done' | 'error'
+
+interface CommandPaletteProps {
+  token: string
+  onLogout: () => void
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function SearchIcon(): JSX.Element {
+  return (
+    <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+      <path
+        d="M6 1a5 5 0 100 10A5 5 0 006 1zM0 6a6 6 0 1110.89 3.477l3.817 3.816a.75.75 0 01-1.06 1.061l-3.817-3.816A6 6 0 010 6z"
+        fill="currentColor"
+        fillRule="evenodd"
+        clipRule="evenodd"
+      />
+    </svg>
+  )
+}
+
+function SpinnerIcon(): JSX.Element {
+  return <span className="spinner" aria-label="Loading" />
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function CommandPalette({ token, onLogout }: CommandPaletteProps): JSX.Element {
+  const [query, setQuery] = useState('')
+  const [context, setContext] = useState<ContextBundle | null>(null)
+  const [response, setResponse] = useState('')
+  const [mode, setMode] = useState<Mode>('idle')
+  const [visible, setVisible] = useState(false)
+
+  const inputRef = useRef<HTMLInputElement>(null)
+  const responseRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  // ── IPC listeners ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    const offShown = window.electronAPI.onPaletteShown(() => {
+      setVisible(true)
+      setQuery('')
+      setResponse('')
+      setMode('idle')
+      setTimeout(() => inputRef.current?.focus(), 60)
+    })
+
+    const offHidden = window.electronAPI.onPaletteHidden(() => {
+      setVisible(false)
+      abortRef.current?.abort()
+    })
+
+    const offContext = window.electronAPI.onContextData((ctx) => {
+      setContext(ctx)
+    })
+
+    return () => { offShown(); offHidden(); offContext() }
+  }, [])
+
+  // ── Keyboard ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') {
+        if (mode === 'thinking' || mode === 'streaming') {
+          // First Escape: cancel the request
+          abortRef.current?.abort()
+          setMode('idle')
+        } else {
+          window.electronAPI.hidePalette()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [mode])
+
+  // ── Auto-scroll response ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (responseRef.current) {
+      responseRef.current.scrollTop = responseRef.current.scrollHeight
+    }
+  }, [response])
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
+  const submit = useCallback(async (): Promise<void> => {
+    const q = query.trim()
+    if (!q || mode === 'thinking' || mode === 'streaming') return
+
+    setMode('thinking')
+    setResponse('')
+
+    abortRef.current?.abort()
+    abortRef.current = new AbortController()
+
+    try {
+      const res = await fetch(`${WEB_URL}/api/context`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ query: q, context: context ?? {} }),
+        signal: abortRef.current.signal
+      })
+
+      if (res.status === 401) { onLogout(); return }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+      setMode('streaming')
+
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value, { stream: true })
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6).trim()
+          if (data === '[DONE]') continue
+          try {
+            const parsed = JSON.parse(data)
+            // Handle both Anthropic streaming formats
+            const text =
+              parsed?.delta?.text ??
+              parsed?.text ??
+              parsed?.choices?.[0]?.delta?.content ??
+              ''
+            if (text) setResponse((prev) => prev + text)
+          } catch { /* skip malformed SSE lines */ }
+        }
+      }
+
+      setMode('done')
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      setMode('error')
+      setResponse('Something went wrong — please try again.')
+    }
+  }, [query, context, token, mode, onLogout])
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
+  const busy = mode === 'thinking' || mode === 'streaming'
+  const hasResponse = response.length > 0
+
+  return (
+    <div className={`palette-root ${visible ? 'palette-root--visible' : ''}`}>
+      <div className={`palette ${visible ? 'palette--visible' : ''}`}>
+
+        {/* Context strip — shown when we know what app is active */}
+        {context?.activeApp && (
+          <div className="context-strip">
+            <span className="context-app">{context.activeApp}</span>
+            {context.selectedText && (
+              <span className="context-excerpt">
+                {context.selectedText.length > 72
+                  ? `"${context.selectedText.slice(0, 72)}…"`
+                  : `"${context.selectedText}"`}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Query input */}
+        <div className="input-row">
+          <span className="input-icon">
+            {busy ? <SpinnerIcon /> : <SearchIcon />}
+          </span>
+          <input
+            ref={inputRef}
+            className="input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
+            placeholder="Ask anything…"
+            autoComplete="off"
+            spellCheck={false}
+            disabled={busy}
+          />
+          {query && !busy && (
+            <kbd className="input-kbd">↵</kbd>
+          )}
+          {busy && (
+            <button className="cancel-btn" onClick={() => abortRef.current?.abort()}>
+              Stop
+            </button>
+          )}
+        </div>
+
+        {/* Divider — only visible when there's a response */}
+        {(hasResponse || mode === 'thinking') && (
+          <div className="divider" />
+        )}
+
+        {/* Response area */}
+        {(hasResponse || mode === 'thinking') && (
+          <div className="response-area" ref={responseRef}>
+            {mode === 'thinking' && !hasResponse && (
+              <div className="thinking-dots">
+                <span className="dot" />
+                <span className="dot" />
+                <span className="dot" />
+              </div>
+            )}
+            {hasResponse && (
+              <p className="response-text">
+                {response}
+                {mode === 'streaming' && <span className="caret" />}
+              </p>
+            )}
+            {mode === 'error' && (
+              <p className="response-text response-text--error">{response}</p>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="palette-footer">
+          <span className="footer-esc">
+            {busy ? 'Esc to stop' : 'Esc to close'}
+          </span>
+          <div className="footer-actions">
+            <button className="footer-btn" onClick={() => window.electronAPI.openDashboard()}>
+              Dashboard ↗
+            </button>
+            <button className="footer-btn footer-btn--danger" onClick={onLogout}>
+              Sign out
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
+}
