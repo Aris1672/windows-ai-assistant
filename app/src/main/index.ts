@@ -1,3 +1,7 @@
+/**
+ * app/src/main/index.ts
+ */
+
 import { app, ipcMain, shell, net } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray, destroyTray } from './tray'
@@ -5,6 +9,8 @@ import { registerHotkey, unregisterHotkey } from './hotkey'
 import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow } from './windows'
 import { getContext } from './context-detector'
 import { store } from './store'
+import { executeAction } from './actions'
+import type { Action } from './actions'
 
 // ─── Single Instance Lock ────────────────────────────────────────────────────
 
@@ -83,6 +89,20 @@ ipcMain.on('open-dashboard', () => {
   )
 })
 
+// ─── Action Executor ─────────────────────────────────────────────────────────
+// Called by the renderer after the user confirms (or immediately for safe actions).
+
+ipcMain.handle('execute-action', async (_event, action: Action) => {
+  try {
+    await executeAction(action)
+    return { ok: true }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[execute-action] error:', message)
+    return { ok: false, error: message }
+  }
+})
+
 // ─── Generic API Request Proxy ───────────────────────────────────────────────
 // Handles simple JSON request/response calls (e.g. login).
 // The renderer cannot fetch external URLs without CORS headers, so all
@@ -121,8 +141,13 @@ ipcMain.handle(
 )
 
 // ─── Streaming API Proxy ──────────────────────────────────────────────────────
-// Handles SSE streaming responses (e.g. the context/AI call).
+// Handles SSE streaming responses (the context/AI call).
 // Chunks are forwarded to the renderer via 'stream-event' IPC messages.
+//
+// NOTE: signal is intentionally NOT passed to net.fetch — there is a known
+// Electron bug where passing an AbortSignal causes the request body to be
+// silently dropped, resulting in a 400 from the server. Cancellation is
+// handled by checking streamAbort.signal.aborted inside the read loop.
 
 let streamAbort: AbortController | null = null
 
@@ -134,6 +159,7 @@ ipcMain.on(
   ) => {
     streamAbort?.abort()
     streamAbort = new AbortController()
+    const { signal } = streamAbort
 
     try {
       const res = await net.fetch(url, {
@@ -142,8 +168,8 @@ ipcMain.on(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(body),
-        signal: streamAbort.signal
+        body: JSON.stringify(body)
+        // ↑ No signal here — see NOTE above
       })
 
       if (res.status === 401) {
@@ -159,15 +185,21 @@ ipcMain.on(
       const decoder = new TextDecoder()
 
       while (true) {
+        if (signal.aborted) break
+
         const { done, value } = await reader.read()
         if (done) break
+        if (signal.aborted) break
+
         event.sender.send('stream-event', {
           type: 'chunk',
           data: decoder.decode(value, { stream: true })
         })
       }
 
-      event.sender.send('stream-event', { type: 'done' })
+      if (!signal.aborted) {
+        event.sender.send('stream-event', { type: 'done' })
+      }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return
       console.error('[stream-context] error:', err)

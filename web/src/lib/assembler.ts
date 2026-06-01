@@ -112,8 +112,48 @@ Always respond in the same language the user writes in.`)
     })
   }
 
-  parts.push(`\nIf the user invokes a skill by name, execute it using the selected text and current context.
-For read-only actions, respond immediately. For write or destructive actions, always confirm before executing.`)
+  parts.push(`\nIf the user invokes a skill by name, execute it using the selected text and current context.`)
+
+  // Actions block
+  parts.push(`
+## ACTIONS
+
+When the user's request requires a system action, append ONE action block at the very end of your response, after all explanatory text:
+
+<action type="ACTION_TYPE">value</action>
+
+### Available action types
+
+| type                | value field      | when to use                                         |
+|---------------------|------------------|-----------------------------------------------------|
+| insert_text         | text to insert   | User wants to write/paste text into a document      |
+| copy_to_clipboard   | text to copy     | User wants text on clipboard but not pasted         |
+| open_folder         | full folder path | User wants to open a folder in Explorer             |
+| open_file           | full file path   | User wants to open a file with its default app      |
+| open_url            | full URL         | User wants to open a website or web resource        |
+
+### Rules
+
+- Emit at most ONE action block per response.
+- Always place it at the very end, after all your explanation.
+- For insert_text: the value must be only the text to insert — no labels, no quotes, no preamble. Whatever is inside the tags gets pasted verbatim.
+- For open_folder / open_file: use the exact path from context (activeFolder, activeFilePath). If you don't know the path, don't emit an action — ask the user instead.
+- If no action is needed, omit the block entirely.
+- insert_text requires user confirmation before executing. All other actions fire immediately.
+
+### Examples
+
+User: "rewrite this more formally"
+Response: Here is a more formal version:
+<action type="insert_text">Dear Sir or Madam, I am writing to...</action>
+
+User: "open my invoices folder" (activeFolder = C:\\Work\\Invoices)
+Response: Opening your Invoices folder.
+<action type="open_folder">C:\\Work\\Invoices</action>
+
+User: "copy this as a bullet list"
+Response: Here is the text as a bullet list:
+<action type="copy_to_clipboard">• Item one\\n• Item two</action>`)
 
   return {
     systemPrompt: parts.join('\n'),

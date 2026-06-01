@@ -1,495 +1,213 @@
-/* ─── Fonts ──────────────────────────────────────────────────────────────────
-   Geist for UI text, Geist Mono for code/paths/context labels.
-   Both are hosted on Google Fonts and load fast.
-   ─────────────────────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@300;400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* ─── Reset ──────────────────────────────────────────────────────────────────*/
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --bg:              #070709;
+  --surface-1:       #0D0D11;
+  --surface-2:       #141419;
+  --surface-3:       #1C1C23;
+  --border:          #24242C;
+  --border-subtle:   #18181E;
+  --text-primary:    #F0EFF2;
+  --text-secondary:  #86869A;
+  --text-muted:      #4A4A5C;
+  --accent:          #0FFFD4;
+  --accent-hover:    #00E8BF;
+  --accent-dim:      rgba(15, 255, 212, 0.07);
+  --accent-border:   rgba(15, 255, 212, 0.18);
+  --error:           #FF5252;
+  --error-dim:       rgba(255, 82, 82, 0.08);
+  --success:         #22C55E;
+  --radius:          8px;
+  --radius-lg:       14px;
+  --font-display:    var(--font-syne);
+  --font-body:       var(--font-manrope);
 }
 
-html, body, #root {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: transparent;
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+
+html {
+  background-color: transparent; /* must be transparent — Electron window handles the bg */
+  color: var(--text-primary);
+  font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-button {
-  cursor: pointer;
-  font-family: inherit;
+body {
+  background-color: transparent; /* must be transparent — Electron window handles the bg */
+  min-height: 100vh;
 }
 
-/* ─── Design tokens ──────────────────────────────────────────────────────────*/
-:root {
-  /* Surfaces */
-  --surface:          rgba(14, 14, 18, 0.96);
-  --surface-hover:    rgba(255, 255, 255, 0.04);
-  --surface-input:    rgba(255, 255, 255, 0.03);
-
-  /* Borders */
-  --border:           rgba(255, 255, 255, 0.07);
-  --border-strong:    rgba(255, 255, 255, 0.13);
-
-  /* Text */
-  --text:             #eeeef2;
-  --text-muted:       rgba(238, 238, 242, 0.42);
-  --text-dim:         rgba(238, 238, 242, 0.22);
-
-  /* Accent — a restrained violet */
-  --accent:           #7c6fff;
-  --accent-subtle:    rgba(124, 111, 255, 0.12);
-  --accent-border:    rgba(124, 111, 255, 0.28);
-
-  /* Semantic */
-  --error:            #f87171;
-  --error-subtle:     rgba(248, 113, 113, 0.12);
-
-  /* Typography */
-  --font:             'Geist', system-ui, -apple-system, sans-serif;
-  --font-mono:        'Geist Mono', 'Cascadia Code', 'Consolas', monospace;
-
-  /* Shape */
-  --radius:           14px;
-  --radius-sm:        8px;
-  --radius-xs:        5px;
-
-  /* Shadow — deep, realistic */
-  --shadow:
-    0 0 0 1px var(--border-strong),
-    0 8px 24px rgba(0, 0, 0, 0.5),
-    0 32px 80px rgba(0, 0, 0, 0.7);
-
-  /* Easing */
-  --ease-out:     cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-in:      cubic-bezier(0.4, 0, 1, 1);
+#root {
+  background-color: transparent;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   COMMAND PALETTE
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-/* Full-screen shell — transparent, no pointer events when hidden */
-.palette-root {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 120ms ease;
+/* ── Dot grid background ───────────────────────────────────────────────────── */
+.bg-grid {
+  background-image: radial-gradient(circle, #2A2A36 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
-.palette-root--visible {
-  opacity: 1;
-  pointer-events: all;
+/* ── Auth card ─────────────────────────────────────────────────────────────── */
+.auth-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.02) inset,
+    0 32px 64px rgba(0,0,0,0.6);
 }
 
-/* The card */
-.palette {
-  width: 660px;
-  font-family: var(--font);
-  background: var(--surface);
+/* ── Form input ────────────────────────────────────────────────────────────── */
+.form-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  transform: translateY(-10px) scale(0.975);
-  transition:
-    transform 220ms var(--ease-spring);
-  /* Windows 11 backdrop blur via CSS — the OS-level acrylic is set in windows.ts */
-  backdrop-filter: blur(48px) saturate(160%);
-  -webkit-backdrop-filter: blur(48px) saturate(160%);
-}
-
-.palette--visible {
-  transform: translateY(0) scale(1);
-}
-
-/* ── Context strip ────────────────────────────────────────────────────────── */
-.context-strip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 18px 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1;
-  overflow: hidden;
-}
-
-.context-app {
-  color: var(--accent);
-  background: var(--accent-subtle);
-  border: 1px solid var(--accent-border);
-  padding: 3px 9px;
-  border-radius: var(--radius-xs);
-  font-weight: 500;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-  flex-shrink: 0;
-}
-
-.context-excerpt {
-  color: var(--text-dim);
-  font-style: italic;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-}
-
-/* ── Input row ────────────────────────────────────────────────────────────── */
-.input-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
-}
-
-.input-icon {
-  display: flex;
-  align-items: center;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.input {
-  flex: 1;
-  background: none;
-  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.9rem;
+  padding: 0.65rem 0.875rem;
   outline: none;
-  font-family: var(--font);
-  font-size: 16px;
-  font-weight: 400;
-  letter-spacing: -0.015em;
-  color: var(--text);
-  caret-color: var(--accent);
-  min-width: 0;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-
-.input::placeholder {
-  color: var(--text-dim);
+.form-input::placeholder { color: var(--text-muted); }
+.form-input:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-dim);
 }
+.form-input:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.input:disabled {
-  opacity: 0.6;
-}
-
-.input-kbd {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 6px;
-  white-space: nowrap;
-  user-select: none;
-  flex-shrink: 0;
-}
-
-/* ── Loading spinner ──────────────────────────────────────────────────────── */
-.spinner {
-  display: block;
-  width: 15px;
-  height: 15px;
-  border: 1.5px solid var(--border-strong);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.65s linear infinite;
-  flex-shrink: 0;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* ── Cancel button ────────────────────────────────────────────────────────── */
-.cancel-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 11px;
-  font-family: var(--font);
-  padding: 3px 10px;
-  border-radius: var(--radius-xs);
-  transition: all 120ms ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.cancel-btn:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-/* ── Divider ──────────────────────────────────────────────────────────────── */
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 0 1px;
-}
-
-/* ── Response area ────────────────────────────────────────────────────────── */
-.response-area {
-  padding: 18px 20px 16px;
-  max-height: 300px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.1) transparent;
-}
-
-.response-area::-webkit-scrollbar { width: 4px; }
-.response-area::-webkit-scrollbar-track { background: transparent; }
-.response-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-
-/* Thinking dots animation */
-.thinking-dots {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  padding: 6px 0;
-}
-
-.dot {
-  display: block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+/* ── Primary button ────────────────────────────────────────────────────────── */
+.btn-primary {
+  width: 100%;
   background: var(--accent);
-  opacity: 0.3;
-  animation: throb 1.2s ease-in-out infinite;
-}
-
-.dot:nth-child(2) { animation-delay: 0.18s; }
-.dot:nth-child(3) { animation-delay: 0.36s; }
-
-@keyframes throb {
-  0%, 100% { opacity: 0.25; transform: scale(0.85); }
-  50%       { opacity: 1;    transform: scale(1);    }
-}
-
-/* Response text */
-.response-text {
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text);
-  font-weight: 300;
-  white-space: pre-wrap;
-  word-break: break-word;
-  letter-spacing: 0.005em;
-}
-
-.response-text--error {
-  color: var(--error);
-}
-
-/* Streaming caret */
-.caret {
-  display: inline-block;
-  width: 2px;
-  height: 14px;
-  background: var(--accent);
-  margin-left: 2px;
-  vertical-align: text-bottom;
-  animation: blink 0.85s steps(1) infinite;
-}
-
-@keyframes blink { 50% { opacity: 0; } }
-
-/* ── Footer ───────────────────────────────────────────────────────────────── */
-.palette-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 9px 18px;
-  border-top: 1px solid var(--border);
-  background: rgba(0, 0, 0, 0.18);
-}
-
-.footer-esc {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  letter-spacing: 0.03em;
-  user-select: none;
-}
-
-.footer-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.footer-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: var(--radius-xs);
-  letter-spacing: 0.02em;
-  transition: all 100ms ease;
-}
-
-.footer-btn:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-.footer-btn--danger:hover {
-  background: var(--error-subtle);
-  border-color: rgba(248, 113, 113, 0.3);
-  color: var(--error);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   LOGIN SCREEN
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-.login-root {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-}
-
-.login {
-  width: 360px;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 32px;
-  font-family: var(--font);
-  backdrop-filter: blur(48px) saturate(160%);
-  -webkit-backdrop-filter: blur(48px) saturate(160%);
-  animation: slideIn 280ms var(--ease-out) both;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateY(12px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)    scale(1);    }
-}
-
-.login-header {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 28px;
-}
-
-.login-logo {
-  flex-shrink: 0;
-  border-radius: 9px;
-}
-
-.login-brand {
-  font-size: 17px;
+  color: #070709;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.025em;
-  line-height: 1.2;
-}
-
-.login-tagline {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 2px;
   letter-spacing: 0.01em;
+  padding: 0.7rem 1.25rem;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s, transform 0.1s;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-primary:active:not(:disabled) { transform: scale(0.99); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Ghost button ──────────────────────────────────────────────────────────── */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-ghost:hover { border-color: var(--accent-border); color: var(--text-primary); }
+
+/* ── Error / success banners ───────────────────────────────────────────────── */
+.error-banner {
+  background: var(--error-dim);
+  border: 1px solid rgba(255, 82, 82, 0.2);
+  border-radius: var(--radius);
+  color: var(--error);
+  font-size: 0.825rem;
+  padding: 0.6rem 0.875rem;
+}
+.success-banner {
+  background: rgba(34, 197, 94, 0.07);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: var(--radius);
+  color: var(--success);
+  font-size: 0.825rem;
+  padding: 0.6rem 0.875rem;
 }
 
-.login-form {
+/* ── Form label ────────────────────────────────────────────────────────────── */
+.form-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+/* ── Wordmark ──────────────────────────────────────────────────────────────── */
+.wordmark {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.wordmark span { color: var(--accent); }
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────── */
+.sidebar {
+  background: var(--surface-1);
+  border-right: 1px solid var(--border);
+  width: 220px;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  flex-shrink: 0;
 }
 
-.login-input {
-  background: var(--surface-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 14px;
-  padding: 11px 14px;
-  outline: none;
-  transition: border-color 120ms ease, background 120ms ease;
-  width: 100%;
-}
-
-.login-input:focus {
-  border-color: var(--accent);
-  background: rgba(124, 111, 255, 0.04);
-}
-
-.login-input::placeholder {
-  color: var(--text-dim);
-}
-
-.login-error {
-  font-size: 12px;
-  color: var(--error);
-  padding: 0 2px;
-  line-height: 1.5;
-}
-
-.login-btn {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-family: var(--font);
-  font-size: 14px;
+/* ── Nav item ──────────────────────────────────────────────────────────────── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
   font-weight: 500;
-  padding: 11px;
-  margin-top: 2px;
-  letter-spacing: -0.01em;
-  transition: opacity 120ms ease, transform 120ms ease;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  cursor: pointer;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text-primary); }
+.nav-item.active { background: var(--accent-dim); color: var(--accent); }
+
+/* ── Card ──────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
 }
 
-.login-btn:hover:not(:disabled) {
-  opacity: 0.88;
-  transform: translateY(-1px);
+/* ── Badge ─────────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
 }
+.badge-accent { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+.badge-muted  { background: var(--surface-3); color: var(--text-muted); border: 1px solid var(--border); }
 
-.login-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.login-btn:disabled {
-  opacity: 0.38;
-  cursor: not-allowed;
-}
-
-.login-register {
-  margin-top: 20px;
-  font-size: 12px;
-  color: var(--text-muted);
-  text-align: center;
-  line-height: 1.5;
-}
-
-.login-link {
-  background: none;
+/* ── Divider ───────────────────────────────────────────────────────────────── */
+.divider {
   border: none;
-  color: var(--accent);
-  font-size: 12px;
-  font-family: var(--font);
-  text-decoration: underline;
-  text-decoration-color: transparent;
-  transition: text-decoration-color 120ms ease;
-  padding: 0;
-}
-
-.login-link:hover {
-  text-decoration-color: var(--accent);
+  border-top: 1px solid var(--border);
+  margin: 1rem 0;
 }

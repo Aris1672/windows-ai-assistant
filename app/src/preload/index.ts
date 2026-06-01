@@ -1,3 +1,7 @@
+/**
+ * app/src/preload/index.ts
+ */
+
 import { contextBridge, ipcRenderer } from 'electron'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -22,6 +26,18 @@ export interface ApiResponse {
   ok: boolean
   status: number
   data: unknown
+}
+
+export type Action =
+  | { type: 'insert_text';       text: string }
+  | { type: 'copy_to_clipboard'; text: string }
+  | { type: 'open_folder';       path: string }
+  | { type: 'open_file';         path: string }
+  | { type: 'open_url';          url: string  }
+
+export interface ActionResult {
+  ok: boolean
+  error?: string
 }
 
 export interface ElectronAPI {
@@ -54,10 +70,15 @@ export interface ElectronAPI {
   cancelStream: () => void
   onStreamEvent: (callback: (ev: StreamEvent) => void) => () => void
 
+  // ── Action executor ──────────────────────────────────────────────────────
+  // Executes a system action in the main process (clipboard, shell, etc.).
+  // Returns { ok: true } on success or { ok: false, error: string } on failure.
+  executeAction: (action: Action) => Promise<ActionResult>
+
   // Events pushed from the main process
-  onPaletteShown: (callback: () => void) => () => void
+  onPaletteShown:  (callback: () => void) => () => void
   onPaletteHidden: (callback: () => void) => () => void
-  onContextData: (callback: (ctx: ContextBundle) => void) => () => void
+  onContextData:   (callback: (ctx: ContextBundle) => void) => () => void
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -77,12 +98,15 @@ const api: ElectronAPI = {
 
   // ── Streaming API proxy ───────────────────────────────────────────────────
   streamContext: (params) => ipcRenderer.send('stream-context', params),
-  cancelStream: () => ipcRenderer.send('cancel-stream'),
+  cancelStream:  () => ipcRenderer.send('cancel-stream'),
   onStreamEvent: (cb) => {
     const fn = (_: Electron.IpcRendererEvent, ev: StreamEvent) => cb(ev)
     ipcRenderer.on('stream-event', fn)
     return () => ipcRenderer.off('stream-event', fn)
   },
+
+  // ── Action executor ───────────────────────────────────────────────────────
+  executeAction: (action) => ipcRenderer.invoke('execute-action', action),
 
   // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {

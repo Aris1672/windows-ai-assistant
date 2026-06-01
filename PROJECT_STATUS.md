@@ -6,9 +6,9 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phase 1 and Phase 2 fully complete and deployed. Full web app live: dashboard, admin panel, landing page, all API routes. Electron app not started — this is next.
+**Current status:** Phase 1, Phase 2, and most of Phase 3 complete. Full web app live on Vercel. Electron app built and working — tray, hotkey, login, context detection, SSE streaming all functional. The palette can read selected text and answer questions. Write actions (insert text, open folder/file) not yet implemented.
 
-**Next immediate step:** Build the Electron shell — `app/` folder, main process, system tray, `Ctrl + Space` global hotkey, and the command palette overlay UI.
+**Next immediate step:** Build the write-action layer — `app/src/main/actions.ts` executor, `execute-action` IPC handler, confirm UI in the palette, and update the assembler system prompt to emit `<action>` XML blocks.
 
 **Monorepo structure:**
 ```
@@ -34,11 +34,23 @@ root/                          ← npm workspaces root
 │           ├── supabase-browser.ts ← ✅ Done (browser client)
 │           ├── auth.ts            ← ✅ Done (requireAuth, jsonError, jsonOk)
 │           └── assembler.ts       ← ✅ Done (instruction + skill assembler)
-└── app/                       ← Electron app (Windows desktop) — not started yet.
+└── app/                       ← Electron app (Windows desktop) — core working ✅
     └── src/
         ├── main/
-        ├── renderer/
-        └── components/
+        │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy
+        │   ├── windows.ts         ← ✅ Palette window (frameless, always-on-top)
+        │   ├── tray.ts            ← ✅ System tray icon + menu
+        │   ├── hotkey.ts          ← ✅ Ctrl+Space global hotkey
+        │   ├── context-detector.ts ← ✅ Active app, file path, selected text
+        │   └── store.ts           ← ✅ Persistent local store (token, prefs)
+        ├── preload/
+        │   └── index.ts           ← ✅ IPC bridge (electronAPI on window)
+        └── renderer/src/
+            ├── App.tsx            ← ✅ Auth gate (login ↔ palette)
+            ├── components/
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming
+            │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token
+            └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
 
 ---
@@ -268,17 +280,24 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Landing page `/` — marketing, features, download button (bilingual EN/RU)
 
 ### Phase 3 — Windows App (Electron) — CORE PRODUCT
-- [ ] Electron shell setup (React + TypeScript)
-- [ ] Login screen (calls Vercel `/api/login`, stores token)
-- [ ] System tray icon — app runs silently in background
-- [ ] Global hotkey `Ctrl + Space` — triggers overlay from anywhere
-- [ ] Command palette overlay UI — fast, minimal, always on top
-- [ ] Active window detection
-- [ ] Active file / folder path detection
-- [ ] Selected text capture
-- [ ] Context bundle — packages all context and sends to Vercel
-- [ ] Action menu — context-aware skills rendered in palette
-- [ ] Confirmation step — for write/destructive actions
+- [x] Electron shell setup (React + TypeScript + electron-vite)
+- [x] Login screen (calls Vercel `/api/auth/login`, stores Bearer token in `store.json`)
+- [x] System tray icon — app runs silently in background
+- [x] Global hotkey `Ctrl + Space` — triggers overlay from anywhere in Windows
+- [x] Command palette overlay UI — frameless, always-on-top, fast
+- [x] Active window detection
+- [x] Active file / folder path detection
+- [x] Selected text capture
+- [x] Context bundle — packages all context, sends to Vercel `/api/context` via main-process proxy
+- [x] SSE streaming — chunks forwarded to renderer via IPC, rendered live in palette
+- [x] Token persistence — stored in `userData/store.json`, survives restarts
+- [x] IPC bridge — full `window.electronAPI` surface (preload, typed)
+- [x] Bug fix: `net.fetch` + `AbortSignal` drops body — removed signal from fetch, cancellation handled in read loop
+- [ ] **Action executor** — `app/src/main/actions.ts` (`insert_text`, `open_folder`, `open_file`, `open_url`)
+- [ ] **`execute-action` IPC handler** — wired in `index.ts` + exposed in preload
+- [ ] **Confirm UI in palette** — destructive actions require one click before firing
+- [ ] **Assembler system prompt update** — teach Claude to emit `<action>` XML blocks
+- [ ] Action menu — context-aware skills rendered as buttons in palette
 - [ ] Multilingual UI with `i18next`
 - [ ] Auto-updater (`electron-updater`)
 - [ ] Windows installer (`.exe`) packaging
@@ -308,11 +327,12 @@ When `Ctrl + Space` fires, the Electron app captures:
 11. ✅ Landing page `/` — done (bilingual EN/RU)
 12. ✅ Wire dashboard pages to real API data — done
 13. ✅ Admin panel — done (overview, users with role/tier management, analytics, settings)
-14. → Electron shell — system tray + global hotkey ← **NOW**
-15. → Command palette overlay UI
-16. → Context detection (active window + folder + selected text)
-17. → Screenshot + Claude Vision
-18. → Workflow memory + power features
+14. ✅ Electron shell — system tray + global hotkey + context detection
+15. ✅ Command palette overlay UI — SSE streaming, login, token persistence
+16. → **Write-action layer** — executor, IPC, confirm UI, assembler prompt ← **NOW**
+17. → Action menu — skills as buttons in palette
+18. → Screenshot + Claude Vision
+19. → Workflow memory + power features
 
 ---
 
@@ -347,4 +367,4 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Phase 1 and Phase 2 fully complete and deployed. Admin panel done (overview, user management with role/tier editing, analytics, settings). Entire web app live on Vercel. Next: Electron app — shell setup, system tray, Ctrl+Space hotkey, command palette overlay UI.*
+*Last updated: Phase 1, 2, and most of Phase 3 complete. Entire web app live on Vercel. Electron app working — tray, hotkey, login, context detection (active app + file + selected text), SSE streaming all functional. Palette can read context and answer questions. Bug fixed: `net.fetch` + `AbortSignal` body-drop issue resolved. Next: write-action layer — `actions.ts` executor, `execute-action` IPC, confirm UI in palette, assembler system prompt update.*
