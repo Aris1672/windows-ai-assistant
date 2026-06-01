@@ -1,5 +1,8 @@
 /* Tailwind directives intentionally removed — Electron renderer uses plain CSS only */
 
+/* ── Google Fonts ───────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@600;700&display=swap');
+
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
   --bg:              #070709;
@@ -20,8 +23,8 @@
   --success:         #22C55E;
   --radius:          8px;
   --radius-lg:       14px;
-  --font-display:    var(--font-syne);
-  --font-body:       var(--font-manrope);
+  --font-display:    'Syne', system-ui, sans-serif;
+  --font-body:       'Inter', system-ui, sans-serif;
 }
 
 /* ── Base ──────────────────────────────────────────────────────────────────── */
@@ -236,15 +239,15 @@ body {
 .palette {
   width: 640px;
   max-width: calc(100vw - 32px);
-  background: rgba(13, 13, 17, 0.92);
+  background: rgba(13, 13, 17, 0.97);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.04) inset,
-    0 24px 64px rgba(0, 0, 0, 0.72),
-    0 0 0 1px rgba(0,0,0,0.4);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+    0 0 0 1px rgba(255,255,255,0.05) inset,
+    0 32px 80px rgba(0, 0, 0, 0.88),
+    0 0 0 1px rgba(0,0,0,0.6);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
   overflow: hidden;
   transform: translateY(-6px) scale(0.99);
   transition: transform 0.14s ease, opacity 0.12s ease;
@@ -333,10 +336,14 @@ body {
   max-height: 320px;
   overflow-y: auto;
   padding: 0.875rem 1rem 0.75rem;
+  scrollbar-width: none;
+}
+.response-area:hover {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
-.response-area::-webkit-scrollbar { width: 4px; }
+.response-area::-webkit-scrollbar { width: 0; transition: width 0.2s; }
+.response-area:hover::-webkit-scrollbar { width: 4px; }
 .response-area::-webkit-scrollbar-track { background: transparent; }
 .response-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
@@ -488,7 +495,7 @@ body {
 }
 .footer-esc {
   font-size: 0.72rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   letter-spacing: 0.02em;
 }
 .footer-actions {
@@ -499,13 +506,13 @@ body {
 .footer-btn {
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--text-muted);
-  background: transparent;
+  color: var(--text-secondary);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 0.25rem 0.65rem;
   cursor: pointer;
-  transition: color 0.12s, border-color 0.12s;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
 }
-.footer-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
-.footer-btn--danger:hover { color: var(--error); border-color: var(--error); }
+.footer-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); background: var(--surface-3); }
+.footer-btn--danger:hover { color: var(--error); border-color: var(--error); background: var(--error-dim); }
