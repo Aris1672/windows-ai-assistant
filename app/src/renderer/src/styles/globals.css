@@ -36,15 +36,18 @@ html {
   font-family: var(--font-body), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow: hidden; /* Electron window is fixed-size — no page scrollbar ever */
 }
 
 body {
   background-color: transparent; /* must be transparent — Electron window handles the bg */
   min-height: 100vh;
+  overflow: hidden;
 }
 
 #root {
   background-color: transparent;
+  overflow: hidden;
 }
 
 /* ── Dot grid background ───────────────────────────────────────────────────── */
@@ -334,18 +337,15 @@ body {
 /* ── Response area ─────────────────────────────────────────────────────────── */
 .response-area {
   max-height: 320px;
-  overflow-y: auto;
+  overflow-y: overlay; /* overlaid — takes no layout space, only appears when content overflows */
   padding: 0.875rem 1rem 0.75rem;
-  scrollbar-width: none;
-}
-.response-area:hover {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
-.response-area::-webkit-scrollbar { width: 0; transition: width 0.2s; }
-.response-area:hover::-webkit-scrollbar { width: 4px; }
+.response-area::-webkit-scrollbar { width: 4px; }
 .response-area::-webkit-scrollbar-track { background: transparent; }
 .response-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.response-area::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 .response-text {
   font-size: 0.9rem;
