@@ -1,14 +1,22 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { jsonError, jsonOk } from '@/lib/auth'
 
-// Use the anon key here — signInWithPassword is a public operation.
-// The returned access_token is a signed JWT the Electron app stores locally
-// and sends as "Authorization: Bearer <token>" on every subsequent request.
+// Electron makes requests from file:// or localhost — must allow cross-origin
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
+
+// Browser sends a preflight OPTIONS request before the actual POST
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: CORS })
+}
 
 export async function POST(req: NextRequest) {
   let email: string, password: string
@@ -18,26 +26,25 @@ export async function POST(req: NextRequest) {
     email = body.email
     password = body.password
   } catch {
-    return jsonError('Invalid request body', 400)
+    return Response.json({ error: 'Invalid request body' }, { status: 400, headers: CORS })
   }
 
   if (!email || !password) {
-    return jsonError('email and password are required', 400)
+    return Response.json({ error: 'Email and password are required' }, { status: 400, headers: CORS })
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error || !data.session) {
-    // Return a generic message — don't reveal whether the email exists
-    return jsonError('Invalid email or password', 401)
+    return Response.json({ error: 'Invalid email or password' }, { status: 401, headers: CORS })
   }
 
-  return jsonOk({
+  return Response.json({
     access_token: data.session.access_token,
     expires_at: data.session.expires_at,
     user: {
       id: data.user.id,
       email: data.user.email
     }
-  })
+  }, { status: 200, headers: CORS })
 }
