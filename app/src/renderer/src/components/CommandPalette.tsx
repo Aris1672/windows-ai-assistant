@@ -29,6 +29,28 @@ function SpinnerIcon(): JSX.Element {
   return <span className="spinner" aria-label="Loading" />
 }
 
+// ─── SSE chunk parser ─────────────────────────────────────────────────────────
+
+function parseSSEChunk(raw: string): string {
+  let text = ''
+  for (const line of raw.split('\n')) {
+    if (!line.startsWith('data: ')) continue
+    const data = line.slice(6).trim()
+    if (data === '[DONE]') continue
+    try {
+      const parsed = JSON.parse(data)
+      text +=
+        parsed?.delta?.text ??
+        parsed?.text ??
+        parsed?.choices?.[0]?.delta?.content ??
+        ''
+    } catch {
+      // skip malformed SSE lines
+    }
+  }
+  return text
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommandPalette({ token, onLogout }: CommandPaletteProps): JSX.Element {
@@ -40,7 +62,38 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const responseRef = useRef<HTMLDivElement>(null)
-  const abortRef = useRef<AbortController | null>(null)
+
+  // ── Stream event listener ─────────────────────────────────────────────────
+  // Registered once. All streaming state updates flow through here.
+  useEffect(() => {
+    const off = window.electronAPI.onStreamEvent((ev) => {
+      switch (ev.type) {
+        case 'auth-error':
+          onLogout()
+          break
+        case 'http-error':
+          setMode('error')
+          setResponse(`Something went wrong — please try again. (HTTP ${ev.status})`)
+          break
+        case 'error':
+          setMode('error')
+          setResponse('Something went wrong — please try again.')
+          break
+        case 'done':
+          setMode('done')
+          break
+        case 'chunk': {
+          const text = parseSSEChunk(ev.data)
+          if (text) {
+            setMode('streaming')
+            setResponse((prev) => prev + text)
+          }
+          break
+        }
+      }
+    })
+    return () => { off() }
+  }, [onLogout])
 
   // ── IPC listeners ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -54,7 +107,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
     const offHidden = window.electronAPI.onPaletteHidden(() => {
       setVisible(false)
-      abortRef.current?.abort()
+      window.electronAPI.cancelStream()
     })
 
     const offContext = window.electronAPI.onContextData((ctx) => {
@@ -69,8 +122,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         if (mode === 'thinking' || mode === 'streaming') {
-          // First Escape: cancel the request
-          abortRef.current?.abort()
+          window.electronAPI.cancelStream()
           setMode('idle')
         } else {
           window.electronAPI.hidePalette()
@@ -89,64 +141,21 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   }, [response])
 
   // ── Submit ─────────────────────────────────────────────────────────────────
-  const submit = useCallback(async (): Promise<void> => {
+  // No fetch() here — the main process handles the HTTP request via net.fetch
+  // (no CORS) and streams chunks back via IPC 'stream-event' messages.
+  const submit = useCallback((): void => {
     const q = query.trim()
     if (!q || mode === 'thinking' || mode === 'streaming') return
 
     setMode('thinking')
     setResponse('')
 
-    abortRef.current?.abort()
-    abortRef.current = new AbortController()
-
-    try {
-      const res = await fetch(`${WEB_URL}/api/context`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ query: q, context: context ?? {} }),
-        signal: abortRef.current.signal
-      })
-
-      if (res.status === 401) { onLogout(); return }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
-      setMode('streaming')
-
-      const reader = res.body!.getReader()
-      const decoder = new TextDecoder()
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        for (const line of chunk.split('\n')) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.slice(6).trim()
-          if (data === '[DONE]') continue
-          try {
-            const parsed = JSON.parse(data)
-            // Handle both Anthropic streaming formats
-            const text =
-              parsed?.delta?.text ??
-              parsed?.text ??
-              parsed?.choices?.[0]?.delta?.content ??
-              ''
-            if (text) setResponse((prev) => prev + text)
-          } catch { /* skip malformed SSE lines */ }
-        }
-      }
-
-      setMode('done')
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') return
-      setMode('error')
-      setResponse('Something went wrong — please try again.')
-    }
-  }, [query, context, token, mode, onLogout])
+    window.electronAPI.streamContext({
+      url: `${WEB_URL}/api/context`,
+      token,
+      body: { query: q, context: context ?? {} }
+    })
+  }, [query, context, token, mode])
 
   // ─── Render ─────────────────────────────────────────────────────────────────
   const busy = mode === 'thinking' || mode === 'streaming'
@@ -180,7 +189,12 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             className="input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                submit()
+              }
+            }}
             placeholder="Ask anything…"
             autoComplete="off"
             spellCheck={false}
@@ -190,7 +204,13 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             <kbd className="input-kbd">↵</kbd>
           )}
           {busy && (
-            <button className="cancel-btn" onClick={() => abortRef.current?.abort()}>
+            <button
+              className="cancel-btn"
+              onClick={() => {
+                window.electronAPI.cancelStream()
+                setMode('idle')
+              }}
+            >
               Stop
             </button>
           )}
@@ -211,7 +231,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 <span className="dot" />
               </div>
             )}
-            {hasResponse && (
+            {hasResponse && mode !== 'error' && (
               <p className="response-text">
                 {response}
                 {mode === 'streaming' && <span className="caret" />}

@@ -1,4 +1,4 @@
-import { app, ipcMain, shell } from 'electron'
+import { app, ipcMain, shell, net } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray, destroyTray } from './tray'
 import { registerHotkey, unregisterHotkey } from './hotkey'
@@ -7,8 +7,6 @@ import { getContext } from './context-detector'
 import { store } from './store'
 
 // ─── Single Instance Lock ────────────────────────────────────────────────────
-// Prevents the app from running twice. If a second instance is launched,
-// bring the existing window to focus instead.
 
 const gotLock = app.requestSingleInstanceLock()
 
@@ -19,26 +17,20 @@ if (!gotLock) {
 
 app.on('second-instance', () => {
   const win = getPaletteWindow()
-  if (win) {
-    showPalette()
-  }
+  if (win) showPalette()
 })
 
 // ─── App Ready ───────────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
-  // Set the Windows App User Model ID (used by Windows for notifications, taskbar grouping)
   electronApp.setAppUserModelId('com.yourcompany.windowsai')
 
-  // Disable default keyboard shortcuts on BrowserWindows in production
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // 1. Create the invisible overlay window (it stays alive but hidden)
   createPaletteWindow()
 
-  // 2. System tray icon
   createTray({
     onShowPalette: async () => {
       const context = await getContext()
@@ -51,7 +43,6 @@ app.whenReady().then(async () => {
     }
   })
 
-  // 3. Global hotkey: Ctrl+Space — toggle palette from anywhere
   registerHotkey({
     onTrigger: async () => {
       const win = getPaletteWindow()
@@ -71,15 +62,12 @@ app.whenReady().then(async () => {
 
 // ─── IPC Handlers ────────────────────────────────────────────────────────────
 
-// Renderer → hide window
 ipcMain.on('hide-palette', () => hidePalette())
 
-// Renderer → request fresh context snapshot
 ipcMain.handle('get-context', async () => {
   return await getContext()
 })
 
-// Renderer ↔ auth token (stored in userData/store.json)
 ipcMain.handle('get-token', () => store.get('authToken', undefined) ?? null)
 ipcMain.on('set-token', (_event, token: string | null) => {
   if (token) {
@@ -89,18 +77,79 @@ ipcMain.on('set-token', (_event, token: string | null) => {
   }
 })
 
-// Renderer → open the web dashboard in the system browser
 ipcMain.on('open-dashboard', () => {
   shell.openExternal(
     (process.env['VITE_WEB_URL'] ?? 'https://your-app.vercel.app') + '/dashboard'
   )
 })
 
+// ─── Streaming API Proxy ──────────────────────────────────────────────────────
+// The renderer (Chromium) can't fetch external URLs without CORS headers.
+// Moving the fetch here (Node.js / net.fetch) completely bypasses CORS.
+// We stream chunks back to the renderer via IPC events.
+
+let streamAbort: AbortController | null = null
+
+ipcMain.on(
+  'stream-context',
+  async (
+    event,
+    { url, token, body }: { url: string; token: string; body: object }
+  ) => {
+    // Cancel any previously in-flight stream
+    streamAbort?.abort()
+    streamAbort = new AbortController()
+
+    try {
+      const res = await net.fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body),
+        signal: streamAbort.signal
+      })
+
+      if (res.status === 401) {
+        event.sender.send('stream-event', { type: 'auth-error' })
+        return
+      }
+      if (!res.ok) {
+        event.sender.send('stream-event', { type: 'http-error', status: res.status })
+        return
+      }
+
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        event.sender.send('stream-event', {
+          type: 'chunk',
+          data: decoder.decode(value, { stream: true })
+        })
+      }
+
+      event.sender.send('stream-event', { type: 'done' })
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      console.error('[stream-context] error:', err)
+      event.sender.send('stream-event', { type: 'error' })
+    }
+  }
+)
+
+ipcMain.on('cancel-stream', () => {
+  streamAbort?.abort()
+  streamAbort = null
+})
+
 // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
-// Keep the process alive when all windows are closed — this is a tray app.
 app.on('window-all-closed', () => {
-  // intentionally empty
+  // intentionally empty — tray app stays alive
 })
 
 app.on('before-quit', () => {

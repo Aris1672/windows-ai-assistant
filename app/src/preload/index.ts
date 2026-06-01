@@ -11,6 +11,13 @@ export interface ContextBundle {
   capturedAt: string
 }
 
+export type StreamEvent =
+  | { type: 'chunk'; data: string }
+  | { type: 'done' }
+  | { type: 'auth-error' }
+  | { type: 'http-error'; status: number }
+  | { type: 'error' }
+
 export interface ElectronAPI {
   // Window control
   hidePalette: () => void
@@ -24,6 +31,14 @@ export interface ElectronAPI {
 
   // Navigation
   openDashboard: () => void
+
+  // ── Streaming API proxy ──────────────────────────────────────────────────
+  // fetch() in the renderer is blocked by CORS. These methods route the
+  // request through the main process (Node.js / net.fetch) which has no
+  // CORS restrictions, and stream chunks back via IPC.
+  streamContext: (params: { url: string; token: string; body: object }) => void
+  cancelStream: () => void
+  onStreamEvent: (callback: (ev: StreamEvent) => void) => () => void
 
   // Events pushed from the main process
   onPaletteShown: (callback: () => void) => () => void
@@ -43,6 +58,16 @@ const api: ElectronAPI = {
 
   openDashboard: () => ipcRenderer.send('open-dashboard'),
 
+  // ── Streaming API proxy ────────────────────────────────────────────────────
+  streamContext: (params) => ipcRenderer.send('stream-context', params),
+  cancelStream: () => ipcRenderer.send('cancel-stream'),
+  onStreamEvent: (cb) => {
+    const fn = (_: Electron.IpcRendererEvent, ev: StreamEvent) => cb(ev)
+    ipcRenderer.on('stream-event', fn)
+    return () => ipcRenderer.off('stream-event', fn)
+  },
+
+  // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {
     const fn = () => cb()
     ipcRenderer.on('palette-shown', fn)
