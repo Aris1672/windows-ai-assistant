@@ -17,14 +17,13 @@ export function createPaletteWindow(): BrowserWindow {
     y: Math.round(height * 0.18),  // ~18% from the top — feels intentional, not dead-centre
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
-    skipTaskbar: true,   // never appears in the Windows taskbar
+    skipTaskbar: true,
     resizable: false,
     movable: false,
     show: false,
-    hasShadow: true,
-    // Windows 11: acrylic material for OS-native frosted glass
-    backgroundMaterial: 'acrylic',
+    hasShadow: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
