@@ -34,7 +34,7 @@ root/                          ← npm workspaces root
 │           ├── supabase-browser.ts ← ✅ Done (browser client)
 │           ├── auth.ts            ← ✅ Done (requireAuth, jsonError, jsonOk)
 │           └── assembler.ts       ← ✅ Done (instruction + skill assembler)
-└── app/                       ← Electron app (Windows desktop) — not started yet
+└── app/                       ← Electron app (Windows desktop) — not started yet.
     └── src/
         ├── main/
         ├── renderer/
