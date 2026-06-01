@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind directives intentionally removed — Electron renderer uses plain CSS only */
 
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
