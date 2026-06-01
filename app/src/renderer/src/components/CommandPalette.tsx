@@ -30,25 +30,40 @@ function SpinnerIcon(): JSX.Element {
 }
 
 // ─── SSE chunk parser ─────────────────────────────────────────────────────────
+// Server sends: { type: 'skills', skills: [...] }
+//               { type: 'delta', text: '...' }
+//               { type: 'done' }
+//               { type: 'error', message: '...' }
 
-function parseSSEChunk(raw: string): string {
+interface ParsedChunk {
+  text: string
+  serverError?: string
+}
+
+function parseSSEChunk(raw: string): ParsedChunk {
   let text = ''
+  let serverError: string | undefined
+
   for (const line of raw.split('\n')) {
     if (!line.startsWith('data: ')) continue
     const data = line.slice(6).trim()
-    if (data === '[DONE]') continue
+    if (!data || data === '[DONE]') continue
+
     try {
       const parsed = JSON.parse(data)
-      text +=
-        parsed?.delta?.text ??
-        parsed?.text ??
-        parsed?.choices?.[0]?.delta?.content ??
-        ''
+
+      if (parsed?.type === 'error') {
+        serverError = parsed.message ?? 'AI response failed'
+      } else if (parsed?.type === 'delta') {
+        text += parsed.text ?? ''
+      }
+      // 'skills' and 'done' events carry no text — intentionally ignored for now
     } catch {
       // skip malformed SSE lines
     }
   }
-  return text
+
+  return { text, serverError }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -64,7 +79,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const responseRef = useRef<HTMLDivElement>(null)
 
   // ── Stream event listener ─────────────────────────────────────────────────
-  // Registered once. All streaming state updates flow through here.
   useEffect(() => {
     const off = window.electronAPI.onStreamEvent((ev) => {
       switch (ev.type) {
@@ -83,8 +97,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           setMode('done')
           break
         case 'chunk': {
-          const text = parseSSEChunk(ev.data)
-          if (text) {
+          const { text, serverError } = parseSSEChunk(ev.data)
+          if (serverError) {
+            setMode('error')
+            setResponse(serverError)
+          } else if (text) {
             setMode('streaming')
             setResponse((prev) => prev + text)
           }
@@ -141,8 +158,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   }, [response])
 
   // ── Submit ─────────────────────────────────────────────────────────────────
-  // No fetch() here — the main process handles the HTTP request via net.fetch
-  // (no CORS) and streams chunks back via IPC 'stream-event' messages.
   const submit = useCallback((): void => {
     const q = query.trim()
     if (!q || mode === 'thinking' || mode === 'streaming') return
@@ -150,10 +165,21 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     setMode('thinking')
     setResponse('')
 
+    // Derive folder from file path: "C:\Work\doc.docx" → "C:\Work"
+    const activeFolder = context?.activeFilePath
+      ? (context.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null)
+      : null
+
     window.electronAPI.streamContext({
       url: `${WEB_URL}/api/context`,
       token,
-      body: { query: q, context: context ?? {} }
+      body: {
+        message: q,                              // server requires "message", not "query"
+        activeApp: context?.activeApp ?? null,
+        activeFolder,
+        selectedText: context?.selectedText ?? null,
+        history: []
+      }
     })
   }, [query, context, token, mode])
 
@@ -165,7 +191,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     <div className={`palette-root ${visible ? 'palette-root--visible' : ''}`}>
       <div className={`palette ${visible ? 'palette--visible' : ''}`}>
 
-        {/* Context strip — shown when we know what app is active */}
+        {/* Context strip */}
         {context?.activeApp && (
           <div className="context-strip">
             <span className="context-app">{context.activeApp}</span>
@@ -200,9 +226,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             spellCheck={false}
             disabled={busy}
           />
-          {query && !busy && (
-            <kbd className="input-kbd">↵</kbd>
-          )}
+          {query && !busy && <kbd className="input-kbd">↵</kbd>}
           {busy && (
             <button
               className="cancel-btn"
@@ -216,10 +240,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           )}
         </div>
 
-        {/* Divider — only visible when there's a response */}
-        {(hasResponse || mode === 'thinking') && (
-          <div className="divider" />
-        )}
+        {/* Divider */}
+        {(hasResponse || mode === 'thinking') && <div className="divider" />}
 
         {/* Response area */}
         {(hasResponse || mode === 'thinking') && (
@@ -245,9 +267,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
         {/* Footer */}
         <div className="palette-footer">
-          <span className="footer-esc">
-            {busy ? 'Esc to stop' : 'Esc to close'}
-          </span>
+          <span className="footer-esc">{busy ? 'Esc to stop' : 'Esc to close'}</span>
           <div className="footer-actions">
             <button className="footer-btn" onClick={() => window.electronAPI.openDashboard()}>
               Dashboard ↗
