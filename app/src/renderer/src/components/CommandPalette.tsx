@@ -14,6 +14,19 @@ interface CommandPaletteProps {
   onLogout: () => void
 }
 
+// ─── Skill type ───────────────────────────────────────────────────────────────
+
+interface Skill {
+  id: string
+  name: string
+  description: string | null
+  prompt: string
+  context_app: string | null
+  context_folder: string | null
+  is_destructive: boolean
+  is_active: boolean
+}
+
 // ─── Action metadata (mirrors main/actions.ts — keep in sync) ────────────────
 
 const ACTION_REQUIRES_CONFIRM: Record<Action['type'], boolean> = {
@@ -33,8 +46,6 @@ const ACTION_LABELS: Record<Action['type'], string> = {
 }
 
 // ─── Action XML parser ────────────────────────────────────────────────────────
-// The AI appends <action type="...">...</action> at the end of its response.
-// We strip it from the displayed text and surface it as a button.
 
 interface ParsedResponse {
   displayText: string
@@ -61,11 +72,6 @@ function parseActionFromResponse(raw: string): ParsedResponse {
   return { displayText, action }
 }
 
-/**
- * Strips the <action> block from text for live display during streaming.
- * Claude always places the action at the very end, so we cut from <action onwards.
- * Using a greedy [\s\S]* so a partially-streamed opening tag is also removed.
- */
 function stripActionTagLive(text: string): string {
   return text.replace(/<action[\s\S]*$/, '').trim()
 }
@@ -120,12 +126,20 @@ function parseSSEChunk(raw: string): ParsedChunk {
   return { text, serverError }
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function deriveActiveFolder(context: ContextBundle | null): string | null {
+  return context?.activeFilePath
+    ? (context.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null)
+    : null
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommandPalette({ token, onLogout }: CommandPaletteProps): JSX.Element {
   const [query, setQuery]       = useState('')
   const [context, setContext]   = useState<ContextBundle | null>(null)
-  const [rawResponse, setRawResponse] = useState('')  // full text inc. <action> tag
+  const [rawResponse, setRawResponse] = useState('')
   const [mode, setMode]         = useState<Mode>('idle')
   const [visible, setVisible]   = useState(false)
 
@@ -136,8 +150,39 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [actionError, setActionError]     = useState<string | null>(null)
   const [confirmed, setConfirmed]         = useState(false)
 
+  // ── Skill state ─────────────────────────────────────────────────────────────
+  const [skills, setSkills]               = useState<Skill[]>([])
+  const [pendingSkill, setPendingSkill]   = useState<Skill | null>(null)
+
   const inputRef    = useRef<HTMLInputElement>(null)
   const responseRef = useRef<HTMLDivElement>(null)
+
+  // ── Derived: active folder + matching skills ───────────────────────────────
+  const activeFolder = deriveActiveFolder(context)
+
+  const matchingSkills = skills.filter(skill => {
+    if (!skill.is_active) return false
+    if (skill.context_app    && skill.context_app    !== context?.activeApp)       return false
+    if (skill.context_folder && !activeFolder?.startsWith(skill.context_folder))   return false
+    return true
+  })
+
+  // ── Fetch skills whenever the palette becomes visible ─────────────────────
+  useEffect(() => {
+    if (!visible) return
+
+    window.electronAPI.apiRequest({
+      url:    `${WEB_URL}/api/skills`,
+      method: 'GET',
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(res => {
+      if (res.ok && Array.isArray(res.data)) {
+        setSkills(res.data as Skill[])
+      }
+    }).catch(() => {
+      // Non-fatal — palette works without skills
+    })
+  }, [visible, token])
 
   // ── Parse action once streaming finishes ──────────────────────────────────
   useEffect(() => {
@@ -150,7 +195,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     setActionError(null)
     setConfirmed(false)
 
-    // Auto-execute safe (non-confirm) actions immediately
     if (action && !ACTION_REQUIRES_CONFIRM[action.type]) {
       runAction(action)
     }
@@ -168,6 +212,58 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       setActionError(result.error ?? 'Action failed')
     }
   }, [])
+
+  // ── Core streaming submit ─────────────────────────────────────────────────
+  // Accepts an explicit message so both the input field and skill buttons
+  // can submit through the same path.
+  const submitQuery = useCallback((message: string): void => {
+    if (!message || mode === 'thinking' || mode === 'streaming') return
+
+    setMode('thinking')
+    setRawResponse('')
+    setDisplayText('')
+    setPendingAction(null)
+    setPendingSkill(null)
+    setActionStatus('idle')
+    setActionError(null)
+    setConfirmed(false)
+
+    window.electronAPI.streamContext({
+      url: `${WEB_URL}/api/context`,
+      token,
+      body: {
+        message,
+        activeApp:    context?.activeApp    ?? null,
+        activeFolder: deriveActiveFolder(context),
+        selectedText: context?.selectedText ?? null,
+        history: []
+      }
+    })
+  }, [context, token, mode])
+
+  // ── Submit from input field ───────────────────────────────────────────────
+  const submit = useCallback((): void => {
+    submitQuery(query.trim())
+  }, [query, submitQuery])
+
+  // ── Trigger a skill button ────────────────────────────────────────────────
+  // Non-destructive: fires immediately.
+  // Destructive: sets pendingSkill for a pre-execution confirm step.
+  const triggerSkill = useCallback((skill: Skill): void => {
+    if (skill.is_destructive) {
+      setPendingSkill(skill)
+    } else {
+      setQuery(skill.name)
+      submitQuery(skill.prompt)
+    }
+  }, [submitQuery])
+
+  // ── Confirm a destructive skill ───────────────────────────────────────────
+  const confirmSkill = useCallback((): void => {
+    if (!pendingSkill) return
+    setQuery(pendingSkill.name)
+    submitQuery(pendingSkill.prompt)
+  }, [pendingSkill, submitQuery])
 
   // ── Stream event listener ─────────────────────────────────────────────────
   useEffect(() => {
@@ -212,6 +308,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       setDisplayText('')
       setMode('idle')
       setPendingAction(null)
+      setPendingSkill(null)
+      setSkills([])          // cleared here; re-fetched by the visible effect above
       setActionStatus('idle')
       setActionError(null)
       setConfirmed(false)
@@ -234,7 +332,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
-        if (mode === 'thinking' || mode === 'streaming') {
+        if (pendingSkill) {
+          setPendingSkill(null)
+        } else if (mode === 'thinking' || mode === 'streaming') {
           window.electronAPI.cancelStream()
           setMode('idle')
         } else {
@@ -244,7 +344,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [mode])
+  }, [mode, pendingSkill])
 
   // ── Auto-scroll response ───────────────────────────────────────────────────
   useEffect(() => {
@@ -253,49 +353,21 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     }
   }, [displayText, rawResponse])
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
-  const submit = useCallback((): void => {
-    const q = query.trim()
-    if (!q || mode === 'thinking' || mode === 'streaming') return
-
-    setMode('thinking')
-    setRawResponse('')
-    setDisplayText('')
-    setPendingAction(null)
-    setActionStatus('idle')
-    setActionError(null)
-    setConfirmed(false)
-
-    const activeFolder = context?.activeFilePath
-      ? (context.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null)
-      : null
-
-    window.electronAPI.streamContext({
-      url: `${WEB_URL}/api/context`,
-      token,
-      body: {
-        message: q,
-        activeApp:    context?.activeApp    ?? null,
-        activeFolder,
-        selectedText: context?.selectedText ?? null,
-        history: []
-      }
-    })
-  }, [query, context, token, mode])
-
   // ─── Render ───────────────────────────────────────────────────────────────
 
   const busy        = mode === 'thinking' || mode === 'streaming'
-  // While streaming, strip the trailing <action> block in real-time so
-  // the user never sees raw XML. Once done, displayText is already stripped.
   const shownText   = (mode === 'streaming') ? stripActionTagLive(rawResponse) : displayText
   const hasResponse = shownText.length > 0
 
-  // Action button state
   const needsConfirm    = pendingAction ? ACTION_REQUIRES_CONFIRM[pendingAction.type] : false
   const showActionBtn   = pendingAction !== null && actionStatus !== 'done' && mode !== 'error'
   const actionLabel     = pendingAction ? ACTION_LABELS[pendingAction.type] : ''
   const actionIsRunning = actionStatus === 'running'
+
+  // Show skill strip when palette is not busy, there are matching skills,
+  // and we're not already in the destructive-skill confirm flow.
+  const showSkillStrip  = !busy && matchingSkills.length > 0 && !pendingSkill
+  const showSkillConfirm = pendingSkill !== null && !busy
 
   return (
     <div className={`palette-root ${visible ? 'palette-root--visible' : ''}`}>
@@ -315,6 +387,99 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           </div>
         )}
 
+        {/* ── Skill button strip ─────────────────────────────────────────── */}
+        {showSkillStrip && (
+          <div style={{
+            display: 'flex',
+            gap: '0.375rem',
+            padding: '0.5rem 0.75rem',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            flexShrink: 0,
+          }}>
+            {matchingSkills.map(skill => (
+              <button
+                key={skill.id}
+                onClick={() => triggerSkill(skill)}
+                title={skill.description ?? skill.prompt}
+                style={{
+                  flexShrink: 0,
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: '5px',
+                  border: `1px solid ${skill.is_destructive ? 'rgba(255,107,107,0.25)' : 'rgba(255,255,255,0.1)'}`,
+                  background: skill.is_destructive ? 'rgba(255,82,82,0.08)' : 'rgba(255,255,255,0.05)',
+                  color: skill.is_destructive ? '#ff6b6b' : 'rgba(255,255,255,0.7)',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  transition: 'background 0.15s, border-color 0.15s',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.4,
+                }}
+              >
+                {skill.is_destructive && (
+                  <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>⚠</span>
+                )}
+                {skill.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Destructive skill pre-execution confirm ────────────────────── */}
+        {showSkillConfirm && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.625rem',
+            padding: '0.5rem 0.875rem',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            flexShrink: 0,
+          }}>
+            <span style={{ fontSize: '0.75rem', color: '#ff6b6b', flexShrink: 0 }}>⚠</span>
+            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', flex: 1 }}>
+              Run: <strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+                {pendingSkill!.name}
+              </strong>?
+            </span>
+            <button
+              onClick={confirmSkill}
+              style={{
+                padding: '0.2rem 0.625rem',
+                borderRadius: '4px',
+                border: '1px solid rgba(255,107,107,0.3)',
+                background: 'rgba(255,82,82,0.12)',
+                color: '#ff6b6b',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              Confirm ↵
+            </button>
+            <button
+              onClick={() => setPendingSkill(null)}
+              style={{
+                padding: '0.2rem 0.5rem',
+                borderRadius: '4px',
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.35)',
+                fontSize: '0.75rem',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {/* Query input */}
         <div className="input-row">
           <span className="input-icon">
@@ -328,7 +493,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                submit()
+                if (pendingSkill) {
+                  confirmSkill()
+                } else {
+                  submit()
+                }
               }
             }}
             placeholder="Ask anything…"
@@ -381,7 +550,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 )}
 
                 {needsConfirm && !confirmed ? (
-                  // Destructive — show confirm prompt first
                   <div className="action-confirm">
                     <span className="action-confirm-label">
                       Run: <strong>{actionLabel}</strong>?
@@ -404,13 +572,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                     </button>
                   </div>
                 ) : needsConfirm && confirmed ? (
-                  // Confirmed, waiting for result
                   <div className="action-running">
                     <SpinnerIcon />
                     <span>{actionLabel}…</span>
                   </div>
                 ) : (
-                  // Safe action — show status while auto-executing
                   <div className="action-running">
                     {actionIsRunning && <><SpinnerIcon /><span>{actionLabel}…</span></>}
                   </div>
@@ -418,7 +584,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
               </div>
             )}
 
-            {/* Action done feedback */}
             {actionStatus === 'done' && (
               <p className="action-done">✓ Done</p>
             )}
@@ -427,7 +592,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
         {/* Footer */}
         <div className="palette-footer">
-          <span className="footer-esc">{busy ? 'Esc to stop' : 'Esc to close'}</span>
+          <span className="footer-esc">
+            {pendingSkill ? 'Esc to cancel' : busy ? 'Esc to stop' : 'Esc to close'}
+          </span>
           <div className="footer-actions">
             <button className="footer-btn" onClick={() => window.electronAPI.openDashboard()}>
               Dashboard ↗

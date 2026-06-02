@@ -6,7 +6,7 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phase 1, Phase 2, and most of Phase 3 complete. Full web app live on Vercel. Electron app built and working — tray, hotkey, login, context detection, SSE streaming all functional. Write-action layer complete and deployed: `actions.ts`, `execute-action` IPC, confirm UI, and assembler system prompt all done. The palette can read context, answer questions, insert text, copy to clipboard, and open files/folders/URLs.
+**Current status:** Phase 1, Phase 2, and most of Phase 3 complete. Full web app live on Vercel. Electron app built and working — tray, hotkey, login, context detection, SSE streaming all functional. Write-action layer complete and deployed: `actions.ts`, `execute-action` IPC, confirm UI, and assembler system prompt all done. The palette can read context, answer questions, insert text, copy to clipboard, and open files/folders/URLs. Russia compliance complete: all Supabase traffic now goes through Vercel for both Electron and web — `supabase-browser.ts` deleted, dashboard pages refactored to use API routes, `auth.ts` supports both Bearer token (Electron) and cookie (web) auth.
 
 **Next immediate step:** Action menu — surface context-aware skills as clickable buttons in the palette (Phase 3, item 17).
 
@@ -18,10 +18,12 @@ root/                          ← npm workspaces root
 │       ├── middleware.ts      ← ✅ Route protection (done)
 │       ├── app/
 │       │   ├── api/
-│       │   │   ├── user/      ← ✅ GET + PUT (done)
+│       │   │   ├── user/          ← ✅ GET + PUT (done)
 │       │   │   ├── instructions/  ← ✅ GET + POST + PATCH + DELETE (done)
-│       │   │   ├── skills/    ← ✅ GET + POST + PATCH + DELETE (done)
-│       │   │   └── context/   ← ✅ Done — streaming SSE, auth, skill injection
+│       │   │   ├── skills/        ← ✅ GET + POST + PATCH + DELETE (done)
+│       │   │   ├── actions/       ← ✅ GET with search/filter/pagination (done)
+│       │   │   ├── auth/signout/  ← ✅ POST — server-side sign out (done)
+│       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection
 │       │   ├── dashboard/     ← ✅ All pages fully wired to real data
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
@@ -31,8 +33,7 @@ root/                          ← npm workspaces root
 │       │   └── AdminSidebar.tsx   ← ✅ Done
 │       └── lib/
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
-│           ├── supabase-browser.ts ← ✅ Done (browser client)
-│           ├── auth.ts            ← ✅ Done (requireAuth, jsonError, jsonOk)
+│           ├── auth.ts            ← ✅ Done (requireAuth: Bearer token + cookie fallback, jsonError, jsonOk)
 │           └── assembler.ts       ← ✅ Done (instruction + skill assembler)
 └── app/                       ← Electron app (Windows desktop) — core working ✅
     └── src/
@@ -228,6 +229,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 | `/api/user` | User data from Supabase | Internal |
 | `/api/instructions` | CRUD for user instructions | Internal |
 | `/api/skills` | CRUD for user skills | Internal |
+| `/api/actions` | Action history with search/filter/pagination | Internal |
+| `/api/auth/signout` | Server-side sign out, clears session cookies | Internal |
 
 ---
 
@@ -255,8 +258,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] All lib files stubbed (`supabase.ts`, `auth.ts`, `assembler.ts`)
 - [x] Vercel project setup + environment variables configured
 - [x] `web/src/lib/supabase.ts` — server + user (Bearer) + admin clients
-- [x] `web/src/lib/supabase-browser.ts` — browser client for 'use client' components
-- [x] `web/src/lib/auth.ts` — `requireAuth`, `jsonError`, `jsonOk` helpers
+- [x] `web/src/lib/auth.ts` — `requireAuth` (Bearer + cookie fallback), `jsonError`, `jsonOk` helpers
 - [x] `web/src/middleware.ts` — route protection (dashboard + admin → login; auth pages → dashboard if logged in)
 - [x] `/api/user/route.ts` — GET profile + PUT update (with admin-only tier guard)
 - [x] `/api/instructions/route.ts` — GET all, POST new
@@ -278,6 +280,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Wire dashboard pages to real API data 
 - [x] `/admin` — admin panel with login protection 
 - [x] Landing page `/` — marketing, features, download button (bilingual EN/RU)
+- [x] **Russia compliance** — all Supabase traffic proxied through Vercel: `supabase-browser.ts` deleted; dashboard pages call `/api/*` routes via `fetch`; `Sidebar.tsx` signs out via `/api/auth/signout`; `auth.ts` supports Bearer token (Electron) + cookie session (web) in a single `requireAuth` function; new `/api/actions` route for history page
 
 ### Phase 3 — Windows App (Electron) — CORE PRODUCT
 - [x] Electron shell setup (React + TypeScript + electron-vite)
@@ -330,6 +333,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 14. ✅ Electron shell — system tray + global hotkey + context detection
 15. ✅ Command palette overlay UI — SSE streaming, login, token persistence
 16. ✅ Write-action layer — executor, IPC, confirm UI, assembler prompt ← **DONE**
+16.5. ✅ Russia compliance — all Supabase traffic through Vercel, `supabase-browser.ts` deleted ← **DONE**
 17. → **Action menu** — skills as buttons in palette ← **NOW**
 18. → Screenshot + Claude Vision
 19. → Workflow memory + power features
@@ -364,9 +368,10 @@ ANTHROPIC_API_KEY=
 - During streaming, `<action>` XML is stripped from live display via `stripActionTagLive()` — users never see raw tags
 - The instruction + skill assembler on Vercel is the most critical backend function
 - Context conditions are invisible infrastructure — users never think in terms of scopes
-- `supabase.ts` exports three clients: `createServerSupabaseClient` (cookies/SSR), `createUserClient` (Bearer token for Electron), `createAdminClient` (service role, server-only)
-- Dashboard pages are fully wired to real Supabase data via the browser client (RLS handles auth); API routes are for the Electron app (Bearer token auth)
+- `supabase.ts` exports three clients: `createServerSupabaseClient` (cookies/SSR), `createUserClient` (Bearer token for Electron), `createAdminClient` (service role, server-only). `supabase-browser.ts` has been deleted — no Supabase JS ever runs in the browser
+- Dashboard pages call their own Vercel API routes via `fetch({ credentials: 'include' })` — never Supabase directly. The `requireAuth` helper accepts both a Bearer token (Electron) and a Supabase session cookie (web), extracting the real access token in both cases so all downstream code is identical
+- All Supabase and Claude traffic is routed through Vercel — required for access from Russia and other restricted regions
 
 ---
 
-*Last updated: Phase 1, 2, and Phase 3 write-action layer complete. Entire web app live on Vercel. Electron app fully functional — tray, hotkey, login, context detection, SSE streaming, and all 5 write actions (`insert_text`, `copy_to_clipboard`, `open_folder`, `open_file`, `open_url`). Assembler updated with explicit capabilities/limitations prompt. UI polish: palette opacity, Inter font, scrollbar, footer visibility all fixed. Next: action menu — surface skills as buttons in the palette.*
+*Last updated: Phase 1, 2, and Phase 3 write-action layer complete. Russia compliance complete — `supabase-browser.ts` deleted, all Supabase traffic proxied through Vercel for both Electron and web. Entire web app live on Vercel. Electron app fully functional — tray, hotkey, login, context detection, SSE streaming, and all 5 write actions (`insert_text`, `copy_to_clipboard`, `open_folder`, `open_file`, `open_url`). Assembler updated with explicit capabilities/limitations prompt. UI polish: palette opacity, Inter font, scrollbar, footer visibility all fixed. Next: action menu — surface skills as buttons in the palette.*
