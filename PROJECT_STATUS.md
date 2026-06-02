@@ -300,7 +300,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] **`execute-action` IPC handler** — wired in `index.ts` + exposed in preload
 - [x] **Confirm UI in palette** — `insert_text` requires confirm; safe actions fire immediately
 - [x] **Assembler system prompt update** — explicit ✅ can-do / ❌ cannot-do table; action XML format + examples
-- [ ] Action menu — context-aware skills rendered as buttons in palette
+- [x] Action menu — context-aware skills rendered as buttons in palette
 - [ ] Multilingual UI with `i18next`
 - [ ] Auto-updater (`electron-updater`)
 - [ ] Windows installer (`.exe`) packaging
@@ -334,8 +334,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 15. ✅ Command palette overlay UI — SSE streaming, login, token persistence
 16. ✅ Write-action layer — executor, IPC, confirm UI, assembler prompt ← **DONE**
 16.5. ✅ Russia compliance — all Supabase traffic through Vercel, `supabase-browser.ts` deleted ← **DONE**
-17. → **Action menu** — skills as buttons in palette ← **NOW**
-18. → Screenshot + Claude Vision
+17. → **Action menu** — skills as buttons in palette 
+18. → Screenshot + Claude Vision ← **NOW**
 19. → Workflow memory + power features
 
 ---
