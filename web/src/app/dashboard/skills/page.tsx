@@ -1,7 +1,10 @@
 'use client'
 
+// All data operations go through our own Vercel API routes.
+// Traffic path: browser → Vercel (/api/skills) → Supabase  ✓
+// supabase-browser is NOT imported here.
+
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import { Plus, Pencil, Trash2, Check, X, Monitor, Folder, AlertTriangle } from 'lucide-react'
 
@@ -37,15 +40,19 @@ export default function SkillsPage() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const supabase = createClient()
-    const { data } = await supabase.from('skills').select('*').order('sort_order', { ascending: true })
+    const res = await fetch('/api/skills', { credentials: 'include' })
+    const data = await res.json()
     setSkills(data ?? [])
     setLoading(false)
   }
 
   async function toggleActive(id: string, current: boolean) {
-    const supabase = createClient()
-    await supabase.from('skills').update({ is_active: !current }).eq('id', id)
+    await fetch(`/api/skills/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !current }),
+    })
     setSkills(prev => prev.map(s => s.id === id ? { ...s, is_active: !current } : s))
   }
 
@@ -63,28 +70,30 @@ export default function SkillsPage() {
 
   async function saveEdit(id: string) {
     setSaving(true)
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('skills')
-      .update({
+    const res = await fetch(`/api/skills/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         name: editState.name.trim(),
         description: editState.description.trim() || null,
         prompt: editState.prompt.trim(),
         context_app: editState.context_app.trim() || null,
         context_folder: editState.context_folder.trim() || null,
         is_destructive: editState.is_destructive,
-      })
-      .eq('id', id)
-      .select()
-      .single()
+      }),
+    })
+    const data = await res.json()
     setSaving(false)
     setEditingId(null)
-    if (data) setSkills(prev => prev.map(s => s.id === id ? data : s))
+    if (data?.id) setSkills(prev => prev.map(s => s.id === id ? data : s))
   }
 
   async function deleteSkill(id: string) {
-    const supabase = createClient()
-    await supabase.from('skills').delete().eq('id', id)
+    await fetch(`/api/skills/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
     setSkills(prev => prev.filter(s => s.id !== id))
     setDeletingId(null)
   }

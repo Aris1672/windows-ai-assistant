@@ -1,8 +1,11 @@
 'use client'
 
+// Sign-out goes through our own Vercel API route — not supabase-browser.
+// Traffic path: browser → Vercel (/api/auth/signout) → Supabase  ✓
+// supabase-browser is NOT imported here.
+
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase-browser'
 import {
   LayoutDashboard,
   Zap,
@@ -24,8 +27,10 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
   const router   = useRouter()
 
   async function signOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    await fetch('/api/auth/signout', {
+      method: 'POST',
+      credentials: 'include',
+    })
     router.push('/login')
     router.refresh()
   }

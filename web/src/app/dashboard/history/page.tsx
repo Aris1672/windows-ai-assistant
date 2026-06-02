@@ -1,7 +1,10 @@
 'use client'
 
+// All data operations go through our own Vercel API route.
+// Traffic path: browser → Vercel (/api/actions) → Supabase  ✓
+// supabase-browser is NOT imported here.
+
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import { Monitor, Search, CheckCircle, XCircle, Clock } from 'lucide-react'
 
 type Action = {
@@ -12,14 +15,13 @@ type Action = {
   created_at: string
 }
 
-const PAGE_SIZE = 25
 const STATUS_OPTIONS = ['all', 'done', 'error', 'pending'] as const
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; color: string; bg: string; border: string; Icon: typeof CheckCircle }> = {
-    done:    { label: 'Done',    color: 'var(--accent)',     bg: 'var(--accent-dim)',    border: 'var(--accent-border)',       Icon: CheckCircle },
-    error:   { label: 'Error',   color: 'var(--error)',      bg: 'rgba(255,82,82,0.08)', border: 'rgba(255,82,82,0.2)',       Icon: XCircle     },
-    pending: { label: 'Pending', color: 'var(--text-muted)', bg: 'var(--surface-2)',    border: 'var(--border)',              Icon: Clock       },
+    done:    { label: 'Done',    color: 'var(--accent)',     bg: 'var(--accent-dim)',     border: 'var(--accent-border)',  Icon: CheckCircle },
+    error:   { label: 'Error',   color: 'var(--error)',      bg: 'rgba(255,82,82,0.08)', border: 'rgba(255,82,82,0.2)',   Icon: XCircle     },
+    pending: { label: 'Pending', color: 'var(--text-muted)', bg: 'var(--surface-2)',     border: 'var(--border)',         Icon: Clock       },
   }
   const { label, color, bg, border, Icon } = map[status] ?? map.pending
   return (
@@ -50,45 +52,39 @@ export default function HistoryPage() {
   const [loading, setLoading]           = useState(true)
   const [loadingMore, setLoadingMore]   = useState(false)
   const [search, setSearch]             = useState('')
-  const [activeSearch, setActiveSearch] = useState('')  // debounced
+  const [activeSearch, setActiveSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // Debounce search
+  // Debounce search input
   useEffect(() => {
     const t = setTimeout(() => setActiveSearch(search), 300)
     return () => clearTimeout(t)
   }, [search])
 
-  // Reset + fetch whenever filters change
+  // Reset and refetch whenever filters change
   useEffect(() => {
     setLoading(true)
-    fetchActions(0, true)
-      .finally(() => setLoading(false))
+    fetchActions(0, true).finally(() => setLoading(false))
   }, [activeSearch, statusFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function fetchActions(fromOffset: number, reset: boolean) {
-    const supabase = createClient()
+    const params = new URLSearchParams({
+      offset: String(fromOffset),
+      status: statusFilter,
+      search: activeSearch.trim(),
+    })
 
-    let query = supabase
-      .from('actions')
-      .select('id, action_label, context_app, status, created_at', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(fromOffset, fromOffset + PAGE_SIZE - 1)
-
-    if (statusFilter !== 'all')  query = query.eq('status', statusFilter)
-    if (activeSearch.trim())     query = query.ilike('action_label', `%${activeSearch.trim()}%`)
-
-    const { data, count } = await query
-    const rows = data ?? []
+    const res = await fetch(`/api/actions?${params}`, { credentials: 'include' })
+    const { data, count } = await res.json() as { data: Action[]; count: number }
 
     if (reset) {
-      setActions(rows)
-      setOffset(rows.length)
+      setActions(data)
+      setOffset(data.length)
     } else {
-      setActions(prev => [...prev, ...rows])
-      setOffset(prev => prev + rows.length)
+      setActions(prev => [...prev, ...data])
+      setOffset(prev => prev + data.length)
     }
-    setTotal(count ?? 0)
+    setTotal(count)
   }
 
   async function loadMore() {

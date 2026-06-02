@@ -1,39 +1,34 @@
-'use client'
+// No 'use client' — this is a Server Component.
+// All Supabase calls happen on Vercel, never in the browser.
+// Traffic path: browser → Vercel (RSC) → Supabase  ✓
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
+import { createServerSupabaseClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { BookOpen, Zap, History, Plus, ArrowRight } from 'lucide-react'
 
-export default function DashboardPage() {
-  const [stats, setStats]             = useState({ instructions: 0, skills: 0, actions: 0 })
-  const [recentActions, setRecentActions] = useState<{ id: string; action_label: string; context_app: string | null; status: string; created_at: string }[]>([])
-  const [loading, setLoading]         = useState(true)
+export default async function DashboardPage() {
+  const supabase = await createServerSupabaseClient()
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient()
+  const [
+    { count: iCount },
+    { count: sCount },
+    { data: actions, count: aCount },
+  ] = await Promise.all([
+    supabase.from('instructions').select('*', { count: 'exact', head: true }),
+    supabase.from('skills').select('*', { count: 'exact', head: true }),
+    supabase
+      .from('actions')
+      .select('id, action_label, context_app, status, created_at', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .limit(5),
+  ])
 
-      const [
-        { count: iCount },
-        { count: sCount },
-        { data: actions, count: aCount },
-      ] = await Promise.all([
-        supabase.from('instructions').select('*', { count: 'exact', head: true }),
-        supabase.from('skills').select('*', { count: 'exact', head: true }),
-        supabase
-          .from('actions')
-          .select('id, action_label, context_app, status, created_at', { count: 'exact' })
-          .order('created_at', { ascending: false })
-          .limit(5),
-      ])
-
-      setStats({ instructions: iCount ?? 0, skills: sCount ?? 0, actions: aCount ?? 0 })
-      setRecentActions(actions ?? [])
-      setLoading(false)
-    }
-    load()
-  }, [])
+  const stats = {
+    instructions: iCount ?? 0,
+    skills:       sCount ?? 0,
+    actions:      aCount ?? 0,
+  }
+  const recentActions = actions ?? []
 
   const statCards = [
     { label: 'Instructions', value: stats.instructions, icon: BookOpen, href: '/dashboard/instructions', color: 'var(--accent)' },
@@ -61,15 +56,13 @@ export default function DashboardPage() {
             <div
               className="card"
               style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', cursor: 'pointer', transition: 'border-color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
             >
               <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon size={16} strokeWidth={1.8} style={{ color }} />
               </div>
               <div>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, marginBottom: '0.25rem' }}>
-                  {loading ? '—' : value.toLocaleString()}
+                  {value.toLocaleString()}
                 </div>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{label}</div>
               </div>
@@ -109,9 +102,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          {loading ? (
-            <div style={{ padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading…</div>
-          ) : recentActions.length === 0 ? (
+          {recentActions.length === 0 ? (
             <div style={{ padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
               No actions yet. Press{' '}
               <kbd style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.1rem 0.4rem', fontSize: '0.75rem', fontFamily: 'monospace' }}>

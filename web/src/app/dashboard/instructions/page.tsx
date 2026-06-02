@@ -1,7 +1,10 @@
 'use client'
 
+// All data operations go through our own Vercel API routes.
+// Traffic path: browser → Vercel (/api/instructions) → Supabase  ✓
+// supabase-browser is NOT imported here.
+
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import { Plus, Pencil, Trash2, Check, X, Monitor, Folder } from 'lucide-react'
 
@@ -33,18 +36,19 @@ export default function InstructionsPage() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('instructions')
-      .select('*')
-      .order('sort_order', { ascending: true })
+    const res = await fetch('/api/instructions', { credentials: 'include' })
+    const data = await res.json()
     setInstructions(data ?? [])
     setLoading(false)
   }
 
   async function toggleActive(id: string, current: boolean) {
-    const supabase = createClient()
-    await supabase.from('instructions').update({ is_active: !current }).eq('id', id)
+    await fetch(`/api/instructions/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: !current }),
+    })
     setInstructions(prev => prev.map(i => i.id === id ? { ...i, is_active: !current } : i))
   }
 
@@ -60,26 +64,28 @@ export default function InstructionsPage() {
 
   async function saveEdit(id: string) {
     setSaving(true)
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('instructions')
-      .update({
+    const res = await fetch(`/api/instructions/${id}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         label: editState.label.trim(),
         instruction_text: editState.instruction_text.trim(),
         context_app: editState.context_app.trim() || null,
         context_folder: editState.context_folder.trim() || null,
-      })
-      .eq('id', id)
-      .select()
-      .single()
+      }),
+    })
+    const data = await res.json()
     setSaving(false)
     setEditingId(null)
-    if (data) setInstructions(prev => prev.map(i => i.id === id ? data : i))
+    if (data?.id) setInstructions(prev => prev.map(i => i.id === id ? data : i))
   }
 
   async function deleteInstruction(id: string) {
-    const supabase = createClient()
-    await supabase.from('instructions').delete().eq('id', id)
+    await fetch(`/api/instructions/${id}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
     setInstructions(prev => prev.filter(i => i.id !== id))
     setDeletingId(null)
   }
