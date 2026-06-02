@@ -91,3 +91,18 @@ export function hidePalette(): void {
 export function getPaletteWindow(): BrowserWindow | null {
   return paletteWindow
 }
+
+/**
+ * hidePaletteForAction
+ *
+ * Used exclusively by the insert_text action executor.
+ * Hides the window IMMEDIATELY (no animation delay) so the OS returns focus
+ * to the previously active application as fast as possible.
+ * The palette renderer still receives 'palette-hidden' for state cleanup,
+ * but we don't wait 150 ms before calling .hide().
+ */
+export function hidePaletteForAction(): void {
+  if (!paletteWindow?.isVisible()) return
+  paletteWindow.webContents.send('palette-hidden')
+  paletteWindow.hide()   // immediate — no setTimeout, no animation wait
+}

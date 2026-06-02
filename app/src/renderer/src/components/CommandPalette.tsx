@@ -61,6 +61,15 @@ function parseActionFromResponse(raw: string): ParsedResponse {
   return { displayText, action }
 }
 
+/**
+ * Strips the <action> block from text for live display during streaming.
+ * Claude always places the action at the very end, so we cut from <action onwards.
+ * Using a greedy [\s\S]* so a partially-streamed opening tag is also removed.
+ */
+function stripActionTagLive(text: string): string {
+  return text.replace(/<action[\s\S]*$/, '').trim()
+}
+
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
 function SearchIcon(): JSX.Element {
@@ -277,8 +286,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // ─── Render ───────────────────────────────────────────────────────────────
 
   const busy        = mode === 'thinking' || mode === 'streaming'
-  // While streaming, show rawResponse (without XML stripped yet)
-  const shownText   = (mode === 'streaming') ? rawResponse : displayText
+  // While streaming, strip the trailing <action> block in real-time so
+  // the user never sees raw XML. Once done, displayText is already stripped.
+  const shownText   = (mode === 'streaming') ? stripActionTagLive(rawResponse) : displayText
   const hasResponse = shownText.length > 0
 
   // Action button state

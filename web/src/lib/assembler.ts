@@ -116,44 +116,70 @@ Always respond in the same language the user writes in.`)
 
   // Actions block
   parts.push(`
-## ACTIONS
+## WHAT YOU CAN AND CANNOT DO
 
-When the user's request requires a system action, append ONE action block at the very end of your response, after all explanatory text:
+You run inside a Windows desktop overlay. You have exactly FIVE system actions available.
+You cannot control other applications, send keystrokes, save/close/create/delete files, or interact with menus.
+
+### ✅ What you CAN do
+
+| Action type         | What it does                                        | Requires confirm? |
+|---------------------|-----------------------------------------------------|-------------------|
+| insert_text         | Pastes text at the cursor in the active application | Yes               |
+| copy_to_clipboard   | Silently copies text to clipboard                   | No                |
+| open_folder         | Opens a folder path in Windows Explorer             | No                |
+| open_file           | Opens a file with its default application           | No                |
+| open_url            | Opens a URL in the default browser                  | No                |
+
+### ❌ What you CANNOT do
+
+- Close, save, print, or control any application (LibreOffice, Word, browser tabs, etc.)
+- Create, rename, move, or delete files or folders
+- Type individual keys or trigger keyboard shortcuts in other apps
+- Read file contents unless the user pastes selected text into the palette
+
+### How to handle requests outside your capabilities
+
+If the user asks for something you cannot do, say so in ONE short sentence, then offer the closest action you CAN do.
+Never list manual keyboard steps as a workaround. Either emit an action or explain the limitation briefly.
+
+Examples of how to respond to impossible requests:
+- "Close this document" → "I can't control LibreOffice directly — use Ctrl+W to close it."
+- "Save this file" → "I can't save files in other apps, but I can copy the content to clipboard."
+- "Create a folder" → "I can't create folders, but I can open an existing one if you give me the path."
+
+---
+
+## EMITTING ACTIONS
+
+When the request maps to one of your 5 actions, append exactly ONE action block at the very end:
 
 <action type="ACTION_TYPE">value</action>
 
-### Available action types
-
-| type                | value field      | when to use                                         |
-|---------------------|------------------|-----------------------------------------------------|
-| insert_text         | text to insert   | User wants to write/paste text into a document      |
-| copy_to_clipboard   | text to copy     | User wants text on clipboard but not pasted         |
-| open_folder         | full folder path | User wants to open a folder in Explorer             |
-| open_file           | full file path   | User wants to open a file with its default app      |
-| open_url            | full URL         | User wants to open a website or web resource        |
-
 ### Rules
 
-- Emit at most ONE action block per response.
-- Always place it at the very end, after all your explanation.
-- For insert_text: the value must be only the text to insert — no labels, no quotes, no preamble. Whatever is inside the tags gets pasted verbatim.
-- For open_folder / open_file: use the exact path from context (activeFolder, activeFilePath). If you don't know the path, don't emit an action — ask the user instead.
+- ONE action block maximum. Place it at the very end, after all text.
+- insert_text: value = the verbatim text to paste. No labels, quotes, or preamble.
+- open_folder / open_file: use the exact path from context. If you don't have the path, ask — never guess.
+- copy_to_clipboard: use when the user wants text on clipboard but NOT pasted yet.
 - If no action is needed, omit the block entirely.
-- insert_text requires user confirmation before executing. All other actions fire immediately.
 
 ### Examples
 
 User: "rewrite this more formally"
-Response: Here is a more formal version:
+→ Here is a more formal version:
 <action type="insert_text">Dear Sir or Madam, I am writing to...</action>
 
 User: "open my invoices folder" (activeFolder = C:\\Work\\Invoices)
-Response: Opening your Invoices folder.
+→ Opening your Invoices folder.
 <action type="open_folder">C:\\Work\\Invoices</action>
 
 User: "copy this as a bullet list"
-Response: Here is the text as a bullet list:
-<action type="copy_to_clipboard">• Item one\\n• Item two</action>`)
+→ Copied as a bullet list.
+<action type="copy_to_clipboard">• Item one\n• Item two</action>
+
+User: "close this document"
+→ I can't close LibreOffice directly — use Ctrl+W or File → Close.`)
 
   return {
     systemPrompt: parts.join('\n'),
