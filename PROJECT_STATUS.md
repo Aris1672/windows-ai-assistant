@@ -6,9 +6,9 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phase 1, Phase 2, and most of Phase 3 complete. Full web app live on Vercel. Electron app built and working — tray, hotkey, login, context detection, SSE streaming all functional. The palette can read selected text and answer questions. Write actions (insert text, open folder/file) not yet implemented.
+**Current status:** Phase 1, Phase 2, and most of Phase 3 complete. Full web app live on Vercel. Electron app built and working — tray, hotkey, login, context detection, SSE streaming all functional. Write-action layer complete and deployed: `actions.ts`, `execute-action` IPC, confirm UI, and assembler system prompt all done. The palette can read context, answer questions, insert text, copy to clipboard, and open files/folders/URLs.
 
-**Next immediate step:** Build the write-action layer — `app/src/main/actions.ts` executor, `execute-action` IPC handler, confirm UI in the palette, and update the assembler system prompt to emit `<action>` XML blocks.
+**Next immediate step:** Action menu — surface context-aware skills as clickable buttons in the palette (Phase 3, item 17).
 
 **Monorepo structure:**
 ```
@@ -38,7 +38,7 @@ root/                          ← npm workspaces root
     └── src/
         ├── main/
         │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy
-        │   ├── windows.ts         ← ✅ Palette window (frameless, always-on-top)
+        │   ├── windows.ts         ← ✅ Palette window (frameless, always-on-top) + hidePaletteForAction()
         │   ├── tray.ts            ← ✅ System tray icon + menu
         │   ├── hotkey.ts          ← ✅ Ctrl+Space global hotkey
         │   ├── context-detector.ts ← ✅ Active app, file path, selected text
@@ -48,7 +48,7 @@ root/                          ← npm workspaces root
         └── renderer/src/
             ├── App.tsx            ← ✅ Auth gate (login ↔ palette)
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + action confirm UI + live XML strip
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -293,10 +293,10 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Token persistence — stored in `userData/store.json`, survives restarts
 - [x] IPC bridge — full `window.electronAPI` surface (preload, typed)
 - [x] Bug fix: `net.fetch` + `AbortSignal` drops body — removed signal from fetch, cancellation handled in read loop
-- [ ] **Action executor** — `app/src/main/actions.ts` (`insert_text`, `open_folder`, `open_file`, `open_url`)
-- [ ] **`execute-action` IPC handler** — wired in `index.ts` + exposed in preload
-- [ ] **Confirm UI in palette** — destructive actions require one click before firing
-- [ ] **Assembler system prompt update** — teach Claude to emit `<action>` XML blocks
+- [x] **Action executor** — `app/src/main/actions.ts` (`insert_text`, `copy_to_clipboard`, `open_folder`, `open_file`, `open_url`)
+- [x] **`execute-action` IPC handler** — wired in `index.ts` + exposed in preload
+- [x] **Confirm UI in palette** — `insert_text` requires confirm; safe actions fire immediately
+- [x] **Assembler system prompt update** — explicit ✅ can-do / ❌ cannot-do table; action XML format + examples
 - [ ] Action menu — context-aware skills rendered as buttons in palette
 - [ ] Multilingual UI with `i18next`
 - [ ] Auto-updater (`electron-updater`)
@@ -329,8 +329,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 13. ✅ Admin panel — done (overview, users with role/tier management, analytics, settings)
 14. ✅ Electron shell — system tray + global hotkey + context detection
 15. ✅ Command palette overlay UI — SSE streaming, login, token persistence
-16. → **Write-action layer** — executor, IPC, confirm UI, assembler prompt ← **NOW**
-17. → Action menu — skills as buttons in palette
+16. ✅ Write-action layer — executor, IPC, confirm UI, assembler prompt ← **DONE**
+17. → **Action menu** — skills as buttons in palette ← **NOW**
 18. → Screenshot + Claude Vision
 19. → Workflow memory + power features
 
@@ -360,6 +360,8 @@ ANTHROPIC_API_KEY=
 - **Layer 2 instructions + Layer 3 skills ARE the moat** — compounds with every addition
 - Never expose users to raw prompt editing unless they explicitly choose it
 - Read-only actions execute immediately; write/destructive always require confirmation
+- `insert_text` uses `hidePaletteForAction()` (immediate hide, no animation delay) + 400ms sleep before SendKeys — 250ms was too short for Windows to return focus reliably
+- During streaming, `<action>` XML is stripped from live display via `stripActionTagLive()` — users never see raw tags
 - The instruction + skill assembler on Vercel is the most critical backend function
 - Context conditions are invisible infrastructure — users never think in terms of scopes
 - `supabase.ts` exports three clients: `createServerSupabaseClient` (cookies/SSR), `createUserClient` (Bearer token for Electron), `createAdminClient` (service role, server-only)
@@ -367,4 +369,4 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Phase 1, 2, and most of Phase 3 complete. Entire web app live on Vercel. Electron app working — tray, hotkey, login, context detection (active app + file + selected text), SSE streaming all functional. Palette can read context and answer questions. Bug fixed: `net.fetch` + `AbortSignal` body-drop issue resolved. Next: write-action layer — `actions.ts` executor, `execute-action` IPC, confirm UI in palette, assembler system prompt update.*
+*Last updated: Phase 1, 2, and Phase 3 write-action layer complete. Entire web app live on Vercel. Electron app fully functional — tray, hotkey, login, context detection, SSE streaming, and all 5 write actions (`insert_text`, `copy_to_clipboard`, `open_folder`, `open_file`, `open_url`). Assembler updated with explicit capabilities/limitations prompt. UI polish: palette opacity, Inter font, scrollbar, footer visibility all fixed. Next: action menu — surface skills as buttons in the palette.*
