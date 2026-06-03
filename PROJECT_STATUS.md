@@ -306,7 +306,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [ ] Windows installer (`.exe`) packaging
 
 ### Phase 4 — Intelligence & Memory
-- [ ] Screenshot capture → Claude Vision for deeper context
+- [x] Screenshot capture → Claude Vision for deeper context
 - [ ] Workflow memory — learns repeated patterns per user
 - [ ] Pre-built skill templates (Developer, Writer, Finance, Support, etc.)
 - [ ] Action history synced to Supabase
@@ -334,9 +334,9 @@ When `Ctrl + Space` fires, the Electron app captures:
 15. ✅ Command palette overlay UI — SSE streaming, login, token persistence
 16. ✅ Write-action layer — executor, IPC, confirm UI, assembler prompt ← **DONE**
 16.5. ✅ Russia compliance — all Supabase traffic through Vercel, `supabase-browser.ts` deleted ← **DONE**
-17. → **Action menu** — skills as buttons in palette 
-18. → Screenshot + Claude Vision ← **NOW**
-19. → Workflow memory + power features
+17. ✅  **Action menu** — skills as buttons in palette 
+18. ✅ Screenshot + Claude Vision 
+19. → Workflow memory + power features ← **NOW**
 
 ---
 

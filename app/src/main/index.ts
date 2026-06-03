@@ -8,9 +8,12 @@ import { createTray, destroyTray } from './tray'
 import { registerHotkey, unregisterHotkey } from './hotkey'
 import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow } from './windows'
 import { getContext } from './context-detector'
+import type { ContextBundle } from './context-detector'
 import { store } from './store'
-import { executeAction } from './actions'
+import { executeAction, ACTION_LABELS } from './actions'
 import type { Action } from './actions'
+
+const WEB_URL = process.env['VITE_WEB_URL'] ?? 'https://your-app.vercel.app'
 
 // ─── Single Instance Lock ────────────────────────────────────────────────────
 
@@ -26,6 +29,12 @@ app.on('second-instance', () => {
   if (win) showPalette()
 })
 
+// ─── Last known context ───────────────────────────────────────────────────────
+// Captured just before the palette opens. Used by the action sync to record
+// which app was active when an action ran — without touching the preload API.
+
+let lastContext: ContextBundle | null = null
+
 // ─── App Ready ───────────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
@@ -40,6 +49,7 @@ app.whenReady().then(async () => {
   createTray({
     onShowPalette: async () => {
       const context = await getContext()
+      lastContext = context
       showPalette(context)
     },
     onQuit: () => {
@@ -58,6 +68,7 @@ app.whenReady().then(async () => {
         hidePalette()
       } else {
         const context = await getContext()
+        lastContext = context
         showPalette(context)
       }
     }
@@ -84,27 +95,85 @@ ipcMain.on('set-token', (_event, token: string | null) => {
 })
 
 ipcMain.on('open-dashboard', () => {
-  shell.openExternal(
-    (process.env['VITE_WEB_URL'] ?? 'https://your-app.vercel.app') + '/dashboard'
-  )
+  shell.openExternal(`${WEB_URL}/dashboard`)
 })
 
 // ─── Action Executor ─────────────────────────────────────────────────────────
 // Called by the renderer after the user confirms (or immediately for safe actions).
+// After execution, syncs a record to Supabase via the Vercel API — fire-and-forget.
 
 ipcMain.handle('execute-action', async (_event, action: Action) => {
+  const token = store.get('authToken', undefined) ?? null
+
   try {
     await executeAction(action)
+
+    // Sync success record — non-blocking, non-fatal
+    if (token) {
+      syncActionHistory({
+        token,
+        actionLabel: ACTION_LABELS[action.type],
+        contextApp:  lastContext?.activeApp ?? null,
+        status:      'done',
+      }).catch((err) => console.warn('[sync-action] failed:', err))
+    }
+
     return { ok: true }
+
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[execute-action] error:', message)
+
+    // Sync failure record too
+    if (token) {
+      syncActionHistory({
+        token,
+        actionLabel:  ACTION_LABELS[action.type],
+        contextApp:   lastContext?.activeApp ?? null,
+        status:       'error',
+        errorMessage: message,
+      }).catch((err) => console.warn('[sync-action] failed:', err))
+    }
+
     return { ok: false, error: message }
   }
 })
 
+// ─── Action History Sync ──────────────────────────────────────────────────────
+// POSTs a single action record to Vercel → Supabase.
+// Called after every action execution (success or failure).
+// Never awaited from the IPC handler — failure here must not affect UX.
+
+async function syncActionHistory({
+  token,
+  actionLabel,
+  contextApp,
+  status,
+  errorMessage,
+}: {
+  token:         string
+  actionLabel:   string
+  contextApp:    string | null
+  status:        'done' | 'error'
+  errorMessage?: string
+}): Promise<void> {
+  await net.fetch(`${WEB_URL}/api/actions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization:  `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      action_label:  actionLabel,
+      context_app:   contextApp,
+      status,
+      error_message: errorMessage ?? null,
+    }),
+  })
+}
+
 // ─── Generic API Request Proxy ───────────────────────────────────────────────
-// Handles simple JSON request/response calls (e.g. login).
+// Handles simple JSON request/response calls (e.g. login, skills fetch).
 // The renderer cannot fetch external URLs without CORS headers, so all
 // HTTP calls are routed through the main process via net.fetch (no CORS).
 
