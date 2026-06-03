@@ -42,6 +42,9 @@ export default function DashboardPage() {
     const skills = await skillsRes.json()
     const actionsData = await actionsRes.json()
 
+    console.log('Skills response:', skills)  // ← ADD THIS
+    console.log('Skills length:', skills?.length)  // ← ADD THIS
+
     // Handle actions response (could be array or paginated object)
     const actionsList = Array.isArray(actionsData) ? actionsData : actionsData?.data ?? []
 
@@ -55,7 +58,11 @@ export default function DashboardPage() {
 
     // Show onboarding if user has no template skills imported yet
     const hasTemplateSkills = skills?.some((s: any) => s.template_pack !== null)
+    console.log('Has template skills:', hasTemplateSkills)  // ← ADD THIS
+    console.log('Should show onboarding:', !hasTemplateSkills)  // ← ADD THIS
+    
     if (!hasTemplateSkills) {
+      console.log('Setting showOnboarding to TRUE')  // ← ADD THIS
       setShowOnboarding(true)
     }
   } catch (error) {
