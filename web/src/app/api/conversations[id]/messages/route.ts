@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server'
 import { requireAuth, jsonError, jsonOk } from '@/lib/auth'
 import { createUserClient } from '@/lib/supabase'
 
@@ -16,10 +17,10 @@ import { createUserClient } from '@/lib/supabase'
  *
  * Traffic path: Electron → Vercel → Supabase  ✓
  */
-
-type Params = Promise<{ id: string }>
-
-export async function POST(request: Request, { params }: { params: Params }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   let authResult: Awaited<ReturnType<typeof requireAuth>>
   try {
     authResult = await requireAuth(request)
