@@ -468,47 +468,51 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         )}
 
         {/* Skill button strip */}
-        {showSkillStrip && (
-          <div style={{
-            display: 'flex',
-            gap: '0.375rem',
-            padding: '0.5rem 0.75rem',
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-            flexShrink: 0,
-          }}>
-            {matchingSkills.map(skill => (
-              <button
-                key={skill.id}
-                onClick={() => triggerSkill(skill)}
-                title={skill.description ?? skill.prompt}
-                style={{
-                  flexShrink: 0,
-                  padding: '0.25rem 0.625rem',
-                  borderRadius: '5px',
-                  border: `1px solid ${skill.is_destructive ? 'rgba(255,107,107,0.25)' : 'rgba(255,255,255,0.1)'}`,
-                  background: skill.is_destructive ? 'rgba(255,82,82,0.08)' : 'rgba(255,255,255,0.05)',
-                  color: skill.is_destructive ? '#ff6b6b' : 'rgba(255,255,255,0.7)',
-                  fontSize: '0.75rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                  transition: 'background 0.15s, border-color 0.15s',
-                  whiteSpace: 'nowrap',
-                  lineHeight: 1.4,
-                }}
-              >
-                {skill.is_destructive && (
-                  <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>⚠</span>
-                )}
-                {skill.name}
-              </button>
-            ))}
-          </div>
+{showSkillStrip && (
+  <div style={{
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.375rem',
+    padding: '0.5rem 0.75rem',
+    maxHeight: '80px',
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'rgba(255,255,255,0.1) transparent',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    flexShrink: 0,
+  }}>
+    {matchingSkills.map(skill => (
+      <button
+        key={skill.id}
+        onClick={() => triggerSkill(skill)}
+        title={skill.description ?? skill.prompt}
+        style={{
+          flexShrink: 0,
+          padding: '0.25rem 0.625rem',
+          borderRadius: '5px',
+          border: `1px solid ${skill.is_destructive ? 'rgba(255,107,107,0.25)' : 'rgba(255,255,255,0.1)'}`,
+          background: skill.is_destructive ? 'rgba(255,82,82,0.08)' : 'rgba(255,255,255,0.05)',
+          color: skill.is_destructive ? '#ff6b6b' : 'rgba(255,255,255,0.7)',
+          fontSize: '0.75rem',
+          fontWeight: 500,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.3rem',
+          transition: 'background 0.15s, border-color 0.15s',
+          whiteSpace: 'nowrap',
+          lineHeight: 1.4,
+        }}
+      >
+        {skill.is_destructive && (
+          <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>⚠</span>
         )}
+        {skill.name}
+      </button>
+    ))}
+  </div>
+)}
 
         {/* Destructive skill confirm */}
         {showSkillConfirm && (
