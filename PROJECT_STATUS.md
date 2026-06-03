@@ -8,7 +8,9 @@
 
 **Current status:** Phase 1, Phase 2, and most of Phase 3 complete. Full web app live on Vercel. Electron app built and working — tray, hotkey, login, context detection, SSE streaming all functional. Write-action layer complete and deployed: `actions.ts`, `execute-action` IPC, confirm UI, and assembler system prompt all done. The palette can read context, answer questions, insert text, copy to clipboard, and open files/folders/URLs. Russia compliance complete: all Supabase traffic now goes through Vercel for both Electron and web — `supabase-browser.ts` deleted, dashboard pages refactored to use API routes, `auth.ts` supports both Bearer token (Electron) and cookie (web) auth.
 
-**Next immediate step:** Action menu — surface context-aware skills as clickable buttons in the palette (Phase 3, item 17).
+**Next immediate step:** Pre-built skill templates — seed Developer, Writer, Finance, Support packs so new users have instant value (Phase 4, item 20).
+
+Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
 **Monorepo structure:**
 ```
@@ -21,7 +23,9 @@ root/                          ← npm workspaces root
 │       │   │   ├── user/          ← ✅ GET + PUT (done)
 │       │   │   ├── instructions/  ← ✅ GET + POST + PATCH + DELETE (done)
 │       │   │   ├── skills/        ← ✅ GET + POST + PATCH + DELETE (done)
-│       │   │   ├── actions/       ← ✅ GET with search/filter/pagination (done)
+│       │   │   ├── actions/               ← ✅ GET (paginated history) + POST (sync from Electron)
+│       │   │   ├── conversations/         ← ✅ POST — create conversation per palette session
+│       │   │   ├── conversations/[id]/messages/ ← ✅ POST — batch save message exchanges
 │       │   │   ├── auth/signout/  ← ✅ POST — server-side sign out (done)
 │       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection
 │       │   ├── dashboard/     ← ✅ All pages fully wired to real data
@@ -34,7 +38,7 @@ root/                          ← npm workspaces root
 │       └── lib/
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
 │           ├── auth.ts            ← ✅ Done (requireAuth: Bearer token + cookie fallback, jsonError, jsonOk)
-│           └── assembler.ts       ← ✅ Done (instruction + skill assembler)
+│           └── assembler.ts       ← ✅ Done (instructions + skills + workflow memory injection)
 └── app/                       ← Electron app (Windows desktop) — core working ✅
     └── src/
         ├── main/
@@ -49,7 +53,7 @@ root/                          ← npm workspaces root
         └── renderer/src/
             ├── App.tsx            ← ✅ Auth gate (login ↔ palette)
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + action confirm UI + live XML strip
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -307,9 +311,9 @@ When `Ctrl + Space` fires, the Electron app captures:
 
 ### Phase 4 — Intelligence & Memory
 - [x] Screenshot capture → Claude Vision for deeper context
-- [ ] Workflow memory — learns repeated patterns per user
+- [x] Workflow memory — conversations + messages saved per session; assembler injects recent activity into system prompt
+- [x] Action history synced to Supabase — POST /api/actions called after every execution, linked to conversation_id
 - [ ] Pre-built skill templates (Developer, Writer, Finance, Support, etc.)
-- [ ] Action history synced to Supabase
 - [ ] Usage analytics in admin panel
 - [ ] Subscription / billing layer
 
@@ -336,7 +340,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 16.5. ✅ Russia compliance — all Supabase traffic through Vercel, `supabase-browser.ts` deleted ← **DONE**
 17. ✅  **Action menu** — skills as buttons in palette 
 18. ✅ Screenshot + Claude Vision 
-19. → Workflow memory + power features ← **NOW**
+19. ✅ Workflow memory + action history sync ← **DONE**
+20. → Pre-built skill templates ← **NOW**
 
 ---
 
@@ -374,4 +379,4 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Phase 1, 2, and Phase 3 write-action layer complete. Russia compliance complete — `supabase-browser.ts` deleted, all Supabase traffic proxied through Vercel for both Electron and web. Entire web app live on Vercel. Electron app fully functional — tray, hotkey, login, context detection, SSE streaming, and all 5 write actions (`insert_text`, `copy_to_clipboard`, `open_folder`, `open_file`, `open_url`). Assembler updated with explicit capabilities/limitations prompt. UI polish: palette opacity, Inter font, scrollbar, footer visibility all fixed. Next: action menu — surface skills as buttons in the palette.*
+*Last updated: Phase 4 workflow memory complete. Every palette session saved as conversation + messages in Supabase. Assembler injects recent activity per app/folder context. Action history synced after every execution with conversation_id, action_type, and context_folder. Screenshot + Claude Vision live. All Phase 3 core features done. Remaining open items: skill templates, analytics, installer, billing.*
