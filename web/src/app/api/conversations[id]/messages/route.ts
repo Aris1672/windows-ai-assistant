@@ -15,12 +15,14 @@ import { createUserClient } from '@/lib/supabase'
  *
  * Response: { ok: true, count: number }
  *
- * Traffic path: Electron → Vercel → Supabase  ✓
+ * Note on params typing: Next.js 15 infers dynamic route params as Promise<{}>
+ * in the route handler constraint, which is incompatible with Promise<{ id: string }>
+ * due to TypeScript's contravariance rule on function parameters. The standard
+ * workaround is to accept params as `any` and assert the type after awaiting.
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function POST(request: NextRequest, { params }: { params: any }) {
   let authResult: Awaited<ReturnType<typeof requireAuth>>
   try {
     authResult = await requireAuth(request)
@@ -29,7 +31,9 @@ export async function POST(
   }
 
   const { user, accessToken } = authResult
-  const { id: conversationId } = await params
+  const { id: conversationId } = (await params) as { id: string }
+
+  if (!conversationId) return jsonError('Missing conversation ID', 400)
 
   let body: {
     messages?: { role: string; content: string }[]
@@ -69,7 +73,6 @@ export async function POST(
   const { error } = await supabase.from('messages').insert(rows)
   if (error) return jsonError(error.message, 500)
 
-  // Update conversation's updated_at
   await supabase
     .from('conversations')
     .update({ updated_at: new Date().toISOString() })
