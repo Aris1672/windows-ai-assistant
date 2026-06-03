@@ -30,37 +30,40 @@ export default function DashboardPage() {
   }, [])
 
   async function loadData() {
-    try {
-      // Fetch all stats in parallel
-      const [instructionsRes, skillsRes, actionsRes] = await Promise.all([
-        fetch('/api/instructions', { credentials: 'include' }),
-        fetch('/api/skills', { credentials: 'include' }),
-        fetch('/api/actions', { credentials: 'include' }),
-      ])
+  try {
+    // Fetch all stats in parallel
+    const [instructionsRes, skillsRes, actionsRes] = await Promise.all([
+      fetch('/api/instructions', { credentials: 'include' }),
+      fetch('/api/skills', { credentials: 'include' }),
+      fetch('/api/actions', { credentials: 'include' }),
+    ])
 
-      const instructions = await instructionsRes.json()
-      const skills = await skillsRes.json()
-      const actions = await actionsRes.json()
+    const instructions = await instructionsRes.json()
+    const skills = await skillsRes.json()
+    const actionsData = await actionsRes.json()
 
-      setStats({
-        instructions: instructions?.length ?? 0,
-        skills: skills?.length ?? 0,
-        actions: actions?.length ?? 0,
-      })
+    // Handle actions response (could be array or paginated object)
+    const actionsList = Array.isArray(actionsData) ? actionsData : actionsData?.data ?? []
 
-      setRecentActions((actions ?? []).slice(0, 5))
+    setStats({
+      instructions: instructions?.length ?? 0,
+      skills: skills?.length ?? 0,
+      actions: actionsList?.length ?? 0,
+    })
 
-// Show onboarding if user has no template skills imported yet
-const hasTemplateSkills = skills?.some((s: any) => s.template_pack !== null)
-if (!hasTemplateSkills) {
-  setShowOnboarding(true)
-}
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error)
-    } finally {
-      setLoading(false)
+    setRecentActions(Array.isArray(actionsList) ? actionsList.slice(0, 5) : [])
+
+    // Show onboarding if user has no template skills imported yet
+    const hasTemplateSkills = skills?.some((s: any) => s.template_pack !== null)
+    if (!hasTemplateSkills) {
+      setShowOnboarding(true)
     }
+  } catch (error) {
+    console.error('Failed to load dashboard data:', error)
+  } finally {
+    setLoading(false)
   }
+}
 
   const statCards = [
     { label: 'Instructions', value: stats.instructions, icon: BookOpen, href: '/dashboard/instructions', color: 'var(--accent)' },
