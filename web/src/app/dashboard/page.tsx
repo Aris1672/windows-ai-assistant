@@ -50,10 +50,11 @@ export default function DashboardPage() {
 
       setRecentActions((actions ?? []).slice(0, 5))
 
-      // Show onboarding if user has no skills yet
-      if (!skills || skills.length === 0) {
-        setShowOnboarding(true)
-      }
+// Show onboarding if user has no template skills imported yet
+const hasTemplateSkills = skills?.some((s: any) => s.template_pack !== null)
+if (!hasTemplateSkills) {
+  setShowOnboarding(true)
+}
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
     } finally {
