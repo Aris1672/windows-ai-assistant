@@ -23,7 +23,10 @@
 
 import { requireAuth, jsonError } from '@/lib/auth'
 import { assembleContext } from '@/lib/assembler'
+import { createUserClient } from '@/lib/supabase'
 import Anthropic from '@anthropic-ai/sdk'
+
+const TOKEN_RATE_USD = 0.0000041 // $4.08 per 1M tokens (Claude Sonnet)
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -146,6 +149,40 @@ export async function POST(request: Request) {
             send({ type: 'delta', text: event.delta.text })
           }
         }
+
+        // ── Track token usage ───────────────────────────────────────────
+        // finalMessage() is available after stream ends — no extra API call
+        const finalMessage  = await claudeStream.finalMessage()
+        const inputTokens   = finalMessage.usage.input_tokens
+        const outputTokens  = finalMessage.usage.output_tokens
+        const totalTokens   = inputTokens + outputTokens
+        const costUsd       = totalTokens * TOKEN_RATE_USD
+
+        try {
+          const supabase = createUserClient(accessToken)
+
+          // 1. Save to token_usage table (detailed analytics)
+          await supabase.from('token_usage').insert({
+            user_id:       user.id,
+            input_tokens:  inputTokens,
+            output_tokens: outputTokens,
+            total_tokens:  totalTokens,
+            cost_usd:      costUsd,
+            action_type:   body.skillId ? 'skill' : 'query',
+            model:         'claude-sonnet-4-6',
+          })
+
+          // 2. Update user totals in real-time
+          await supabase.rpc('increment_user_tokens', {
+            user_id:      user.id,
+            tokens_count: totalTokens,
+            cost:         costUsd,
+          })
+        } catch (tokenErr) {
+          // Non-fatal — don't fail the response if tracking fails
+          console.error('Token tracking error:', tokenErr)
+        }
+        // ── End token tracking ──────────────────────────────────────────
 
         send({ type: 'done' })
       } catch (err) {
