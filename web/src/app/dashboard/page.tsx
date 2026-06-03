@@ -56,15 +56,17 @@ export default function DashboardPage() {
 
     setRecentActions(Array.isArray(actionsList) ? actionsList.slice(0, 5) : [])
 
-    // Show onboarding if user has no template skills imported yet
-    const hasTemplateSkills = skills?.some((s: any) => s.template_pack !== null)
-    console.log('Has template skills:', hasTemplateSkills)  // ← ADD THIS
-    console.log('Should show onboarding:', !hasTemplateSkills)  // ← ADD THIS
-    
-    if (!hasTemplateSkills) {
-      console.log('Setting showOnboarding to TRUE')  // ← ADD THIS
-      setShowOnboarding(true)
-    }
+   // Show onboarding if user has only the default 4 skills (hasn't imported templates yet)
+const defaultSkillCount = 4
+const hasImportedTemplates = (skills?.length ?? 0) > defaultSkillCount
+console.log('Skill count:', skills?.length)
+console.log('Has imported templates:', hasImportedTemplates)
+console.log('Should show onboarding:', !hasImportedTemplates)
+
+if (!hasImportedTemplates) {
+  console.log('Setting showOnboarding to TRUE')
+  setShowOnboarding(true)
+}
   } catch (error) {
     console.error('Failed to load dashboard data:', error)
   } finally {
