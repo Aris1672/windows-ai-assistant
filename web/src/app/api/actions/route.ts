@@ -5,24 +5,26 @@ import { requireAuth } from '@/lib/auth';
 import { createUserClient } from '@/lib/supabase';
 import { NextRequest } from 'next/server';
 
-const TOKEN_RATE_USD = 0.0000041; // $4.08 per 1M tokens (Claude Sonnet 3.5)
+const TOKEN_RATE_USD = 0.0000041; // $4.08 per 1M tokens (Claude Sonnet)
 
 export async function GET(req: NextRequest) {
-  /**
-   * GET /api/actions
-   * Returns paginated action history for the authenticated user
-   * Query params: page=1, limit=20
-   */
-  const user = await requireAuth(req);
+  let user: Awaited<ReturnType<typeof requireAuth>>['user']
+  let accessToken: string
+
+  try {
+    ;({ user, accessToken } = await requireAuth(req))
+  } catch (response) {
+    return response as Response
+  }
+
   const url = new URL(req.url);
   const page = parseInt(url.searchParams.get('page') || '1');
   const limit = parseInt(url.searchParams.get('limit') || '20');
   const offset = (page - 1) * limit;
 
-  const supabase = createUserClient(req);
+  const supabase = createUserClient(accessToken);
 
   try {
-    // Get paginated actions
     const { data: actions, error: actionsError } = await supabase
       .from('actions')
       .select('*')
@@ -32,7 +34,6 @@ export async function GET(req: NextRequest) {
 
     if (actionsError) throw actionsError;
 
-    // Get total count
     const { count, error: countError } = await supabase
       .from('actions')
       .select('*', { count: 'exact', head: true })
@@ -57,24 +58,16 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  /**
-   * POST /api/actions
-   * Saves action execution + token usage from Electron app
-   *
-   * Body:
-   * {
-   *   action_id?: string (optional, link to existing action)
-   *   action_type: 'insert_text' | 'copy_to_clipboard' | 'open_file' | etc.
-   *   input_tokens: number
-   *   output_tokens: number
-   *   model?: string (default: 'claude-sonnet-4-6')
-   *   status: 'success' | 'error' | 'pending'
-   *   result?: string (what was inserted/copied/etc)
-   *   error?: string (if status === 'error')
-   * }
-   */
-  const user = await requireAuth(req);
-  const supabase = createUserClient(req);
+  let user: Awaited<ReturnType<typeof requireAuth>>['user']
+  let accessToken: string
+
+  try {
+    ;({ user, accessToken } = await requireAuth(req))
+  } catch (response) {
+    return response as Response
+  }
+
+  const supabase = createUserClient(accessToken);
 
   try {
     const body = await req.json();
@@ -89,18 +82,14 @@ export async function POST(req: NextRequest) {
       error: errorMsg,
     } = body;
 
-    // Validate required fields
     if (!action_type) {
-      return Response.json(
-        { error: 'action_type is required' },
-        { status: 400 }
-      );
+      return Response.json({ error: 'action_type is required' }, { status: 400 });
     }
 
     const total_tokens = input_tokens + output_tokens;
     const cost_usd = total_tokens * TOKEN_RATE_USD;
 
-    // 1. Create token_usage record (for analytics)
+    // 1. Create token_usage record
     const { data: tokenUsage, error: tokenError } = await supabase
       .from('token_usage')
       .insert({
@@ -116,47 +105,31 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
 
-    if (tokenError) {
-      console.error('Failed to save token usage:', tokenError);
-      throw tokenError;
-    }
+    if (tokenError) throw tokenError;
 
-    // 2. Update user's token totals (calls Postgres function)
-    const { error: incrementError } = await supabase.rpc(
-      'increment_user_tokens',
-      {
-        user_id: user.id,
-        tokens_count: total_tokens,
-        cost: cost_usd,
-      }
-    );
+    // 2. Update user totals
+    const { error: incrementError } = await supabase.rpc('increment_user_tokens', {
+      user_id: user.id,
+      tokens_count: total_tokens,
+      cost: cost_usd,
+    });
 
-    if (incrementError) {
-      console.error('Failed to increment user tokens:', incrementError);
-      throw incrementError;
-    }
+    if (incrementError) throw incrementError;
 
-    // 3. Update the action record with token counts (if action_id provided)
+    // 3. Update the action record (if action_id provided)
     if (action_id) {
       const { error: updateError } = await supabase
         .from('actions')
         .update({
-          input_tokens,
-          output_tokens,
-          total_tokens,
-          cost_usd,
           status,
           result: result || null,
           error: errorMsg || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', action_id)
-        .eq('user_id', user.id); // Ensure user can only update their own actions
+        .eq('user_id', user.id);
 
-      if (updateError) {
-        console.error('Failed to update action:', updateError);
-        throw updateError;
-      }
+      if (updateError) throw updateError;
     }
 
     return Response.json({
@@ -171,9 +144,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('POST /api/actions error:', error);
-    return Response.json(
-      { error: 'Failed to save action and tokens' },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Failed to save action and tokens' }, { status: 500 });
   }
 }
