@@ -313,7 +313,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Screenshot capture → Claude Vision for deeper context
 - [x] Workflow memory — conversations + messages saved per session; assembler injects recent activity into system prompt
 - [x] Action history synced to Supabase — POST /api/actions called after every execution, linked to conversation_id
-- [ ] Pre-built skill templates (Developer, Writer, Finance, Support, etc.)
+- [x] Pre-built skill templates (Developer, Writer, Finance, Support, etc.)
 - [ ] Usage analytics in admin panel
 - [ ] Subscription / billing layer
 
@@ -340,8 +340,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 16.5. ✅ Russia compliance — all Supabase traffic through Vercel, `supabase-browser.ts` deleted ← **DONE**
 17. ✅  **Action menu** — skills as buttons in palette 
 18. ✅ Screenshot + Claude Vision 
-19. ✅ Workflow memory + action history sync ← **DONE**
-20. → Pre-built skill templates ← **NOW**
+19. ✅ Workflow memory + action history sync 
+20. ✅ Pre-built skill templates ← **DONE**
 
 ---
 
@@ -379,4 +379,6 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Phase 4 workflow memory complete. Every palette session saved as conversation + messages in Supabase. Assembler injects recent activity per app/folder context. Action history synced after every execution with conversation_id, action_type, and context_folder. Screenshot + Claude Vision live. All Phase 3 core features done. Remaining open items: skill templates, analytics, installer, billing.*
+*Last updated: Phase 4 complete — all 20 items done.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅
+Remaining open items: Usage analytics, Subscription/billing, Multilingual UI, Windows installer.*
