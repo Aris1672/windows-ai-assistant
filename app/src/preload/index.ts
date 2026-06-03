@@ -12,6 +12,7 @@ export interface ContextBundle {
   activeWindowTitle: string | null
   activeFilePath: string | null
   selectedText: string | null
+  screenshotBase64: string | null   // base64 PNG captured before palette opened
   capturedAt: string
 }
 
@@ -55,8 +56,6 @@ export interface ElectronAPI {
   openDashboard: () => void
 
   // ── Generic API proxy (JSON request/response) ────────────────────────────
-  // Use for any non-streaming call (login, etc.).
-  // Runs in the main process — no CORS restrictions.
   apiRequest: (params: {
     url: string
     method?: string
@@ -65,14 +64,11 @@ export interface ElectronAPI {
   }) => Promise<ApiResponse>
 
   // ── Streaming API proxy (SSE) ────────────────────────────────────────────
-  // Use for the context/AI streaming call.
   streamContext: (params: { url: string; token: string; body: object }) => void
   cancelStream: () => void
   onStreamEvent: (callback: (ev: StreamEvent) => void) => () => void
 
   // ── Action executor ──────────────────────────────────────────────────────
-  // Executes a system action in the main process (clipboard, shell, etc.).
-  // Returns { ok: true } on success or { ok: false, error: string } on failure.
   executeAction: (action: Action) => Promise<ActionResult>
 
   // Events pushed from the main process
@@ -125,7 +121,7 @@ const api: ElectronAPI = {
     const fn = (_: Electron.IpcRendererEvent, ctx: ContextBundle) => cb(ctx)
     ipcRenderer.on('context-data', fn)
     return () => ipcRenderer.off('context-data', fn)
-  }
+  },
 }
 
 // Expose under window.electronAPI — never expose the raw ipcRenderer

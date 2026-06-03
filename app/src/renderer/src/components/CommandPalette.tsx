@@ -150,9 +150,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [actionError, setActionError]     = useState<string | null>(null)
   const [confirmed, setConfirmed]         = useState(false)
 
-  // ── Skill state ─────────────────────────────────────────────────────────────
-  const [skills, setSkills]               = useState<Skill[]>([])
-  const [pendingSkill, setPendingSkill]   = useState<Skill | null>(null)
+  // Skill state
+  const [skills, setSkills]             = useState<Skill[]>([])
+  const [pendingSkill, setPendingSkill] = useState<Skill | null>(null)
 
   const inputRef    = useRef<HTMLInputElement>(null)
   const responseRef = useRef<HTMLDivElement>(null)
@@ -162,8 +162,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   const matchingSkills = skills.filter(skill => {
     if (!skill.is_active) return false
-    if (skill.context_app    && skill.context_app    !== context?.activeApp)       return false
-    if (skill.context_folder && !activeFolder?.startsWith(skill.context_folder))   return false
+    if (skill.context_app    && skill.context_app    !== context?.activeApp)     return false
+    if (skill.context_folder && !activeFolder?.startsWith(skill.context_folder)) return false
     return true
   })
 
@@ -172,8 +172,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     if (!visible) return
 
     window.electronAPI.apiRequest({
-      url:    `${WEB_URL}/api/skills`,
-      method: 'GET',
+      url:     `${WEB_URL}/api/skills`,
+      method:  'GET',
       headers: { Authorization: `Bearer ${token}` },
     }).then(res => {
       if (res.ok && Array.isArray(res.data)) {
@@ -233,11 +233,12 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       token,
       body: {
         message,
-        activeApp:    context?.activeApp    ?? null,
-        activeFolder: deriveActiveFolder(context),
-        selectedText: context?.selectedText ?? null,
-        history: []
-      }
+        activeApp:        context?.activeApp        ?? null,
+        activeFolder:     deriveActiveFolder(context),
+        selectedText:     context?.selectedText     ?? null,
+        screenshotBase64: context?.screenshotBase64 ?? null,  // ← Vision
+        history: [],
+      },
     })
   }, [context, token, mode])
 
@@ -247,8 +248,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   }, [query, submitQuery])
 
   // ── Trigger a skill button ────────────────────────────────────────────────
-  // Non-destructive: fires immediately.
-  // Destructive: sets pendingSkill for a pre-execution confirm step.
   const triggerSkill = useCallback((skill: Skill): void => {
     if (skill.is_destructive) {
       setPendingSkill(skill)
@@ -309,7 +308,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       setMode('idle')
       setPendingAction(null)
       setPendingSkill(null)
-      setSkills([])          // cleared here; re-fetched by the visible effect above
+      setSkills([])
       setActionStatus('idle')
       setActionError(null)
       setConfirmed(false)
@@ -364,9 +363,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const actionLabel     = pendingAction ? ACTION_LABELS[pendingAction.type] : ''
   const actionIsRunning = actionStatus === 'running'
 
-  // Show skill strip when palette is not busy, there are matching skills,
-  // and we're not already in the destructive-skill confirm flow.
-  const showSkillStrip  = !busy && matchingSkills.length > 0 && !pendingSkill
+  const showSkillStrip   = !busy && matchingSkills.length > 0 && !pendingSkill
   const showSkillConfirm = pendingSkill !== null && !busy
 
   return (
@@ -384,10 +381,25 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                   : `"${context.selectedText}"`}
               </span>
             )}
+            {/* Vision indicator — shown when a screenshot was captured */}
+            {context.screenshotBase64 && (
+              <span
+                title="Screen captured — Claude can see what you're working on"
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: '0.65rem',
+                  color: 'rgba(255,255,255,0.25)',
+                  letterSpacing: '0.04em',
+                  flexShrink: 0,
+                }}
+              >
+                ◉ vision
+              </span>
+            )}
           </div>
         )}
 
-        {/* ── Skill button strip ─────────────────────────────────────────── */}
+        {/* Skill button strip */}
         {showSkillStrip && (
           <div style={{
             display: 'flex',
@@ -430,7 +442,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           </div>
         )}
 
-        {/* ── Destructive skill pre-execution confirm ────────────────────── */}
+        {/* Destructive skill pre-execution confirm */}
         {showSkillConfirm && (
           <div style={{
             display: 'flex',

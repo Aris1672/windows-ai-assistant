@@ -1,24 +1,28 @@
-import { clipboard } from 'electron'
+import { clipboard, desktopCapturer } from 'electron'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
 const execAsync = promisify(exec)
 
 export interface ContextBundle {
-  activeApp: string | null         // e.g. "Code", "Outlook", "Excel"
-  activeAppPath: string | null     // e.g. "C:\\Program Files\\..."
-  activeWindowTitle: string | null // e.g. "main.ts — my-project — VS Code"
-  activeFilePath: string | null    // extracted from title where possible
-  selectedText: string | null      // currently highlighted text
-  capturedAt: string               // ISO timestamp
+  activeApp: string | null          // e.g. "Code", "Outlook", "Excel"
+  activeAppPath: string | null      // e.g. "C:\\Program Files\\..."
+  activeWindowTitle: string | null  // e.g. "main.ts — my-project — VS Code"
+  activeFilePath: string | null     // extracted from title where possible
+  selectedText: string | null       // currently highlighted text
+  screenshotBase64: string | null   // base64 PNG of the primary screen at capture time
+  capturedAt: string                // ISO timestamp
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 export async function getContext(): Promise<ContextBundle> {
-  const [windowInfo, selectedText] = await Promise.all([
+  // Capture all three in parallel — screenshot must happen BEFORE the palette
+  // window is shown (caller guarantees this: getContext() → showPalette()).
+  const [windowInfo, selectedText, screenshotBase64] = await Promise.all([
     getActiveWindow(),
-    captureSelectedText()
+    captureSelectedText(),
+    captureScreenshot(),
   ])
 
   return {
@@ -27,7 +31,35 @@ export async function getContext(): Promise<ContextBundle> {
     activeWindowTitle: windowInfo?.title ?? null,
     activeFilePath: extractFilePath(windowInfo?.title ?? null),
     selectedText,
-    capturedAt: new Date().toISOString()
+    screenshotBase64,
+    capturedAt: new Date().toISOString(),
+  }
+}
+
+// ─── Screenshot ───────────────────────────────────────────────────────────────
+// Uses Electron's desktopCapturer to grab the primary screen as a PNG.
+// Thumbnail is capped at 1280 × 800 — enough detail for Claude Vision,
+// small enough to keep latency low (~200–500 KB base64 for a typical screen).
+// Returns null on any failure so the rest of the context still works.
+
+async function captureScreenshot(): Promise<string | null> {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: 1280, height: 800 },
+    })
+
+    if (!sources.length) return null
+
+    // sources[0] is always the primary / full-desktop source
+    const png = sources[0].thumbnail.toPNG()
+    if (!png.length) return null
+
+    return png.toString('base64')
+  } catch {
+    // desktopCapturer can fail if the app lacks screen-capture permission
+    // (rare on Windows, possible on macOS). Non-fatal — return null.
+    return null
   }
 }
 
@@ -51,7 +83,6 @@ async function getActiveWindow(): Promise<WindowInfo | null> {
     // active-win may not be available on all setups — fall back to PowerShell
   }
 
-  // PowerShell fallback (Windows only)
   return getActiveWindowPowerShell()
 }
 
@@ -83,7 +114,7 @@ async function getActiveWindowPowerShell(): Promise<WindowInfo | null> {
     const raw = JSON.parse(stdout.trim())
     return {
       title: raw.title ?? '',
-      owner: { name: raw.ownerName ?? '', path: raw.ownerPath ?? '' }
+      owner: { name: raw.ownerName ?? '', path: raw.ownerPath ?? '' },
     }
   } catch {
     return null
@@ -93,13 +124,9 @@ async function getActiveWindowPowerShell(): Promise<WindowInfo | null> {
 // ─── Selected Text ───────────────────────────────────────────────────────────
 
 async function captureSelectedText(): Promise<string | null> {
-  // Save the current clipboard so we can restore it
   const previous = clipboard.readText()
 
   try {
-    // Simulate Ctrl+C to copy whatever is selected
-    // Requires @nut-tree/nut-js in Phase 3 enhancement.
-    // For now, we read the clipboard as-is — the user's last copy counts as context.
     // TODO: Replace with keyboard simulation for true selection capture:
     //   import { keyboard, Key } from '@nut-tree/nut-js'
     //   await keyboard.pressKey(Key.LeftControl, Key.C)
@@ -115,16 +142,9 @@ async function captureSelectedText(): Promise<string | null> {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/**
- * Attempts to extract a file path from a window title.
- * Works for VS Code ("file.ts — folder — VS Code"), Notepad ("file.txt — Notepad"), etc.
- */
 function extractFilePath(title: string | null): string | null {
   if (!title) return null
-
-  // Absolute Windows path pattern: C:\something or \\network\something
   const match = title.match(/[A-Za-z]:\\[^\s|—–]+|\\\\[^\s|—–]+/)
   if (match) return match[0]
-
   return null
 }

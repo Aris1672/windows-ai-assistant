@@ -5,49 +5,59 @@
  *
  * Request body:
  * {
- *   activeApp:    string | null   // e.g. "Microsoft Excel"
- *   activeFolder: string | null   // e.g. "C:/Work/Invoices"
- *   selectedText: string | null   // highlighted text
- *   message:      string          // what the user typed or the skill name
- *   skillId:      string | null   // if a specific skill was triggered
- *   history:      { role: "user" | "assistant", content: string }[]  // conversation so far
+ *   activeApp:        string | null
+ *   activeFolder:     string | null
+ *   selectedText:     string | null
+ *   screenshotBase64: string | null   // base64 PNG — enables Claude Vision
+ *   message:          string
+ *   skillId:          string | null
+ *   history:          { role: "user" | "assistant", content: string }[]
  * }
  *
- * Response:
- * - Streaming text/event-stream (SSE) with Claude's response
- * - On the first event: sends { type: "skills", skills: [...] }
- * - Subsequent events: { type: "delta", text: "..." }
- * - Final event: { type: "done" }
+ * Response: text/event-stream (SSE)
+ *   { type: "skills",  skills: [...] }   — first event
+ *   { type: "delta",   text: "..." }     — streamed tokens
+ *   { type: "done" }                     — final event
+ *   { type: "error",   message: "..." }  — on failure
  */
 
 import { requireAuth, jsonError } from '@/lib/auth'
 import { assembleContext } from '@/lib/assembler'
 import Anthropic from '@anthropic-ai/sdk'
 
-
-
-
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type TextBlock  = { type: 'text';  text: string }
+type ImageBlock = {
+  type: 'image'
+  source: { type: 'base64'; media_type: 'image/png'; data: string }
+}
+type ContentBlock = TextBlock | ImageBlock
+
 export async function POST(request: Request) {
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  let user, accessToken
+  // ── Auth ─────────────────────────────────────────────────────────────────
+  let user: Awaited<ReturnType<typeof requireAuth>>['user']
+  let accessToken: string
+
   try {
     ;({ user, accessToken } = await requireAuth(request))
   } catch (response) {
     return response as Response
   }
 
-  // ── Parse body ──────────────────────────────────────────────────────────────
+  // ── Parse body ────────────────────────────────────────────────────────────
   let body: {
-    activeApp?: string | null
-    activeFolder?: string | null
-    selectedText?: string | null
-    message: string
-    skillId?: string | null
-    history?: { role: 'user' | 'assistant'; content: string }[]
+    activeApp?:        string | null
+    activeFolder?:     string | null
+    selectedText?:     string | null
+    screenshotBase64?: string | null
+    message:           string
+    skillId?:          string | null
+    history?:          { role: 'user' | 'assistant'; content: string }[]
   }
 
   try {
@@ -60,13 +70,14 @@ export async function POST(request: Request) {
     return jsonError('message is required', 400)
   }
 
-  // ── Assemble context ────────────────────────────────────────────────────────
-  let assembled
+  // ── Assemble context ──────────────────────────────────────────────────────
+  let assembled: Awaited<ReturnType<typeof assembleContext>>
+
   try {
     assembled = await assembleContext(
       user.id,
       {
-        activeApp: body.activeApp ?? null,
+        activeApp:    body.activeApp    ?? null,
         activeFolder: body.activeFolder ?? null,
         selectedText: body.selectedText ?? null,
       },
@@ -77,8 +88,8 @@ export async function POST(request: Request) {
     return jsonError('Failed to assemble context', 500)
   }
 
-  // ── Build the user message ──────────────────────────────────────────────────
-  // If a specific skill was invoked, inject its prompt
+  // ── Resolve user message ──────────────────────────────────────────────────
+  // If a specific skill was invoked by ID, substitute its prompt.
   let userMessage = body.message
   if (body.skillId) {
     const skill = assembled.matchingSkills.find((s) => s.id === body.skillId)
@@ -87,7 +98,19 @@ export async function POST(request: Request) {
     }
   }
 
-  // ── Stream response ─────────────────────────────────────────────────────────
+  // ── Build Claude message content ──────────────────────────────────────────
+  // When a screenshot is present: send [image, text] so Claude can see the
+  // screen. When absent: send a plain string to keep the payload small and
+  // avoid any unnecessary vision processing cost.
+  //
+  // Only the CURRENT turn gets the screenshot — conversation history stays
+  // as plain text, which is correct (the image is always "right now").
+  const currentContent: string | ContentBlock[] = buildContent(
+    userMessage,
+    body.screenshotBase64 ?? null
+  )
+
+  // ── Stream response ───────────────────────────────────────────────────────
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream({
@@ -96,19 +119,22 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
       }
 
-      // First event: send matching skills to populate the palette
+      // First event: matching skills for the palette action menu
       send({ type: 'skills', skills: assembled.matchingSkills })
 
       try {
-        const messages = [
-          ...(body.history ?? []),
-          { role: 'user' as const, content: userMessage },
+        const messages: Anthropic.MessageParam[] = [
+          ...(body.history ?? []).map((h) => ({
+            role: h.role,
+            content: h.content,
+          })),
+          { role: 'user' as const, content: currentContent },
         ]
 
         const claudeStream = await anthropic.messages.stream({
-          model: 'claude-sonnet-4-6',
+          model:      'claude-sonnet-4-6',
           max_tokens: 1024,
-          system: assembled.systemPrompt,
+          system:     assembled.systemPrompt,
           messages,
         })
 
@@ -133,9 +159,39 @@ export async function POST(request: Request) {
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
+      'Content-Type':  'text/event-stream',
       'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
+      'Connection':    'keep-alive',
     },
   })
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Builds the content for the current user turn.
+ *
+ * With screenshot → [image block, text block]
+ * Without         → plain string (cheaper, faster)
+ */
+function buildContent(
+  text: string,
+  screenshotBase64: string | null
+): string | ContentBlock[] {
+  if (!screenshotBase64) return text
+
+  return [
+    {
+      type:   'image',
+      source: {
+        type:       'base64',
+        media_type: 'image/png',
+        data:       screenshotBase64,
+      },
+    },
+    {
+      type: 'text',
+      text,
+    },
+  ]
 }
