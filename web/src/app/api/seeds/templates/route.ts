@@ -34,18 +34,21 @@ export async function POST(request: Request) {
 
   const supabase = createUserClient(accessToken)
 
-  // Check if user already has skills (avoid duplicate imports on refresh)
-  const { count: existingCount } = await supabase
-    .from('skills')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+ // Check if user already imported these specific templates to avoid duplicates
+// (But allow import even if they have other skills like the default 4)
+const { data: existingTemplates } = await supabase
+  .from('skills')
+  .select('id')
+  .eq('user_id', user.id)
+  .in('name', templatesToImport.map((t) => t.name))
+  .limit(1)
 
-  if ((existingCount ?? 0) > 0) {
-    return jsonError(
-      'User already has skills. Delete existing skills before importing templates.',
-      400
-    )
-  }
+if ((existingTemplates?.length ?? 0) > 0) {
+  return jsonError(
+    'You have already imported these templates. Delete them first if you want to re-import.',
+    400
+  )
+}
 
   // Prepare bulk insert data
   const now = new Date().toISOString()
