@@ -30,8 +30,8 @@ app.on('second-instance', () => {
 })
 
 // ─── Last known context ───────────────────────────────────────────────────────
-// Captured just before the palette opens. Used by the action sync to record
-// which app was active when an action ran — without touching the preload API.
+// Captured just before the palette opens — used by action sync to record
+// which app and folder were active when an action ran.
 
 let lastContext: ContextBundle | null = null
 
@@ -99,63 +99,74 @@ ipcMain.on('open-dashboard', () => {
 })
 
 // ─── Action Executor ─────────────────────────────────────────────────────────
-// Called by the renderer after the user confirms (or immediately for safe actions).
-// After execution, syncs a record to Supabase via the Vercel API — fire-and-forget.
+// Payload is now { action, conversationId } so the sync record can link back
+// to the palette session that produced the action.
 
-ipcMain.handle('execute-action', async (_event, action: Action) => {
-  const token = store.get('authToken', undefined) ?? null
+ipcMain.handle(
+  'execute-action',
+  async (_event, { action, conversationId }: { action: Action; conversationId: string | null }) => {
+    const token = store.get('authToken', undefined) ?? null
 
-  try {
-    await executeAction(action)
+    try {
+      await executeAction(action)
 
-    // Sync success record — non-blocking, non-fatal
-    if (token) {
-      syncActionHistory({
-        token,
-        actionLabel: ACTION_LABELS[action.type],
-        contextApp:  lastContext?.activeApp ?? null,
-        status:      'done',
-      }).catch((err) => console.warn('[sync-action] failed:', err))
+      if (token) {
+        syncActionHistory({
+          token,
+          actionType:     action.type,
+          actionLabel:    ACTION_LABELS[action.type],
+          contextApp:     lastContext?.activeApp    ?? null,
+          contextFolder:  lastContext?.activeFilePath
+            ? lastContext.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null
+            : null,
+          status:         'done',
+          conversationId: conversationId ?? null,
+        }).catch((err) => console.warn('[sync-action] failed:', err))
+      }
+
+      return { ok: true }
+
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[execute-action] error:', message)
+
+      if (token) {
+        syncActionHistory({
+          token,
+          actionType:     action.type,
+          actionLabel:    ACTION_LABELS[action.type],
+          contextApp:     lastContext?.activeApp    ?? null,
+          contextFolder:  lastContext?.activeFilePath
+            ? lastContext.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null
+            : null,
+          status:         'error',
+          conversationId: conversationId ?? null,
+        }).catch((err) => console.warn('[sync-action] failed:', err))
+      }
+
+      return { ok: false, error: message }
     }
-
-    return { ok: true }
-
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[execute-action] error:', message)
-
-    // Sync failure record too
-    if (token) {
-      syncActionHistory({
-        token,
-        actionLabel:  ACTION_LABELS[action.type],
-        contextApp:   lastContext?.activeApp ?? null,
-        status:       'error',
-        errorMessage: message,
-      }).catch((err) => console.warn('[sync-action] failed:', err))
-    }
-
-    return { ok: false, error: message }
   }
-})
+)
 
 // ─── Action History Sync ──────────────────────────────────────────────────────
-// POSTs a single action record to Vercel → Supabase.
-// Called after every action execution (success or failure).
-// Never awaited from the IPC handler — failure here must not affect UX.
 
 async function syncActionHistory({
   token,
+  actionType,
   actionLabel,
   contextApp,
+  contextFolder,
   status,
-  errorMessage,
+  conversationId,
 }: {
-  token:         string
-  actionLabel:   string
-  contextApp:    string | null
-  status:        'done' | 'error'
-  errorMessage?: string
+  token:           string
+  actionType:      string
+  actionLabel:     string
+  contextApp:      string | null
+  contextFolder:   string | null
+  status:          'done' | 'error'
+  conversationId:  string | null
 }): Promise<void> {
   await net.fetch(`${WEB_URL}/api/actions`, {
     method: 'POST',
@@ -164,18 +175,17 @@ async function syncActionHistory({
       Authorization:  `Bearer ${token}`,
     },
     body: JSON.stringify({
-      action_label:  actionLabel,
-      context_app:   contextApp,
+      action_type:     actionType,
+      action_label:    actionLabel,
+      context_app:     contextApp,
+      context_folder:  contextFolder,
       status,
-      error_message: errorMessage ?? null,
+      conversation_id: conversationId,
     }),
   })
 }
 
 // ─── Generic API Request Proxy ───────────────────────────────────────────────
-// Handles simple JSON request/response calls (e.g. login, skills fetch).
-// The renderer cannot fetch external URLs without CORS headers, so all
-// HTTP calls are routed through the main process via net.fetch (no CORS).
 
 ipcMain.handle(
   'api-request',
@@ -210,13 +220,6 @@ ipcMain.handle(
 )
 
 // ─── Streaming API Proxy ──────────────────────────────────────────────────────
-// Handles SSE streaming responses (the context/AI call).
-// Chunks are forwarded to the renderer via 'stream-event' IPC messages.
-//
-// NOTE: signal is intentionally NOT passed to net.fetch — there is a known
-// Electron bug where passing an AbortSignal causes the request body to be
-// silently dropped, resulting in a 400 from the server. Cancellation is
-// handled by checking streamAbort.signal.aborted inside the read loop.
 
 let streamAbort: AbortController | null = null
 
@@ -238,7 +241,6 @@ ipcMain.on(
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify(body)
-        // ↑ No signal here — see NOTE above
       })
 
       if (res.status === 401) {
@@ -255,11 +257,9 @@ ipcMain.on(
 
       while (true) {
         if (signal.aborted) break
-
         const { done, value } = await reader.read()
         if (done) break
         if (signal.aborted) break
-
         event.sender.send('stream-event', {
           type: 'chunk',
           data: decoder.decode(value, { stream: true })

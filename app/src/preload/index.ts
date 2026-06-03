@@ -12,7 +12,7 @@ export interface ContextBundle {
   activeWindowTitle: string | null
   activeFilePath: string | null
   selectedText: string | null
-  screenshotBase64: string | null   // base64 PNG captured before palette opened
+  screenshotBase64: string | null
   capturedAt: string
 }
 
@@ -69,7 +69,8 @@ export interface ElectronAPI {
   onStreamEvent: (callback: (ev: StreamEvent) => void) => () => void
 
   // ── Action executor ──────────────────────────────────────────────────────
-  executeAction: (action: Action) => Promise<ActionResult>
+  // conversationId links the action to its palette session in the history log.
+  executeAction: (action: Action, conversationId?: string | null) => Promise<ActionResult>
 
   // Events pushed from the main process
   onPaletteShown:  (callback: () => void) => () => void
@@ -102,7 +103,10 @@ const api: ElectronAPI = {
   },
 
   // ── Action executor ───────────────────────────────────────────────────────
-  executeAction: (action) => ipcRenderer.invoke('execute-action', action),
+  // Wraps action + conversationId in a single IPC payload so the main process
+  // can include the conversation link in the Supabase history record.
+  executeAction: (action, conversationId = null) =>
+    ipcRenderer.invoke('execute-action', { action, conversationId }),
 
   // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {

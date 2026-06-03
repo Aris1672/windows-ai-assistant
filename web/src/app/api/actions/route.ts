@@ -56,12 +56,15 @@ export async function GET(request: Request) {
  * Called by the Electron main process after every action execution.
  * Fire-and-forget from the client — failure here never affects UX.
  *
- * Body:
+ * Body (matched to actual schema):
  * {
- *   action_label:  string          // human-readable label, e.g. "Insert text"
- *   context_app:   string | null   // active app at time of execution
- *   status:        'done' | 'error'
- *   error_message: string | null   // populated on status 'error'
+ *   action_type:     string          // raw type, e.g. "insert_text"
+ *   action_label:    string          // human label, e.g. "Insert text"
+ *   context_app:     string | null
+ *   context_folder:  string | null
+ *   status:          'done' | 'error'
+ *   conversation_id: string | null   // links action to its palette session
+ *   skill_id:        string | null   // set if action was triggered via a skill
  * }
  *
  * Response: the created row (201)
@@ -79,10 +82,13 @@ export async function POST(request: Request) {
   const { user, accessToken } = authResult
 
   let body: {
-    action_label?:  string
-    context_app?:   string | null
-    status?:        string
-    error_message?: string | null
+    action_type?:     string
+    action_label?:    string
+    context_app?:     string | null
+    context_folder?:  string | null
+    status?:          string
+    conversation_id?: string | null
+    skill_id?:        string | null
   }
 
   try {
@@ -99,11 +105,14 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from('actions')
     .insert({
-      user_id:       user.id,
-      action_label:  body.action_label.trim(),
-      context_app:   body.context_app   ?? null,
-      status:        body.status.trim(),
-      error_message: body.error_message ?? null,
+      user_id:         user.id,
+      action_type:     body.action_type     ?? null,
+      action_label:    body.action_label.trim(),
+      context_app:     body.context_app     ?? null,
+      context_folder:  body.context_folder  ?? null,
+      status:          body.status.trim(),
+      conversation_id: body.conversation_id ?? null,
+      skill_id:        body.skill_id        ?? null,
     })
     .select()
     .single()

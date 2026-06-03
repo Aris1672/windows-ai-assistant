@@ -6,8 +6,9 @@
  * 2. Filters to those that match the current context
  * 3. Fetches all active skills for the user
  * 4. Filters to those that should surface in the current context
- * 5. Builds a single merged system prompt to send to Claude
- * 6. Returns the matching skills list for the palette UI
+ * 5. Fetches recent conversations for the same context (workflow memory)
+ * 6. Builds a single merged system prompt to send to Claude
+ * 7. Returns the matching skills list for the palette UI
  */
 
 import { createUserClient } from './supabase'
@@ -31,6 +32,23 @@ export interface AssembledContext {
   matchingSkills: Skill[]
 }
 
+// ─── Recent activity types ────────────────────────────────────────────────────
+
+interface RecentMessage {
+  role: string
+  content: string
+  created_at: string
+}
+
+interface RecentConversation {
+  id: string
+  title: string | null
+  created_at: string
+  messages: RecentMessage[]
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
 export async function assembleContext(
   userId: string,
   bundle: ContextBundle,
@@ -38,45 +56,51 @@ export async function assembleContext(
 ): Promise<AssembledContext> {
   const supabase = createUserClient(accessToken)
 
-  // ── Fetch all active instructions ──────────────────────────────────────────
-  const { data: instructions, error: iErr } = await supabase
-    .from('instructions')
-    .select('label, instruction_text, context_app, context_folder')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true })
+  // ── Fetch all data in parallel ─────────────────────────────────────────────
+  const [instructionsResult, skillsResult, recentConversations] = await Promise.all([
+    supabase
+      .from('instructions')
+      .select('label, instruction_text, context_app, context_folder')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
 
-  if (iErr) throw new Error(`Failed to fetch instructions: ${iErr.message}`)
+    supabase
+      .from('skills')
+      .select('id, name, description, prompt, context_app, context_folder, is_destructive')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true }),
+
+    fetchRecentActivity(supabase, userId, bundle),
+  ])
+
+  if (instructionsResult.error) {
+    throw new Error(`Failed to fetch instructions: ${instructionsResult.error.message}`)
+  }
+  if (skillsResult.error) {
+    throw new Error(`Failed to fetch skills: ${skillsResult.error.message}`)
+  }
 
   // ── Filter instructions to those matching the current context ──────────────
-  const activeInstructions = (instructions ?? []).filter((inst) => {
-    if (inst.context_app && inst.context_app !== bundle.activeApp) return false
-    if (inst.context_folder && !bundle.activeFolder?.startsWith(inst.context_folder)) return false
+  const activeInstructions = (instructionsResult.data ?? []).filter((inst) => {
+    if (inst.context_app    && inst.context_app    !== bundle.activeApp)                   return false
+    if (inst.context_folder && !bundle.activeFolder?.startsWith(inst.context_folder))      return false
     return true
   })
 
-  // ── Fetch all active skills ─────────────────────────────────────────────────
-  const { data: skills, error: sErr } = await supabase
-    .from('skills')
-    .select('id, name, description, prompt, context_app, context_folder, is_destructive')
-    .eq('user_id', userId)
-    .eq('is_active', true)
-    .order('sort_order', { ascending: true })
-
-  if (sErr) throw new Error(`Failed to fetch skills: ${sErr.message}`)
-
   // ── Filter skills to those matching the current context ────────────────────
-  const matchingSkills: Skill[] = (skills ?? [])
+  const matchingSkills: Skill[] = (skillsResult.data ?? [])
     .filter((skill) => {
-      if (skill.context_app && skill.context_app !== bundle.activeApp) return false
-      if (skill.context_folder && !bundle.activeFolder?.startsWith(skill.context_folder)) return false
+      if (skill.context_app    && skill.context_app    !== bundle.activeApp)               return false
+      if (skill.context_folder && !bundle.activeFolder?.startsWith(skill.context_folder))  return false
       return true
     })
     .map((skill) => ({
-      id: skill.id,
-      name: skill.name,
-      description: skill.description,
-      prompt: skill.prompt,
+      id:            skill.id,
+      name:          skill.name,
+      description:   skill.description,
+      prompt:        skill.prompt,
       isDestructive: skill.is_destructive,
     }))
 
@@ -91,7 +115,7 @@ Always respond in the same language the user writes in.`)
   // Context block
   if (bundle.activeApp || bundle.activeFolder || bundle.selectedText) {
     parts.push(`\n## Current Context`)
-    if (bundle.activeApp) parts.push(`Active application: ${bundle.activeApp}`)
+    if (bundle.activeApp)    parts.push(`Active application: ${bundle.activeApp}`)
     if (bundle.activeFolder) parts.push(`Active folder: ${bundle.activeFolder}`)
     if (bundle.selectedText) parts.push(`Selected text:\n"""\n${bundle.selectedText}\n"""`)
   }
@@ -104,7 +128,7 @@ Always respond in the same language the user writes in.`)
     })
   }
 
-  // Available skills block (for Claude's awareness)
+  // Available skills block
   if (matchingSkills.length > 0) {
     parts.push(`\n## Available Skills\nThe user may invoke one of these named skills:`)
     matchingSkills.forEach((skill) => {
@@ -113,6 +137,28 @@ Always respond in the same language the user writes in.`)
   }
 
   parts.push(`\nIf the user invokes a skill by name, execute it using the selected text and current context.`)
+
+  // ── Workflow memory block ──────────────────────────────────────────────────
+  // Inject recent conversations from this context so Claude understands
+  // the user's patterns and can build on previous work.
+  if (recentConversations.length > 0) {
+    parts.push(`\n## Recent Activity`)
+    parts.push(`These are the user's recent interactions in this context. Use them to understand their workflow, preferred style, and patterns — but do not repeat what was already done unless asked.`)
+
+    recentConversations.forEach((convo) => {
+      const label = convo.title
+        ? `"${convo.title}"`
+        : 'Untitled session'
+      parts.push(`\n### ${label} — ${relativeTime(convo.created_at)}`)
+      convo.messages.forEach((msg) => {
+        const role = msg.role === 'user' ? 'User' : 'Assistant'
+        const text = msg.content.length > 200
+          ? msg.content.slice(0, 200) + '…'
+          : msg.content
+        parts.push(`${role}: ${text}`)
+      })
+    })
+  }
 
   // Actions block
   parts.push(`
@@ -185,4 +231,64 @@ User: "close this document"
     systemPrompt: parts.join('\n'),
     matchingSkills,
   }
+}
+
+// ─── Recent activity helpers ──────────────────────────────────────────────────
+
+/**
+ * Fetches the last 3 conversations for the same app (and folder if available),
+ * with up to 6 messages each. Non-fatal — returns [] on any error.
+ */
+async function fetchRecentActivity(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string,
+  bundle: ContextBundle
+): Promise<RecentConversation[]> {
+  // Only inject history when we have app context — otherwise too generic to be useful
+  if (!bundle.activeApp) return []
+
+  try {
+    let query = supabase
+      .from('conversations')
+      .select(`
+        id,
+        title,
+        created_at,
+        messages (
+          role,
+          content,
+          created_at
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('context_app', bundle.activeApp)
+      .order('created_at', { ascending: false })
+      .limit(3)
+
+    if (bundle.activeFolder) {
+      query = query.eq('context_folder', bundle.activeFolder)
+    }
+
+    const { data, error } = await query
+    if (error || !data?.length) return []
+
+    return (data as RecentConversation[]).map((convo) => ({
+      ...convo,
+      // Sort messages chronologically and cap at 6 (3 exchanges)
+      messages: [...(convo.messages ?? [])]
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        .slice(0, 6),
+    }))
+  } catch {
+    return []
+  }
+}
+
+function relativeTime(iso: string): string {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000
+  if (diff < 3600)   return 'just now'
+  if (diff < 86400)  return `${Math.floor(diff / 3600)}h ago`
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }

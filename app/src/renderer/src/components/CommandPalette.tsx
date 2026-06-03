@@ -27,7 +27,7 @@ interface Skill {
   is_active: boolean
 }
 
-// ─── Action metadata (mirrors main/actions.ts — keep in sync) ────────────────
+// ─── Action metadata ──────────────────────────────────────────────────────────
 
 const ACTION_REQUIRES_CONFIRM: Record<Action['type'], boolean> = {
   insert_text:       true,
@@ -45,7 +45,7 @@ const ACTION_LABELS: Record<Action['type'], string> = {
   open_url:          'Open URL',
 }
 
-// ─── Action XML parser ────────────────────────────────────────────────────────
+// ─── Parsers ──────────────────────────────────────────────────────────────────
 
 interface ParsedResponse {
   displayText: string
@@ -83,9 +83,7 @@ function SearchIcon(): JSX.Element {
     <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
       <path
         d="M6 1a5 5 0 100 10A5 5 0 006 1zM0 6a6 6 0 1110.89 3.477l3.817 3.816a.75.75 0 01-1.06 1.061l-3.817-3.816A6 6 0 010 6z"
-        fill="currentColor"
-        fillRule="evenodd"
-        clipRule="evenodd"
+        fill="currentColor" fillRule="evenodd" clipRule="evenodd"
       />
     </svg>
   )
@@ -137,11 +135,11 @@ function deriveActiveFolder(context: ContextBundle | null): string | null {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommandPalette({ token, onLogout }: CommandPaletteProps): JSX.Element {
-  const [query, setQuery]       = useState('')
-  const [context, setContext]   = useState<ContextBundle | null>(null)
+  const [query, setQuery]     = useState('')
+  const [context, setContext] = useState<ContextBundle | null>(null)
   const [rawResponse, setRawResponse] = useState('')
-  const [mode, setMode]         = useState<Mode>('idle')
-  const [visible, setVisible]   = useState(false)
+  const [mode, setMode]       = useState<Mode>('idle')
+  const [visible, setVisible] = useState(false)
 
   // Action state
   const [pendingAction, setPendingAction] = useState<Action | null>(null)
@@ -153,6 +151,16 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // Skill state
   const [skills, setSkills]             = useState<Skill[]>([])
   const [pendingSkill, setPendingSkill] = useState<Skill | null>(null)
+
+  // ── Workflow memory state ─────────────────────────────────────────────────
+  // conversationId is set after the first response completes.
+  // It's passed to executeAction so the action record links to its session.
+  const [conversationId, setConversationId] = useState<string | null>(null)
+
+  // Refs for async callbacks that need current values without stale closures
+  const lastQueryRef        = useRef('')                                      // query text at submit time
+  const rawResponseRef      = useRef('')                                      // mirrors rawResponse for use in async callbacks
+  const conversationCreationRef = useRef<Promise<string | null>>(Promise.resolve(null))
 
   const inputRef    = useRef<HTMLInputElement>(null)
   const responseRef = useRef<HTMLDivElement>(null)
@@ -179,12 +187,15 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       if (res.ok && Array.isArray(res.data)) {
         setSkills(res.data as Skill[])
       }
-    }).catch(() => {
-      // Non-fatal — palette works without skills
-    })
+    }).catch(() => {})
   }, [visible, token])
 
-  // ── Parse action once streaming finishes ──────────────────────────────────
+  // ── Keep rawResponseRef in sync ───────────────────────────────────────────
+  useEffect(() => {
+    rawResponseRef.current = rawResponse
+  }, [rawResponse])
+
+  // ── Parse action + save conversation when streaming finishes ─────────────
   useEffect(() => {
     if (mode !== 'done' && mode !== 'error') return
 
@@ -198,12 +209,42 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     if (action && !ACTION_REQUIRES_CONFIRM[action.type]) {
       runAction(action)
     }
+
+    // Save the conversation + messages — fire-and-forget
+    if (mode === 'done') {
+      const capturedQuery    = lastQueryRef.current
+      const capturedResponse = rawResponseRef.current
+
+      conversationCreationRef.current
+        .then(async (convId) => {
+          if (!convId || !capturedQuery) return
+
+          // Store the ID so executeAction can link to this session
+          setConversationId(convId)
+
+          // Batch-save both turns
+          await window.electronAPI.apiRequest({
+            url:     `${WEB_URL}/api/conversations/${convId}/messages`,
+            method:  'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: {
+              messages: [
+                { role: 'user',      content: capturedQuery    },
+                { role: 'assistant', content: capturedResponse },
+              ],
+            },
+          })
+        })
+        .catch(() => {})  // non-fatal
+    }
   }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Execute action ────────────────────────────────────────────────────────
   const runAction = useCallback(async (action: Action) => {
     setActionStatus('running')
-    const result = await window.electronAPI.executeAction(action)
+    // Pass conversationId so the action record links to this session.
+    // Uses functional ref pattern to avoid stale closure over state.
+    const result = await window.electronAPI.executeAction(action, conversationId)
     if (result.ok) {
       setActionStatus('done')
       setPendingAction(null)
@@ -211,23 +252,47 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       setActionStatus('error')
       setActionError(result.error ?? 'Action failed')
     }
-  }, [])
+  }, [conversationId])
 
   // ── Core streaming submit ─────────────────────────────────────────────────
-  // Accepts an explicit message so both the input field and skill buttons
-  // can submit through the same path.
   const submitQuery = useCallback((message: string): void => {
     if (!message || mode === 'thinking' || mode === 'streaming') return
 
+    // Reset all response state
     setMode('thinking')
     setRawResponse('')
+    rawResponseRef.current = ''
     setDisplayText('')
     setPendingAction(null)
     setPendingSkill(null)
+    setConversationId(null)
     setActionStatus('idle')
     setActionError(null)
     setConfirmed(false)
 
+    // Capture query for message saving after response
+    lastQueryRef.current = message
+
+    // Create the conversation record in parallel with the stream.
+    // We don't await it here — the done effect will pick up the resolved ID.
+    conversationCreationRef.current = window.electronAPI.apiRequest({
+      url:     `${WEB_URL}/api/conversations`,
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        title:          message.slice(0, 80),
+        context_app:    context?.activeApp    ?? null,
+        context_folder: deriveActiveFolder(context),
+        context_text:   context?.selectedText ?? null,
+      },
+    }).then(res => {
+      if (res.ok && res.data && typeof (res.data as { id?: string }).id === 'string') {
+        return (res.data as { id: string }).id
+      }
+      return null
+    }).catch(() => null)
+
+    // Fire the stream
     window.electronAPI.streamContext({
       url: `${WEB_URL}/api/context`,
       token,
@@ -236,7 +301,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         activeApp:        context?.activeApp        ?? null,
         activeFolder:     deriveActiveFolder(context),
         selectedText:     context?.selectedText     ?? null,
-        screenshotBase64: context?.screenshotBase64 ?? null,  // ← Vision
+        screenshotBase64: context?.screenshotBase64 ?? null,
         history: [],
       },
     })
@@ -304,11 +369,15 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       setVisible(true)
       setQuery('')
       setRawResponse('')
+      rawResponseRef.current = ''
       setDisplayText('')
       setMode('idle')
       setPendingAction(null)
       setPendingSkill(null)
       setSkills([])
+      setConversationId(null)
+      conversationCreationRef.current = Promise.resolve(null)
+      lastQueryRef.current = ''
       setActionStatus('idle')
       setActionError(null)
       setConfirmed(false)
@@ -381,7 +450,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                   : `"${context.selectedText}"`}
               </span>
             )}
-            {/* Vision indicator — shown when a screenshot was captured */}
             {context.screenshotBase64 && (
               <span
                 title="Screen captured — Claude can see what you're working on"
@@ -442,7 +510,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           </div>
         )}
 
-        {/* Destructive skill pre-execution confirm */}
+        {/* Destructive skill confirm */}
         {showSkillConfirm && (
           <div style={{
             display: 'flex',
@@ -461,15 +529,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             <button
               onClick={confirmSkill}
               style={{
-                padding: '0.2rem 0.625rem',
-                borderRadius: '4px',
-                border: '1px solid rgba(255,107,107,0.3)',
-                background: 'rgba(255,82,82,0.12)',
-                color: '#ff6b6b',
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                flexShrink: 0,
+                padding: '0.2rem 0.625rem', borderRadius: '4px',
+                border: '1px solid rgba(255,107,107,0.3)', background: 'rgba(255,82,82,0.12)',
+                color: '#ff6b6b', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', flexShrink: 0,
               }}
             >
               Confirm ↵
@@ -477,14 +539,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             <button
               onClick={() => setPendingSkill(null)}
               style={{
-                padding: '0.2rem 0.5rem',
-                borderRadius: '4px',
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'transparent',
-                color: 'rgba(255,255,255,0.35)',
-                fontSize: '0.75rem',
-                cursor: 'pointer',
-                flexShrink: 0,
+                padding: '0.2rem 0.5rem', borderRadius: '4px',
+                border: '1px solid rgba(255,255,255,0.08)', background: 'transparent',
+                color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0,
               }}
             >
               Cancel
@@ -505,11 +562,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
-                if (pendingSkill) {
-                  confirmSkill()
-                } else {
-                  submit()
-                }
+                if (pendingSkill) { confirmSkill() } else { submit() }
               }
             }}
             placeholder="Ask anything…"
@@ -521,10 +574,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           {busy && (
             <button
               className="cancel-btn"
-              onClick={() => {
-                window.electronAPI.cancelStream()
-                setMode('idle')
-              }}
+              onClick={() => { window.electronAPI.cancelStream(); setMode('idle') }}
             >
               Stop
             </button>
@@ -539,9 +589,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           <div className="response-area" ref={responseRef}>
             {mode === 'thinking' && !hasResponse && (
               <div className="thinking-dots">
-                <span className="dot" />
-                <span className="dot" />
-                <span className="dot" />
+                <span className="dot" /><span className="dot" /><span className="dot" />
               </div>
             )}
             {hasResponse && mode !== 'error' && (
@@ -560,7 +608,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 {actionStatus === 'error' && actionError && (
                   <span className="action-error">{actionError}</span>
                 )}
-
                 {needsConfirm && !confirmed ? (
                   <div className="action-confirm">
                     <span className="action-confirm-label">
@@ -568,10 +615,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                     </span>
                     <button
                       className="action-btn action-btn--confirm"
-                      onClick={() => {
-                        setConfirmed(true)
-                        runAction(pendingAction!)
-                      }}
+                      onClick={() => { setConfirmed(true); runAction(pendingAction!) }}
                       disabled={actionIsRunning}
                     >
                       {actionIsRunning ? 'Running…' : 'Confirm ↵'}
@@ -585,8 +629,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                   </div>
                 ) : needsConfirm && confirmed ? (
                   <div className="action-running">
-                    <SpinnerIcon />
-                    <span>{actionLabel}…</span>
+                    <SpinnerIcon /><span>{actionLabel}…</span>
                   </div>
                 ) : (
                   <div className="action-running">
@@ -596,9 +639,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
               </div>
             )}
 
-            {actionStatus === 'done' && (
-              <p className="action-done">✓ Done</p>
-            )}
+            {actionStatus === 'done' && <p className="action-done">✓ Done</p>}
           </div>
         )}
 
