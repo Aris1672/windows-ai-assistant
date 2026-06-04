@@ -13,6 +13,7 @@ import {
   History,
   LogOut,
   ChevronRight,
+  Shield,
 } from 'lucide-react'
 
 const NAV = [
@@ -22,7 +23,7 @@ const NAV = [
   { href: '/dashboard/history',      label: 'History',      icon: History },
 ]
 
-export default function Sidebar({ userEmail }: { userEmail: string }) {
+export default function Sidebar({ userEmail, isAdmin = false }: { userEmail: string; isAdmin?: boolean }) {
   const pathname = usePathname()
   const router   = useRouter()
 
@@ -76,6 +77,19 @@ export default function Sidebar({ userEmail }: { userEmail: string }) {
       {/* Footer */}
       <div style={{ padding: '0.75rem 0.5rem 1.25rem' }}>
         <hr className="divider" style={{ margin: '0 0.25rem 0.75rem' }} />
+
+        {/* Admin panel link — only shown to admins */}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="nav-item"
+            style={{ marginBottom: '4px', color: 'var(--error)' }}
+          >
+            <Shield size={15} strokeWidth={1.8} />
+            Admin panel
+          </Link>
+        )}
+
         <div style={{
           padding: '0 0.5rem',
           marginBottom: '0.5rem',
