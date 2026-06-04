@@ -50,7 +50,7 @@ async function toggleBlock(formData: FormData) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const ROLES = ['user', 'administrator']
+const ROLES = ['user', 'admin']
 const TIERS = ['free', 'pro', 'enterprise']
 
 const confirmBtnStyle = {
@@ -182,7 +182,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                   <input type="hidden" name="id" value={u.id} />
                   <select
                     name="role"
-                    defaultValue={u.role ?? 'user'}
+                    key={u.role ?? 'user'} defaultValue={u.role ?? 'user'}
                     className="form-input"
                     style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', flex: 1 }}
                   >
@@ -196,7 +196,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Search
                   <input type="hidden" name="id" value={u.id} />
                   <select
                     name="tier"
-                    defaultValue={u.tier ?? 'free'}
+                    key={u.tier ?? 'free'} defaultValue={u.tier ?? 'free'}
                     className="form-input"
                     style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem', flex: 1 }}
                   >
