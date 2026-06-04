@@ -6,9 +6,9 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phase 1, Phase 2, and most of Phase 3 complete. Full web app live on Vercel. Electron app built and working — tray, hotkey, login, context detection, SSE streaming all functional. Write-action layer complete and deployed: `actions.ts`, `execute-action` IPC, confirm UI, and assembler system prompt all done. The palette can read context, answer questions, insert text, copy to clipboard, and open files/folders/URLs. Russia compliance complete: all Supabase traffic now goes through Vercel for both Electron and web — `supabase-browser.ts` deleted, dashboard pages refactored to use API routes, `auth.ts` supports both Bearer token (Electron) and cookie (web) auth.
+**Current status:** Phases 1–4 complete. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer now live: real-time token tracking after every Claude call, trial/subscription schema in Supabase, 7-day free trial auto-assigned on signup. Token cost validated at ~$0.01–0.02 per query using Claude Sonnet 4-6 ($0.0000041/token). Currently in 2-week beta test with friends to validate real-world token consumption before public launch.
 
-**Next immediate step:** Pre-built skill templates — seed Developer, Writer, Finance, Support packs so new users have instant value (Phase 4, item 20).
+**Next immediate step:** Build admin billing dashboard (`/admin/billing`) — visualise per-user token spend, trial status, days remaining, and cost over time. After 2-week test: email templates for trial expiry reminders + subscription activation logic.
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -27,7 +27,7 @@ root/                          ← npm workspaces root
 │       │   │   ├── conversations/         ← ✅ POST — create conversation per palette session
 │       │   │   ├── conversations/[id]/messages/ ← ✅ POST — batch save message exchanges
 │       │   │   ├── auth/signout/  ← ✅ POST — server-side sign out (done)
-│       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection
+│       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection, real-time token tracking
 │       │   ├── dashboard/     ← ✅ All pages fully wired to real data
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
@@ -38,7 +38,8 @@ root/                          ← npm workspaces root
 │       └── lib/
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
 │           ├── auth.ts            ← ✅ Done (requireAuth: Bearer token + cookie fallback, jsonError, jsonOk)
-│           └── assembler.ts       ← ✅ Done (instructions + skills + workflow memory injection)
+│           ├── assembler.ts       ← ✅ Done (instructions + skills + workflow memory injection)
+│           └── trial-subscription.ts ← ✅ Done (getUserSubscriptionStatus, markTrialExpiredIfNeeded, activateSubscription)
 └── app/                       ← Electron app (Windows desktop) — core working ✅
     └── src/
         ├── main/
@@ -314,8 +315,17 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Workflow memory — conversations + messages saved per session; assembler injects recent activity into system prompt
 - [x] Action history synced to Supabase — POST /api/actions called after every execution, linked to conversation_id
 - [x] Pre-built skill templates (Developer, Writer, Finance, Support, etc.)
+- [x] Token tracking schema — token_usage + billing_records tables, RLS policies, increment_user_tokens() function
+- [x] Real-time token tracking — /api/context updated to capture input/output tokens after every Claude call
+- [x] Trial/subscription system — 7-day trial auto-created on signup; subscription_status, trial_ended_at, subscription_ends_at fields live
+- [x] /api/actions updated — accepts token counts, creates token_usage records, updates user monthly totals
+- [x] Token cost validated — Claude Sonnet 4-6 at ~$0.0000041/token; avg query costs $0.01–0.02; €19.90/month pricing confirmed healthy
+- [ ] Admin billing dashboard (/admin/billing) — per-user token spend, trial status, days remaining, cost charts
 - [ ] Usage analytics in admin panel
-- [ ] Subscription / billing layer
+- [ ] Subscription activation logic — activateSubscription() helper built, needs payment trigger wiring
+- [ ] Trial expiry email — "Your trial expires in 2 days" reminder (Vercel Cron + email template)
+- [ ] Manual billing records — admin logs payments via /admin/billing until Stripe is integrated
+- [ ] Stripe integration (future — after beta validation)
 
 ---
 
@@ -342,6 +352,11 @@ When `Ctrl + Space` fires, the Electron app captures:
 18. ✅ Screenshot + Claude Vision 
 19. ✅ Workflow memory + action history sync 
 20. ✅ Pre-built skill templates ← **DONE**
+21. ✅ Analytics & billing schema — token_usage, billing_records, trial/subscription columns ← **DONE**
+22. ✅ Real-time token tracking — /api/context captures tokens after every Claude call ← **DONE**
+23. [ ] Admin billing dashboard (/admin/billing) ← **NEXT**
+24. [ ] Trial expiry email reminders
+25. [ ] Subscription activation logic
 
 ---
 
@@ -379,6 +394,47 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Phase 4 complete — all 20 items done.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅
-Remaining open items: Usage analytics, Subscription/billing, Multilingual UI, Windows installer.*
+*Last updated: Phase 5 (Analytics & Billing) in progress — token tracking live, beta test running.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅
+Remaining open items: Admin billing dashboard, Trial expiry emails, Subscription activation, Multilingual UI, Windows installer.*
+
+## Pricing & Billing Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Pricing model | 7-day free trial → €19.90/month | Removes adoption friction; predictable revenue |
+| Token model | Monthly flat fee (not pay-as-you-go) | Encourages deep usage once paid; simpler billing |
+| Token rate | $0.0000041/token (Claude Sonnet 4-6) | Validated from real Anthropic console: $0.20 for ~49k tokens |
+| Avg cost per query | ~$0.01–0.02 | ~500 input + 200 output tokens typical |
+| Avg cost per user/month | ~$0.50–$2.50 (50–500 actions) | At €19.90 charge: 8–40× margin |
+| Trial duration | 7 days | Long enough to feel value; short enough to convert |
+| Renewal flow | Manual "renew?" email link (for now) | No Stripe yet; validate manually during beta |
+| Beta test plan | 2 weeks with friends | Collect real token consumption data before public launch |
+
+## Supabase Schema Changes (Phase 5)
+
+### New columns on `users` table
+```
+is_admin                BOOLEAN          DEFAULT false
+trial_started_at        TIMESTAMPTZ      DEFAULT NOW()
+trial_ended_at          TIMESTAMPTZ      DEFAULT NOW() + 7 days
+subscription_status     VARCHAR(50)      DEFAULT 'trial'   -- 'trial' | 'active' | 'cancelled' | 'expired'
+subscription_started_at TIMESTAMPTZ
+subscription_ends_at    TIMESTAMPTZ
+last_payment_at         TIMESTAMPTZ
+tokens_used_this_month  INT              DEFAULT 0
+tokens_used_all_time    INT              DEFAULT 0
+estimated_cost_usd      DECIMAL(10,4)    DEFAULT 0.0
+```
+
+### New table: `token_usage`
+Records every Claude call — input tokens, output tokens, cost, action type, model.
+
+### New table: `billing_records`
+Manual payment log — amount, date, period, status, notes.
+
+### New Postgres function: `increment_user_tokens(user_id, tokens_count, cost)`
+Called after every Claude call to update user's monthly totals in real-time.
+
+### Admin account
+`assistant@assistant24.tech` — `is_admin = true`, `role = 'admin'`
