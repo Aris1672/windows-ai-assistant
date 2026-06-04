@@ -12,6 +12,7 @@ import type { ContextBundle } from './context-detector'
 import { store } from './store'
 import { executeAction, ACTION_LABELS } from './actions'
 import type { Action } from './actions'
+import { initAutoUpdater } from './updater'                // ← NEW
 
 const WEB_URL = process.env['VITE_WEB_URL'] ?? 'https://your-app.vercel.app'
 
@@ -30,8 +31,6 @@ app.on('second-instance', () => {
 })
 
 // ─── Last known context ───────────────────────────────────────────────────────
-// Captured just before the palette opens — used by action sync to record
-// which app and folder were active when an action ran.
 
 let lastContext: ContextBundle | null = null
 
@@ -45,6 +44,13 @@ app.whenReady().then(async () => {
   })
 
   createPaletteWindow()
+
+  // ── Auto-updater (production only) ─────────────────────────────────────── NEW
+  if (!app.isPackaged === false) {
+    const win = getPaletteWindow()
+    if (win) initAutoUpdater(win)
+  }
+  // ── End auto-updater ────────────────────────────────────────────────────
 
   createTray({
     onShowPalette: async () => {
@@ -99,8 +105,6 @@ ipcMain.on('open-dashboard', () => {
 })
 
 // ─── Action Executor ─────────────────────────────────────────────────────────
-// Payload is now { action, conversationId } so the sync record can link back
-// to the palette session that produced the action.
 
 ipcMain.handle(
   'execute-action',

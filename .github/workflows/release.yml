@@ -1,0 +1,42 @@
+name: Release
+
+# Triggers on any tag like v0.1.0, v1.2.3
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-win:
+    name: Build & publish Windows installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Node ──────────────────────────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # ── Root workspace deps ──────────────────────────────────────────────
+      - name: Install root dependencies
+        run: npm ci
+
+      # ── Electron app deps ────────────────────────────────────────────────
+      - name: Install app dependencies
+        working-directory: app
+        run: npm ci
+
+      # ── Build + publish to GitHub Releases ──────────────────────────────
+      # electron-builder reads GH_TOKEN to create/upload to the GitHub release.
+      # The tag name becomes the release name automatically.
+      - name: Build & publish
+        working-directory: app
+        run: npm run release:win
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          VITE_WEB_URL: ${{ secrets.VITE_WEB_URL }}
