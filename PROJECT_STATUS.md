@@ -6,9 +6,9 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phases 1–4 complete. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer now live: real-time token tracking after every Claude call, trial/subscription schema in Supabase, 7-day free trial auto-assigned on signup. Token cost validated at ~$0.01–0.02 per query using Claude Sonnet 4-6 ($0.0000041/token). Currently in 2-week beta test with friends to validate real-world token consumption before public launch.
+**Current status:** Phases 1–5 complete. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends.
 
-**Next immediate step:** Build admin billing dashboard (`/admin/billing`) — visualise per-user token spend, trial status, days remaining, and cost over time. After 2-week test: email templates for trial expiry reminders + subscription activation logic.
+**Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron), multilingual UI (`i18next`), auto-updater (`electron-updater`), Windows installer (`.exe`).
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -31,7 +31,7 @@ root/                          ← npm workspaces root
 │       │   ├── dashboard/     ← ✅ All pages fully wired to real data
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
-│       │   └── admin/         ← ✅ Done (overview, users, analytics, settings)
+│       │   └── admin/         ← ✅ Done (overview, users, analytics, billing + activation, settings)
 │       ├── components/
 │       │   ├── Sidebar.tsx        ← ✅ Done
 │       │   └── AdminSidebar.tsx   ← ✅ Done
@@ -227,7 +227,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 | `/dashboard/billing` | Subscription plan (future) | Users |
 | `/admin` | Admin dashboard | Administrator |
 | `/admin/users` | View and manage all users | Administrator |
-| `/admin/analytics` | Usage stats | Administrator |
+| `/admin/analytics` | Usage stats — actions/day, top apps, action types | Administrator |
+| `/admin/billing` | Token spend, trial status, subscription activation, payment records | Administrator |
 | `/admin/settings` | Global app configuration | Administrator |
 | `/api/chat` | Claude proxy route | Internal |
 | `/api/context` | Context bundle receiver + assembler | Internal |
@@ -320,11 +321,11 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Trial/subscription system — 7-day trial auto-created on signup; subscription_status, trial_ended_at, subscription_ends_at fields live
 - [x] /api/actions updated — accepts token counts, creates token_usage records, updates user monthly totals
 - [x] Token cost validated — Claude Sonnet 4-6 at ~$0.0000041/token; avg query costs $0.01–0.02; €19.90/month pricing confirmed healthy
-- [ ] Admin billing dashboard (/admin/billing) — per-user token spend, trial status, days remaining, cost charts
-- [ ] Usage analytics in admin panel
-- [ ] Subscription activation logic — activateSubscription() helper built, needs payment trigger wiring
+- [x] Admin billing dashboard (/admin/billing) — per-user token spend, trial status, days remaining, payment records
+- [x] Usage analytics in admin panel — actions/day chart, status breakdown, top apps, top action types
+- [x] Subscription activation — admin clicks "Activate" in /admin/billing; flips status to active, sets subscription_ends_at, resets tokens, auto-logs billing_records row
 - [ ] Trial expiry email — "Your trial expires in 2 days" reminder (Vercel Cron + email template)
-- [ ] Manual billing records — admin logs payments via /admin/billing until Stripe is integrated
+- [ ] Manual billing records — admin logs payments via /admin/billing until Stripe is integrated ← auto-logged on activation now
 - [ ] Stripe integration (future — after beta validation)
 
 ---
@@ -354,9 +355,9 @@ When `Ctrl + Space` fires, the Electron app captures:
 20. ✅ Pre-built skill templates ← **DONE**
 21. ✅ Analytics & billing schema — token_usage, billing_records, trial/subscription columns ← **DONE**
 22. ✅ Real-time token tracking — /api/context captures tokens after every Claude call ← **DONE**
-23. [ ] Admin billing dashboard (/admin/billing) ← **NEXT**
+23. ✅ Admin billing dashboard (/admin/billing) — token spend, trial status, payment records ← **DONE**
 24. [ ] Trial expiry email reminders
-25. [ ] Subscription activation logic
+25. ✅ Subscription activation — "Activate" button in billing dashboard, auto-logs billing_records ← **DONE**
 
 ---
 
@@ -394,9 +395,9 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Phase 5 (Analytics & Billing) in progress — token tracking live, beta test running.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅
-Remaining open items: Admin billing dashboard, Trial expiry emails, Subscription activation, Multilingual UI, Windows installer.*
+*Last updated: Phase 5 (Analytics & Billing) complete — all billing infrastructure live.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅
+Remaining open items: Trial expiry emails, Multilingual UI, Auto-updater, Windows installer.*
 
 ## Pricing & Billing Decisions
 
