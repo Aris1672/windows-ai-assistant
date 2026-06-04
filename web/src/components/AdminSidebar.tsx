@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
-import { LayoutDashboard, Users, BarChart2, Settings, LogOut, ChevronRight, ArrowLeft } from 'lucide-react'
+import { LayoutDashboard, Users, BarChart2, CreditCard, Settings, LogOut, ChevronRight, ArrowLeft } from 'lucide-react'
 
 const NAV = [
   { href: '/admin',           label: 'Overview',  icon: LayoutDashboard },
   { href: '/admin/users',     label: 'Users',     icon: Users           },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart2       },
+  { href: '/admin/billing',   label: 'Billing',   icon: CreditCard      },
   { href: '/admin/settings',  label: 'Settings',  icon: Settings        },
 ]
 
