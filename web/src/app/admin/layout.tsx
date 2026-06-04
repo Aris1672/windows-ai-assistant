@@ -12,11 +12,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('users')
-    .select('role')
+    .select('role, is_admin')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'administrator') redirect('/dashboard')
+  const isAdmin = profile?.role === 'administrator' || profile?.is_admin === true
+  if (!isAdmin) redirect('/dashboard')
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg)' }}>
