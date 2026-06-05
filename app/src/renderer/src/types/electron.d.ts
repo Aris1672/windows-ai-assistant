@@ -1,4 +1,4 @@
-import type { ElectronAPI, ContextBundle } from '../../../preload'
+import type { ElectronAPI, ContextBundle, Action } from '../../../preload'
 
 declare global {
   interface Window {
@@ -6,4 +6,4 @@ declare global {
   }
 }
 
-export type { ContextBundle }
+export type { ContextBundle, Action }

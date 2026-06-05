@@ -124,6 +124,26 @@ function parseSSEChunk(raw: string): ParsedChunk {
   return { text, serverError }
 }
 
+// ─── System shell detector ────────────────────────────────────────────────────
+// Returns true for file managers and OS shells — not "real work" apps.
+// When the active app is a system shell, no app-filtered skills are shown.
+
+const SYSTEM_SHELLS = [
+  'проводник',   // Windows Explorer (Russian)
+  'explorer',    // Windows Explorer (English)
+  'finder',      // macOS Finder
+  'nautilus',    // GNOME Files
+  'dolphin',     // KDE Dolphin
+  'thunar',      // XFCE Thunar
+  'files',       // GNOME Files alt name
+]
+
+function isSystemShell(app: string | null): boolean {
+  if (!app) return true
+  const a = app.toLowerCase()
+  return SYSTEM_SHELLS.some(shell => a.includes(shell))
+}
+
 // ─── Semantic app matcher ─────────────────────────────────────────────────────
 // Matches a user-typed filter (e.g. "Foxit PDF") against the active app name
 // (e.g. "Foxit PDF Reader 12.1.0") using word-level fuzzy matching.
@@ -205,6 +225,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   const matchingSkills = skills.filter(skill => {
     if (!skill.is_active) return false
+    if (isSystemShell(context?.activeApp ?? null)) return false
     if (!appMatchesFilter(skill.context_app, context?.activeApp ?? null)) return false
     if (skill.context_folder && !activeFolder?.startsWith(skill.context_folder)) return false
     return true
