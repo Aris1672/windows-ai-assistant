@@ -450,7 +450,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   return (
     <div className={`palette-root ${visible ? 'palette-root--visible' : ''}`}>
-      <div className={`palette ${visible ? 'palette--visible' : ''}`}>
+      <div className={`palette ${visible ? 'palette--visible' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Context strip */}
         {context?.activeApp && (
@@ -603,7 +603,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
         {/* Response area */}
         {(hasResponse || mode === 'thinking') && (
-          <div className="response-area" ref={responseRef}>
+          <div className="response-area" ref={responseRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
             {mode === 'thinking' && !hasResponse && (
               <div className="thinking-dots">
                 <span className="dot" /><span className="dot" /><span className="dot" />
