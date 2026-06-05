@@ -242,6 +242,9 @@ body {
 .palette {
   width: 640px;
   max-width: calc(100vw - 32px);
+  max-height: calc(85vh - 1rem); /* never exceed viewport — leaves room for padding-top: 15vh */
+  display: flex;
+  flex-direction: column;
   background: rgba(13, 13, 17, 0.97);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -336,8 +339,10 @@ body {
 
 /* ── Response area ─────────────────────────────────────────────────────────── */
 .response-area {
+  flex: 1;
+  min-height: 0;        /* critical — allows flex item to shrink below content size */
   max-height: 320px;
-  overflow-y: overlay; /* overlaid — takes no layout space, only appears when content overflows */
+  overflow-y: auto;     /* changed from overlay — more reliable cross-platform */
   padding: 0.875rem 1rem 0.75rem;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
