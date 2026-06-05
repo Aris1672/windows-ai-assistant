@@ -36,3 +36,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           VITE_WEB_URL: ${{ secrets.VITE_WEB_URL }}
+          EP_RELEASE_TAG_NAME: ${{ github.ref_name }}
+          EP_DRAFT: false
