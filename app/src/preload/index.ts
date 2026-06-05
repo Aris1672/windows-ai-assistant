@@ -76,6 +76,10 @@ export interface ElectronAPI {
   onPaletteShown:  (callback: () => void) => () => void
   onPaletteHidden: (callback: () => void) => () => void
   onContextData:   (callback: (ctx: ContextBundle) => void) => () => void
+
+  // ── Auto-updater ─────────────────────────────────────────────────────────
+  onUpdaterEvent: (callback: (ev: Record<string, string>) => void) => () => void
+  updaterInstall: () => void
 }
 
 // ─── Implementation ──────────────────────────────────────────────────────────
@@ -126,6 +130,14 @@ const api: ElectronAPI = {
     ipcRenderer.on('context-data', fn)
     return () => ipcRenderer.off('context-data', fn)
   },
+
+  // ── Auto-updater ──────────────────────────────────────────────────────────
+  onUpdaterEvent: (cb) => {
+    const fn = (_: Electron.IpcRendererEvent, ev: Record<string, string>) => cb(ev)
+    ipcRenderer.on('updater-event', fn)
+    return () => ipcRenderer.off('updater-event', fn)
+  },
+  updaterInstall: () => ipcRenderer.send('updater-install'),
 }
 
 // Expose under window.electronAPI — never expose the raw ipcRenderer

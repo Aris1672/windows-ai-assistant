@@ -152,6 +152,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [skills, setSkills]             = useState<Skill[]>([])
   const [pendingSkill, setPendingSkill] = useState<Skill | null>(null)
 
+  // Auto-updater state — set when a new version is downloaded and ready
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null)
+
   // ── Workflow memory state ─────────────────────────────────────────────────
   // conversationId is set after the first response completes.
   // It's passed to executeAction so the action record links to its session.
@@ -414,6 +417,16 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     return () => window.removeEventListener('keydown', onKey)
   }, [mode, pendingSkill])
 
+  // ── Auto-updater listener ─────────────────────────────────────────────────
+  useEffect(() => {
+    const off = window.electronAPI.onUpdaterEvent((ev) => {
+      if (ev.type === 'downloaded') {
+        setUpdateVersion(ev.version ?? 'new version')
+      }
+    })
+    return () => { off() }
+  }, [])
+
   // ── Auto-scroll response ───────────────────────────────────────────────────
   useEffect(() => {
     if (responseRef.current) {
@@ -644,6 +657,39 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             )}
 
             {actionStatus === 'done' && <p className="action-done">✓ Done</p>}
+          </div>
+        )}
+
+        {/* Update banner */}
+        {updateVersion && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.4rem 0.875rem',
+            background: 'rgba(0, 245, 160, 0.07)',
+            borderTop: '1px solid rgba(0, 245, 160, 0.15)',
+            flexShrink: 0,
+          }}>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(0, 245, 160, 0.85)' }}>
+              ↑ v{updateVersion} ready to install
+            </span>
+            <button
+              onClick={() => window.electronAPI.updaterInstall()}
+              style={{
+                padding: '0.2rem 0.625rem',
+                borderRadius: '4px',
+                border: '1px solid rgba(0, 245, 160, 0.3)',
+                background: 'rgba(0, 245, 160, 0.12)',
+                color: 'rgb(0, 245, 160)',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              Restart &amp; update
+            </button>
           </div>
         )}
 
