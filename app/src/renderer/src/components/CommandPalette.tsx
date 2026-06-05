@@ -124,6 +124,38 @@ function parseSSEChunk(raw: string): ParsedChunk {
   return { text, serverError }
 }
 
+// ─── Semantic app matcher ─────────────────────────────────────────────────────
+// Matches a user-typed filter (e.g. "Foxit PDF") against the active app name
+// (e.g. "Foxit PDF Reader 12.1.0") using word-level fuzzy matching.
+// Rules:
+//   1. Direct substring check in either direction
+//   2. Every significant word in the filter must appear (as a substring) in
+//      at least one word of the active app name
+// This means "excel" matches "Microsoft Excel 365", "pdf" matches "Foxit PDF
+// Reader", "foxit pdf" matches "Foxit PDF Reader 12", etc.
+
+function appMatchesFilter(filter: string | null, activeApp: string | null): boolean {
+  if (!filter) return true   // no filter → always visible
+  if (!activeApp) return false
+
+  const normalize = (s: string): string =>
+    s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+
+  const f = normalize(filter)
+  const a = normalize(activeApp)
+
+  // Fast path: one contains the other
+  if (a.includes(f) || f.includes(a)) return true
+
+  // Word-level: every meaningful word in filter must match some word in app
+  const noise = new Set(['the', 'a', 'an', 'and', 'or', 'for', 'of', 'in', 'on', 'at'])
+  const fWords = f.split(' ').filter(w => w.length > 1 && !noise.has(w))
+  const aWords = a.split(' ').filter(w => w.length > 1 && !noise.has(w))
+
+  return fWords.length > 0 &&
+    fWords.every(fw => aWords.some(aw => aw.includes(fw) || fw.includes(aw)))
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function deriveActiveFolder(context: ContextBundle | null): string | null {
@@ -173,7 +205,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   const matchingSkills = skills.filter(skill => {
     if (!skill.is_active) return false
-    if (skill.context_app    && skill.context_app    !== context?.activeApp)     return false
+    if (!appMatchesFilter(skill.context_app, context?.activeApp ?? null)) return false
     if (skill.context_folder && !activeFolder?.startsWith(skill.context_folder)) return false
     return true
   })
