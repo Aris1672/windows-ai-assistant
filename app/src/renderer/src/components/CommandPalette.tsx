@@ -319,13 +319,31 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const submitQuery = useCallback((message: string): void => {
     if (!message || mode === 'thinking' || mode === 'streaming') return
 
+    // ── Build history snapshot BEFORE any state updates ─────────────────────
+    // We read `messages` (current committed turns) and the just-finished
+    // exchange from refs — both are synchronously available right now.
+    // After setMessages() fires, React state is async and we can't rely on it.
+    const historySnapshot: { role: 'user' | 'assistant'; content: string }[] = [
+      // All previously committed turns
+      ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.text })),
+      // The exchange that just finished (about to be committed below)
+      ...(lastQueryRef.current && rawResponseRef.current ? (() => {
+        const { displayText: prevDisplay } = parseActionFromResponse(rawResponseRef.current)
+        const prevText = prevDisplay || rawResponseRef.current
+        return [
+          { role: 'user'      as const, content: lastQueryRef.current },
+          { role: 'assistant' as const, content: prevText },
+        ]
+      })() : []),
+    ]
+
     // Commit the previous exchange (if any) to the conversation thread
     if (lastQueryRef.current && rawResponseRef.current) {
       const { displayText: prevDisplay } = parseActionFromResponse(rawResponseRef.current)
       const prevText = prevDisplay || rawResponseRef.current
       setMessages(prev => [
         ...prev,
-        { role: 'user' as const,      text: lastQueryRef.current },
+        { role: 'user'      as const, text: lastQueryRef.current },
         { role: 'assistant' as const, text: prevText },
       ])
     }
@@ -365,7 +383,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       return null
     }).catch(() => null)
 
-    // Fire the stream — history is [] for now; extend when assembler supports it
+    // Fire the stream — pass full history so Claude remembers previous turns
     window.electronAPI.streamContext({
       url: `${WEB_URL}/api/context`,
       token,
@@ -375,10 +393,10 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         activeFolder:     deriveActiveFolder(context),
         selectedText:     context?.selectedText     ?? null,
         screenshotBase64: context?.screenshotBase64 ?? null,
-        history: [],
+        history: historySnapshot,
       },
     })
-  }, [context, token, mode])
+  }, [context, token, mode, messages])
 
   // ── Submit from input field ───────────────────────────────────────────────
   const submit = useCallback((): void => {

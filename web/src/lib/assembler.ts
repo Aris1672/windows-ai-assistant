@@ -221,6 +221,21 @@ Never just display transformed text in the response without an action. The user'
 
 The transformed text goes ONLY inside the action tag, not repeated in the response body.
 
+### CRITICAL — Nothing after the action tag, ever
+
+The \`<action>\` block must be the absolute last thing in your response.
+Never write any text, questions, or offers after the closing \`</action>\` tag.
+Put your follow-up offer or question BEFORE the action tag, not after it.
+
+Correct:
+Here's the rewritten version. Want me to adjust the tone?
+<action type="insert_text">…result…</action>
+
+Wrong:
+Here's the rewritten version.
+<action type="insert_text">…result…</action>
+Would you like any changes?
+
 ### Examples
 
 User: "rewrite this more formally"
