@@ -544,7 +544,25 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         {/* Context strip */}
         {context?.activeApp && (
           <div className="context-strip">
-            <span className="context-app">{context.activeApp}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0 }}>
+              <span className="context-app">{context.activeApp}</span>
+              {deriveActiveFolder(context) && (
+                <span
+                  title={deriveActiveFolder(context) ?? ''}
+                  style={{
+                    fontSize: '0.62rem',
+                    color: 'rgba(255,255,255,0.32)',
+                    letterSpacing: '0.02em',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '340px',
+                  }}
+                >
+                  {deriveActiveFolder(context)}
+                </span>
+              )}
+            </div>
             {context.selectedText && (
               <span className="context-excerpt">
                 {context.selectedText.length > 72
