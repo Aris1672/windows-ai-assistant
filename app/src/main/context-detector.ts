@@ -45,10 +45,6 @@ export async function getContext(): Promise<ContextBundle> {
 }
 
 // ─── Screenshot ───────────────────────────────────────────────────────────────
-// Uses Electron's desktopCapturer to grab the primary screen as a PNG.
-// Thumbnail is capped at 1280 × 800 — enough detail for Claude Vision,
-// small enough to keep latency low (~200–500 KB base64 for a typical screen).
-// Returns null on any failure so the rest of the context still works.
 
 async function captureScreenshot(): Promise<string | null> {
   try {
@@ -59,14 +55,11 @@ async function captureScreenshot(): Promise<string | null> {
 
     if (!sources.length) return null
 
-    // sources[0] is always the primary / full-desktop source
     const png = sources[0].thumbnail.toPNG()
     if (!png.length) return null
 
     return png.toString('base64')
   } catch {
-    // desktopCapturer can fail if the app lacks screen-capture permission
-    // (rare on Windows, possible on macOS). Non-fatal — return null.
     return null
   }
 }
@@ -82,13 +75,12 @@ interface WindowInfo {
 }
 
 async function getActiveWindow(): Promise<WindowInfo | null> {
-  // Try active-win first (cross-platform, uses prebuilt binaries)
   try {
     const { default: activeWin } = await import('active-win')
     const result = await activeWin()
     if (result) return result as WindowInfo
   } catch {
-    // active-win may not be available on all setups — fall back to PowerShell
+    // fall back to PowerShell
   }
 
   return getActiveWindowPowerShell()
@@ -132,15 +124,7 @@ async function getActiveWindowPowerShell(): Promise<WindowInfo | null> {
 // ─── Selected Text ───────────────────────────────────────────────────────────
 
 async function captureSelectedText(): Promise<string | null> {
-  const previous = clipboard.readText()
-
   try {
-    // TODO: Replace with keyboard simulation for true selection capture:
-    //   import { keyboard, Key } from '@nut-tree/nut-js'
-    //   await keyboard.pressKey(Key.LeftControl, Key.C)
-    //   await keyboard.releaseKey(Key.LeftControl, Key.C)
-    //   await new Promise(r => setTimeout(r, 80))
-
     const text = clipboard.readText()
     return text?.trim() || null
   } catch {
@@ -151,7 +135,7 @@ async function captureSelectedText(): Promise<string | null> {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Fast path: some apps (VS Code, Notepad++, etc.) embed the full path in
- *  their window title. Regex looks for drive-letter paths and UNC paths. */
+ *  their window title. */
 function extractFilePath(title: string | null): string | null {
   if (!title) return null
   const match = title.match(/[A-Za-z]:\\[^\s|—–]+|\\\\[^\s|—–]+/)
@@ -159,35 +143,49 @@ function extractFilePath(title: string | null): string | null {
   return null
 }
 
-/** Slow path: query the process command line via WMI.
- *  Works for apps like OpenOffice / LibreOffice that show only the filename
- *  in their title bar but pass the full path as a CLI argument when opening
- *  a file. Times out gracefully and returns null on any failure. */
+/** Slow-path fallback: query the process command line via WMI.
+ *
+ *  Apps like OpenOffice/LibreOffice show only "filename.doc - OpenOffice Writer"
+ *  in the title, but their process was launched with the full path as a CLI arg:
+ *    soffice.bin "C:\Users\Ivan\Documents\contract.docx"
+ *
+ *  We use -EncodedCommand (base64 UTF-16LE) to send the PowerShell script so
+ *  that regex special characters survive the JS → shell → PowerShell journey
+ *  without any escaping distortion. */
 async function extractFilePathFromProcess(processName: string | null): Promise<string | null> {
   if (!processName) return null
 
-  // Escape the process name for safe embedding in PowerShell
-  const safeName = processName.replace(/[^a-zA-Z0-9._-]/g, '')
+  // Sanitise before embedding in the PowerShell string literal
+  const safeName = processName.replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 60)
   if (!safeName) return null
 
-  // WMI CommandLine contains the full argv, e.g.:
-  //   "C:\Program Files\LibreOffice\program\swriter.exe" "C:\Users\Ivan\Docs\contract.docx"
-  // We extract the first argument that looks like a document path.
-  const script = `
-    $proc = Get-WmiObject Win32_Process -Filter "Name LIKE '${safeName}%'" | Select-Object -First 1
-    if ($proc -and $proc.CommandLine) {
-      $m = [regex]::Match($proc.CommandLine, '[A-Za-z]:\\\\(?:[^"\\\\]+\\\\)*[^"\\\\]+\\.(?:doc|docx|odt|ods|odp|xls|xlsx|ppt|pptx|pdf|txt|csv|rtf|md)')
-      if ($m.Success) { $m.Value }
-    }
-  `.trim()
+  // Build the PowerShell script as a plain string — no shell escaping needed
+  // because it will be base64-encoded and passed via -EncodedCommand.
+  const ps = `
+$ext = 'doc|docx|odt|ods|odp|xls|xlsx|ppt|pptx|pdf|txt|csv|rtf|md'
+$procs = Get-WmiObject Win32_Process | Where-Object {
+  $_.Name -like '${safeName}*' -and $_.CommandLine -ne $null
+}
+foreach ($p in $procs) {
+  # Try quoted path first: "C:\\path\\file.ext"
+  $m = [regex]::Match($p.CommandLine, '"([A-Za-z]:\\\\[^"]+\\.(' + $ext + '))"')
+  if ($m.Success) { Write-Output $m.Groups[1].Value; exit }
+  # Try unquoted path: C:\\path\\file.ext (no spaces)
+  $m = [regex]::Match($p.CommandLine, '([A-Za-z]:\\\\\\S+\\.(' + $ext + '))')
+  if ($m.Success) { Write-Output $m.Groups[1].Value; exit }
+}
+`.trim()
+
+  // Encode as UTF-16LE — that is what PowerShell -EncodedCommand expects
+  const encoded = Buffer.from(ps, 'utf16le').toString('base64')
 
   try {
     const { stdout } = await execAsync(
-      `powershell -NonInteractive -NoProfile -Command "${script.replace(/"/g, '\\"')}"`,
-      { timeout: 2500 }
+      `powershell -NonInteractive -NoProfile -EncodedCommand ${encoded}`,
+      { timeout: 3000 }
     )
-    const path = stdout.trim()
-    return path || null
+    const result = stdout.trim()
+    return result || null
   } catch {
     return null
   }
