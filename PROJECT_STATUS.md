@@ -8,7 +8,7 @@
 
 **Current status:** Phases 1–5 complete. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends.
 
-**Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron), multilingual UI (`i18next`), auto-updater (`electron-updater`), Windows installer (`.exe`).
+**Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron), multilingual UI (`i18next`).
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -308,8 +308,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] **Assembler system prompt update** — explicit ✅ can-do / ❌ cannot-do table; action XML format + examples
 - [x] Action menu — context-aware skills rendered as buttons in palette
 - [ ] Multilingual UI with `i18next`
-- [ ] Auto-updater (`electron-updater`)
-- [ ] Windows installer (`.exe`) packaging
+- [x] Auto-updater (`electron-updater`) ← **DONE**
+- [x] Windows installer (`.exe`) packaging ← **DONE**
 
 ### Phase 4 — Intelligence & Memory
 - [x] Screenshot capture → Claude Vision for deeper context
@@ -358,6 +358,11 @@ When `Ctrl + Space` fires, the Electron app captures:
 23. ✅ Admin billing dashboard (/admin/billing) — token spend, trial status, payment records ← **DONE**
 24. [ ] Trial expiry email reminders
 25. ✅ Subscription activation — "Activate" button in billing dashboard, auto-logs billing_records ← **DONE**
+26. ✅ Windows installer — NSIS `.exe` via electron-builder, GitHub Actions release pipeline ← **DONE**
+27. ✅ Auto-updater — electron-updater, in-palette "Restart & update" banner ← **DONE**
+28. ✅ Dashboard download modal — appears after onboarding, guides user to install desktop app ← **DONE**
+29. ✅ Semantic skill filtering — fuzzy app name matching + system shell detection ← **DONE**
+30. [ ] Multilingual UI (`i18next`)
 
 ---
 
@@ -395,9 +400,9 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Phase 5 (Analytics & Billing) complete — all billing infrastructure live.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅
-Remaining open items: Trial expiry emails, Multilingual UI, Auto-updater, Windows installer.*
+*Last updated: Phase 5 complete + Windows installer & auto-updater shipped.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅
+Remaining open items: Trial expiry emails, Multilingual UI.*
 
 ## Pricing & Billing Decisions
 

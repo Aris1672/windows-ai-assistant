@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { BookOpen, Zap, History, Plus, ArrowRight, Download } from 'lucide-react'
 import TemplateOnboarding from '@/components/TemplateOnboarding'
 
-const RELEASE_URL = 'https://github.com/Aris1672/windows-ai-assistant/releases/latest'
+const DOWNLOAD_URL = '/api/download'
 
 interface RecentAction {
   id: string
@@ -96,7 +96,7 @@ function DownloadModal({ onClose }: { onClose: () => void }) {
 
         {/* Buttons */}
         <a
-          href={RELEASE_URL}
+          href={DOWNLOAD_URL}
           target="_blank"
           rel="noopener noreferrer"
           style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}
@@ -222,7 +222,7 @@ export default function DashboardPage() {
 
             {/* Download banner */}
             <div style={{ marginBottom: '2.5rem' }}>
-              <a href={RELEASE_URL} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+              <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
                 <div className="card" style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   background: 'rgba(0,245,160,0.04)', borderColor: 'rgba(0,245,160,0.15)',
