@@ -207,6 +207,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // Auto-updater state — set when a new version is downloaded and ready
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
 
+  // ── Conversation thread ───────────────────────────────────────────────────
+  // Committed exchanges — each submit appends the previous user+assistant turn.
+  interface ThreadMessage { role: 'user' | 'assistant'; text: string; isError?: boolean }
+  const [messages, setMessages] = useState<ThreadMessage[]>([])
+
   // ── Workflow memory state ─────────────────────────────────────────────────
   // conversationId is set after the first response completes.
   // It's passed to executeAction so the action record links to its session.
@@ -314,7 +319,19 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const submitQuery = useCallback((message: string): void => {
     if (!message || mode === 'thinking' || mode === 'streaming') return
 
-    // Reset all response state
+    // Commit the previous exchange (if any) to the conversation thread
+    if (lastQueryRef.current && rawResponseRef.current) {
+      const { displayText: prevDisplay } = parseActionFromResponse(rawResponseRef.current)
+      const prevText = prevDisplay || rawResponseRef.current
+      setMessages(prev => [
+        ...prev,
+        { role: 'user' as const,      text: lastQueryRef.current },
+        { role: 'assistant' as const, text: prevText },
+      ])
+    }
+
+    // Clear input and reset live response state
+    setQuery('')
     setMode('thinking')
     setRawResponse('')
     rawResponseRef.current = ''
@@ -348,7 +365,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       return null
     }).catch(() => null)
 
-    // Fire the stream
+    // Fire the stream — history is [] for now; extend when assembler supports it
     window.electronAPI.streamContext({
       url: `${WEB_URL}/api/context`,
       token,
@@ -432,6 +449,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       setPendingSkill(null)
       setSkills([])
       setConversationId(null)
+      setMessages([])
       conversationCreationRef.current = Promise.resolve(null)
       lastQueryRef.current = ''
       setActionStatus('idle')
@@ -651,66 +669,133 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           )}
         </div>
 
-        {/* Divider */}
-        {(hasResponse || mode === 'thinking') && <div className="divider" />}
+        {/* Conversation thread — shown whenever there's history or a live turn */}
+        {(messages.length > 0 || hasResponse || mode === 'thinking') && (
+          <>
+            <div className="divider" />
+            <div className="response-area" ref={responseRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
 
-        {/* Response area */}
-        {(hasResponse || mode === 'thinking') && (
-          <div className="response-area" ref={responseRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-            {mode === 'thinking' && !hasResponse && (
-              <div className="thinking-dots">
-                <span className="dot" /><span className="dot" /><span className="dot" />
-              </div>
-            )}
-            {hasResponse && mode !== 'error' && (
-              <p className="response-text">
-                {shownText}
-                {mode === 'streaming' && <span className="caret" />}
-              </p>
-            )}
-            {mode === 'error' && (
-              <p className="response-text response-text--error">{shownText || rawResponse}</p>
-            )}
+              {/* ── Committed history ── */}
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                    marginBottom: '0.5rem',
+                    gap: '0.5rem',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <p
+                    className="response-text"
+                    style={{
+                      maxWidth: '85%',
+                      padding: '0.35rem 0.6rem',
+                      borderRadius: msg.role === 'user' ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
+                      background: msg.role === 'user'
+                        ? 'rgba(0, 245, 160, 0.1)'
+                        : 'rgba(255,255,255,0.04)',
+                      border: msg.role === 'user'
+                        ? '1px solid rgba(0, 245, 160, 0.18)'
+                        : '1px solid rgba(255,255,255,0.07)',
+                      margin: 0,
+                      color: msg.role === 'user'
+                        ? 'rgba(0, 245, 160, 0.9)'
+                        : 'rgba(255,255,255,0.78)',
+                      fontSize: '0.82rem',
+                      lineHeight: 1.55,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {msg.text}
+                  </p>
+                </div>
+              ))}
 
-            {/* Action button */}
-            {showActionBtn && (
-              <div className="action-row">
-                {actionStatus === 'error' && actionError && (
-                  <span className="action-error">{actionError}</span>
-                )}
-                {needsConfirm && !confirmed ? (
-                  <div className="action-confirm">
-                    <span className="action-confirm-label">
-                      Run: <strong>{actionLabel}</strong>?
-                    </span>
-                    <button
-                      className="action-btn action-btn--confirm"
-                      onClick={() => { setConfirmed(true); runAction(pendingAction!) }}
-                      disabled={actionIsRunning}
-                    >
-                      {actionIsRunning ? 'Running…' : 'Confirm ↵'}
-                    </button>
-                    <button
-                      className="action-btn action-btn--cancel"
-                      onClick={() => setPendingAction(null)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : needsConfirm && confirmed ? (
-                  <div className="action-running">
-                    <SpinnerIcon /><span>{actionLabel}…</span>
-                  </div>
-                ) : (
-                  <div className="action-running">
-                    {actionIsRunning && <><SpinnerIcon /><span>{actionLabel}…</span></>}
-                  </div>
-                )}
-              </div>
-            )}
+              {/* ── Live turn: current user query (while pending response) ── */}
+              {lastQueryRef.current && (mode === 'thinking' || mode === 'streaming') && (
+                <div style={{ display: 'flex', flexDirection: 'row-reverse', marginBottom: '0.5rem' }}>
+                  <p
+                    className="response-text"
+                    style={{
+                      maxWidth: '85%',
+                      padding: '0.35rem 0.6rem',
+                      borderRadius: '10px 10px 2px 10px',
+                      background: 'rgba(0, 245, 160, 0.1)',
+                      border: '1px solid rgba(0, 245, 160, 0.18)',
+                      margin: 0,
+                      color: 'rgba(0, 245, 160, 0.9)',
+                      fontSize: '0.82rem',
+                      lineHeight: 1.55,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {lastQueryRef.current}
+                  </p>
+                </div>
+              )}
 
-            {actionStatus === 'done' && <p className="action-done">✓ Done</p>}
-          </div>
+              {/* ── Live turn: assistant response ── */}
+              {mode === 'thinking' && !hasResponse && (
+                <div className="thinking-dots" style={{ paddingLeft: '0.1rem' }}>
+                  <span className="dot" /><span className="dot" /><span className="dot" />
+                </div>
+              )}
+              {hasResponse && mode !== 'error' && (
+                <p className="response-text" style={{ margin: '0 0 0.25rem 0' }}>
+                  {shownText}
+                  {mode === 'streaming' && <span className="caret" />}
+                </p>
+              )}
+              {mode === 'error' && (
+                <p className="response-text response-text--error" style={{ margin: 0 }}>
+                  {shownText || rawResponse}
+                </p>
+              )}
+
+              {/* ── Action button (live turn only) ── */}
+              {showActionBtn && (
+                <div className="action-row">
+                  {actionStatus === 'error' && actionError && (
+                    <span className="action-error">{actionError}</span>
+                  )}
+                  {needsConfirm && !confirmed ? (
+                    <div className="action-confirm">
+                      <span className="action-confirm-label">
+                        Run: <strong>{actionLabel}</strong>?
+                      </span>
+                      <button
+                        className="action-btn action-btn--confirm"
+                        onClick={() => { setConfirmed(true); runAction(pendingAction!) }}
+                        disabled={actionIsRunning}
+                      >
+                        {actionIsRunning ? 'Running…' : 'Confirm ↵'}
+                      </button>
+                      <button
+                        className="action-btn action-btn--cancel"
+                        onClick={() => setPendingAction(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : needsConfirm && confirmed ? (
+                    <div className="action-running">
+                      <SpinnerIcon /><span>{actionLabel}…</span>
+                    </div>
+                  ) : (
+                    <div className="action-running">
+                      {actionIsRunning && <><SpinnerIcon /><span>{actionLabel}…</span></>}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {actionStatus === 'done' && <p className="action-done">✓ Done</p>}
+            </div>
+          </>
         )}
 
         {/* Update banner */}
