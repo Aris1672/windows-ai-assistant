@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { ContextBundle, Action } from '../types/electron'
 
 const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
@@ -37,12 +38,10 @@ const ACTION_REQUIRES_CONFIRM: Record<Action['type'], boolean> = {
   open_url:          false,
 }
 
-const ACTION_LABELS: Record<Action['type'], string> = {
-  insert_text:       'Insert text',
-  copy_to_clipboard: 'Copy to clipboard',
-  open_folder:       'Open folder',
-  open_file:         'Open file',
-  open_url:          'Open URL',
+// Returns a translated label for a given action type.
+// Replaces the former static ACTION_LABELS object.
+function getActionLabel(type: Action['type'], t: (key: string) => string): string {
+  return t(`palette.actions.${type}`)
 }
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
@@ -187,6 +186,8 @@ function deriveActiveFolder(context: ContextBundle | null): string | null {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommandPalette({ token, onLogout }: CommandPaletteProps): JSX.Element {
+  const { t, i18n } = useTranslation()
+
   const [query, setQuery]     = useState('')
   const [context, setContext] = useState<ContextBundle | null>(null)
   const [rawResponse, setRawResponse] = useState('')
@@ -429,11 +430,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           break
         case 'http-error':
           setMode('error')
-          setRawResponse(`Something went wrong — please try again. (HTTP ${ev.status})`)
+          setRawResponse(t('palette.error.http', { status: ev.status }))
           break
         case 'error':
           setMode('error')
-          setRawResponse('Something went wrong — please try again.')
+          setRawResponse(t('palette.error.generic'))
           break
         case 'done':
           setMode('done')
@@ -452,7 +453,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       }
     })
     return () => { off() }
-  }, [onLogout])
+  }, [onLogout, t])
 
   // ── IPC listeners ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -531,7 +532,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   const needsConfirm    = pendingAction ? ACTION_REQUIRES_CONFIRM[pendingAction.type] : false
   const showActionBtn   = pendingAction !== null && actionStatus !== 'done' && mode !== 'error'
-  const actionLabel     = pendingAction ? ACTION_LABELS[pendingAction.type] : ''
+  const actionLabel     = pendingAction ? getActionLabel(pendingAction.type, t) : ''
   const actionIsRunning = actionStatus === 'running'
 
   const showSkillStrip   = !busy && matchingSkills.length > 0 && !pendingSkill
@@ -588,51 +589,51 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         )}
 
         {/* Skill button strip */}
-{showSkillStrip && (
-  <div style={{
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '0.375rem',
-    padding: '0.5rem 0.75rem',
-    maxHeight: '80px',
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    scrollbarWidth: 'thin',
-    scrollbarColor: 'rgba(255,255,255,0.1) transparent',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
-    flexShrink: 0,
-  }}>
-    {matchingSkills.map(skill => (
-      <button
-        key={skill.id}
-        onClick={() => triggerSkill(skill)}
-        title={skill.description ?? skill.prompt}
-        style={{
-          flexShrink: 0,
-          padding: '0.25rem 0.625rem',
-          borderRadius: '5px',
-          border: `1px solid ${skill.is_destructive ? 'rgba(255,107,107,0.25)' : 'rgba(255,255,255,0.1)'}`,
-          background: skill.is_destructive ? 'rgba(255,82,82,0.08)' : 'rgba(255,255,255,0.05)',
-          color: skill.is_destructive ? '#ff6b6b' : 'rgba(255,255,255,0.7)',
-          fontSize: '0.75rem',
-          fontWeight: 500,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.3rem',
-          transition: 'background 0.15s, border-color 0.15s',
-          whiteSpace: 'nowrap',
-          lineHeight: 1.4,
-        }}
-      >
-        {skill.is_destructive && (
-          <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>⚠</span>
+        {showSkillStrip && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.375rem',
+            padding: '0.5rem 0.75rem',
+            maxHeight: '80px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.1) transparent',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            flexShrink: 0,
+          }}>
+            {matchingSkills.map(skill => (
+              <button
+                key={skill.id}
+                onClick={() => triggerSkill(skill)}
+                title={skill.description ?? skill.prompt}
+                style={{
+                  flexShrink: 0,
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: '5px',
+                  border: `1px solid ${skill.is_destructive ? 'rgba(255,107,107,0.25)' : 'rgba(255,255,255,0.1)'}`,
+                  background: skill.is_destructive ? 'rgba(255,82,82,0.08)' : 'rgba(255,255,255,0.05)',
+                  color: skill.is_destructive ? '#ff6b6b' : 'rgba(255,255,255,0.7)',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  transition: 'background 0.15s, border-color 0.15s',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.4,
+                }}
+              >
+                {skill.is_destructive && (
+                  <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>⚠</span>
+                )}
+                {skill.name}
+              </button>
+            ))}
+          </div>
         )}
-        {skill.name}
-      </button>
-    ))}
-  </div>
-)}
 
         {/* Destructive skill confirm */}
         {showSkillConfirm && (
@@ -646,9 +647,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           }}>
             <span style={{ fontSize: '0.75rem', color: '#ff6b6b', flexShrink: 0 }}>⚠</span>
             <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.55)', flex: 1 }}>
-              Run: <strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
-                {pendingSkill!.name}
-              </strong>?
+              {t('palette.confirm.prompt', { label: pendingSkill!.name })}
             </span>
             <button
               onClick={confirmSkill}
@@ -658,7 +657,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 color: '#ff6b6b', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', flexShrink: 0,
               }}
             >
-              Confirm ↵
+              {t('palette.confirm.confirm')}
             </button>
             <button
               onClick={() => setPendingSkill(null)}
@@ -668,7 +667,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0,
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         )}
@@ -689,7 +688,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 if (pendingSkill) { confirmSkill() } else { submit() }
               }
             }}
-            placeholder="Ask anything…"
+            placeholder={t('palette.placeholder')}
             autoComplete="off"
             spellCheck={false}
             disabled={busy}
@@ -700,7 +699,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
               className="cancel-btn"
               onClick={() => { window.electronAPI.cancelStream(); setMode('idle') }}
             >
-              Stop
+              {t('palette.stop')}
             </button>
           )}
         </div>
@@ -801,20 +800,20 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                   {needsConfirm && !confirmed ? (
                     <div className="action-confirm">
                       <span className="action-confirm-label">
-                        Run: <strong>{actionLabel}</strong>?
+                        {t('palette.confirm.prompt', { label: actionLabel })}
                       </span>
                       <button
                         className="action-btn action-btn--confirm"
                         onClick={() => { setConfirmed(true); runAction(pendingAction!) }}
                         disabled={actionIsRunning}
                       >
-                        {actionIsRunning ? 'Running…' : 'Confirm ↵'}
+                        {actionIsRunning ? t('palette.actions.running') : t('palette.confirm.confirm')}
                       </button>
                       <button
                         className="action-btn action-btn--cancel"
                         onClick={() => setPendingAction(null)}
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   ) : needsConfirm && confirmed ? (
@@ -829,7 +828,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 </div>
               )}
 
-              {actionStatus === 'done' && <p className="action-done">✓ Done</p>}
+              {actionStatus === 'done' && <p className="action-done">{t('palette.actions.done')}</p>}
             </div>
           </>
         )}
@@ -846,7 +845,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             flexShrink: 0,
           }}>
             <span style={{ fontSize: '0.75rem', color: 'rgba(0, 245, 160, 0.85)' }}>
-              ↑ v{updateVersion} ready to install
+              {t('palette.update.ready', { version: updateVersion })}
             </span>
             <button
               onClick={() => window.electronAPI.updaterInstall()}
@@ -862,7 +861,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 flexShrink: 0,
               }}
             >
-              Restart &amp; update
+              {t('palette.update.restart')}
             </button>
           </div>
         )}
@@ -870,14 +869,21 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         {/* Footer */}
         <div className="palette-footer">
           <span className="footer-esc">
-            {pendingSkill ? 'Esc to cancel' : busy ? 'Esc to stop' : 'Esc to close'}
+            {pendingSkill ? t('palette.footer.escCancel') : busy ? t('palette.footer.escStop') : t('palette.footer.escClose')}
           </span>
           <div className="footer-actions">
+            <button
+              className="footer-btn"
+              style={{ opacity: 0.45, fontSize: '0.68rem' }}
+              onClick={() => i18n.changeLanguage(i18n.language === 'ru' ? 'en' : 'ru')}
+            >
+              {i18n.language === 'ru' ? 'EN' : 'RU'}
+            </button>
             <button className="footer-btn" onClick={() => window.electronAPI.openDashboard()}>
-              Dashboard ↗
+              {t('palette.footer.dashboard')}
             </button>
             <button className="footer-btn footer-btn--danger" onClick={onLogout}>
-              Sign out
+              {t('common.signOut')}
             </button>
           </div>
         </div>

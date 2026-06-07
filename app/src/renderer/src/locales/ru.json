@@ -1,0 +1,49 @@
+{
+  "common": {
+    "cancel": "Отмена",
+    "signOut": "Выйти"
+  },
+  "login": {
+    "brand": "ИИ-Ассистент",
+    "tagline": "Войдите, чтобы продолжить",
+    "emailPlaceholder": "Эл. почта",
+    "passwordPlaceholder": "Пароль",
+    "submit": "Войти",
+    "submitting": "Вход…",
+    "noAccount": "Нет аккаунта?",
+    "register": "Зарегистрируйтесь на сайте ↗",
+    "errorCredentials": "Ошибка входа. Проверьте данные.",
+    "errorNetwork": "Нет соединения. Проверьте интернет."
+  },
+  "palette": {
+    "placeholder": "Спросите что угодно…",
+    "stop": "Стоп",
+    "footer": {
+      "escCancel": "Esc — отмена",
+      "escStop": "Esc — стоп",
+      "escClose": "Esc — закрыть",
+      "dashboard": "Панель ↗"
+    },
+    "actions": {
+      "insert_text": "Вставить текст",
+      "copy_to_clipboard": "Скопировать",
+      "open_folder": "Открыть папку",
+      "open_file": "Открыть файл",
+      "open_url": "Открыть ссылку",
+      "running": "Выполнение…",
+      "done": "✓ Готово"
+    },
+    "confirm": {
+      "prompt": "Выполнить: {{label}}?",
+      "confirm": "Подтвердить ↵"
+    },
+    "update": {
+      "ready": "↑ v{{version}} готово к установке",
+      "restart": "Перезапустить и обновить"
+    },
+    "error": {
+      "http": "Что-то пошло не так — попробуйте снова. (HTTP {{status}})",
+      "generic": "Что-то пошло не так — попробуйте снова."
+    }
+  }
+}

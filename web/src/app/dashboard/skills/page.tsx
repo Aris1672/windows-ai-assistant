@@ -1,12 +1,10 @@
 'use client'
 
-// All data operations go through our own Vercel API routes.
-// Traffic path: browser → Vercel (/api/skills) → Supabase  ✓
-// supabase-browser is NOT imported here.
-
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus, Pencil, Trash2, Check, X, Monitor, Folder, AlertTriangle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import '@/lib/i18n'
 
 type Skill = {
   id: string
@@ -30,6 +28,7 @@ type EditState = {
 }
 
 export default function SkillsPage() {
+  const { t } = useTranslation()
   const [skills, setSkills]         = useState<Skill[]>([])
   const [loading, setLoading]       = useState(true)
   const [editingId, setEditingId]   = useState<string | null>(null)
@@ -90,10 +89,7 @@ export default function SkillsPage() {
   }
 
   async function deleteSkill(id: string) {
-    await fetch(`/api/skills/${id}`, {
-      method: 'DELETE',
-      credentials: 'include',
-    })
+    await fetch(`/api/skills/${id}`, { method: 'DELETE', credentials: 'include' })
     setSkills(prev => prev.filter(s => s.id !== id))
     setDeletingId(null)
   }
@@ -104,27 +100,27 @@ export default function SkillsPage() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '0.375rem', color: 'var(--text-primary)' }}>
-            Skills
+            {t('dashboard.skills.title')}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Named actions that appear in your command palette — triggered on demand.
+            {t('dashboard.skills.subtitle')}
           </p>
         </div>
         <Link href="/dashboard/skills/new" style={{ textDecoration: 'none' }}>
           <button className="btn-primary" style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <Plus size={14} /> New skill
+            <Plus size={14} /> {t('dashboard.skills.newBtn')}
           </button>
         </Link>
       </div>
 
       {loading ? (
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading…</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</div>
       ) : skills.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>No skills yet.</p>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>{t('dashboard.skills.empty')}</p>
           <Link href="/dashboard/skills/new" style={{ textDecoration: 'none' }}>
             <button className="btn-primary" style={{ width: 'auto', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-              <Plus size={14} /> Create your first skill
+              <Plus size={14} /> {t('dashboard.skills.createFirst')}
             </button>
           </Link>
         </div>
@@ -137,38 +133,38 @@ export default function SkillsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                     <div>
-                      <label className="form-label">Name</label>
+                      <label className="form-label">{t('dashboard.skills.fieldName')}</label>
                       <input className="form-input" value={editState.name} onChange={e => setEditState(s => ({ ...s, name: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="form-label">Description</label>
+                      <label className="form-label">{t('dashboard.skills.fieldDescription')}</label>
                       <input className="form-input" value={editState.description} onChange={e => setEditState(s => ({ ...s, description: e.target.value }))} />
                     </div>
                   </div>
                   <div>
-                    <label className="form-label">Prompt</label>
+                    <label className="form-label">{t('dashboard.skills.fieldPrompt')}</label>
                     <textarea className="form-input" rows={3} value={editState.prompt} onChange={e => setEditState(s => ({ ...s, prompt: e.target.value }))} style={{ resize: 'vertical' }} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                     <div>
-                      <label className="form-label">Only when app</label>
-                      <input className="form-input" placeholder="e.g. Microsoft Excel" value={editState.context_app} onChange={e => setEditState(s => ({ ...s, context_app: e.target.value }))} />
+                      <label className="form-label">{t('dashboard.skills.fieldApp')}</label>
+                      <input className="form-input" placeholder={t('dashboard.skills.fieldAppPlaceholder')} value={editState.context_app} onChange={e => setEditState(s => ({ ...s, context_app: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="form-label">Only in folder</label>
-                      <input className="form-input" placeholder="e.g. C:/Work/Invoices" value={editState.context_folder} onChange={e => setEditState(s => ({ ...s, context_folder: e.target.value }))} />
+                      <label className="form-label">{t('dashboard.skills.fieldFolder')}</label>
+                      <input className="form-input" placeholder={t('dashboard.skills.fieldFolderPlaceholder')} value={editState.context_folder} onChange={e => setEditState(s => ({ ...s, context_folder: e.target.value }))} />
                     </div>
                   </div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                     <input type="checkbox" checked={editState.is_destructive} onChange={e => setEditState(s => ({ ...s, is_destructive: e.target.checked }))} />
-                    Requires confirmation before executing
+                    {t('dashboard.skills.destructiveLabel')}
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
                     <button className="btn-ghost" style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.35rem' }} onClick={() => setEditingId(null)}>
-                      <X size={13} /> Cancel
+                      <X size={13} /> {t('common.cancel')}
                     </button>
                     <button className="btn-primary" style={{ width: 'auto', display: 'flex', alignItems: 'center', gap: '0.35rem' }} onClick={() => saveEdit(skill.id)} disabled={saving}>
-                      <Check size={13} /> {saving ? 'Saving…' : 'Save'}
+                      <Check size={13} /> {saving ? t('common.saving') : t('common.save')}
                     </button>
                   </div>
                 </div>
@@ -177,10 +173,13 @@ export default function SkillsPage() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-primary)' }}>{skill.name}</span>
-                      {skill.is_active ? <span className="badge badge-accent">Active</span> : <span className="badge badge-muted">Off</span>}
+                      {skill.is_active
+                        ? <span className="badge badge-accent">{t('common.active')}</span>
+                        : <span className="badge badge-muted">{t('common.off')}</span>
+                      }
                       {skill.is_destructive && (
                         <span className="badge" style={{ background: 'rgba(255,82,82,0.08)', color: 'var(--error)', border: '1px solid rgba(255,82,82,0.2)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <AlertTriangle size={9} /> Confirmation required
+                          <AlertTriangle size={9} /> {t('dashboard.skills.destructiveBadge')}
                         </span>
                       )}
                     </div>
@@ -211,7 +210,7 @@ export default function SkillsPage() {
                       </button>
                       {deletingId === skill.id ? (
                         <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--error)' }}>Delete?</span>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--error)' }}>{t('common.delete')}</span>
                           <button onClick={() => deleteSkill(skill.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error)', padding: '0.25rem', borderRadius: '4px', display: 'flex', alignItems: 'center' }}><Check size={14} /></button>
                           <button onClick={() => setDeletingId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.25rem', borderRadius: '4px', display: 'flex', alignItems: 'center' }}><X size={14} /></button>
                         </div>

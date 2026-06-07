@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import CommandPalette from './components/CommandPalette'
 import LoginScreen from './components/LoginScreen'
+import './lib/i18n' // initialize i18n before any component renders
 
 export default function App(): JSX.Element | null {
   const [token, setToken] = useState<string | null>(null)

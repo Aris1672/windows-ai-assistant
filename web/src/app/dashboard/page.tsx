@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { BookOpen, Zap, History, Plus, ArrowRight, Download } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import TemplateOnboarding from '@/components/TemplateOnboarding'
+import '@/lib/i18n'
 
 const DOWNLOAD_URL = '/api/download'
 
@@ -24,10 +26,12 @@ interface Stats {
 // ─── Download Modal ───────────────────────────────────────────────────────────
 
 function DownloadModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
+
   const steps = [
-    { n: '1', label: 'Download the installer', sub: 'Click the button below — it\'s free during beta.' },
-    { n: '2', label: 'Run & install',           sub: 'Double-click the .exe and follow the setup wizard.' },
-    { n: '3', label: 'Press Ctrl + Space',       sub: 'From any app, anywhere on Windows. That\'s it.' },
+    { n: '1', label: t('dashboard.downloadModal.step1Label'), sub: t('dashboard.downloadModal.step1Sub') },
+    { n: '2', label: t('dashboard.downloadModal.step2Label'), sub: t('dashboard.downloadModal.step2Sub') },
+    { n: '3', label: t('dashboard.downloadModal.step3Label'), sub: t('dashboard.downloadModal.step3Sub') },
   ]
 
   return (
@@ -60,10 +64,10 @@ function DownloadModal({ onClose }: { onClose: () => void }) {
             fontFamily: 'var(--font-display)', fontSize: '1.35rem', fontWeight: 700,
             color: 'var(--text-primary)', marginBottom: '0.5rem',
           }}>
-            Get the desktop app
+            {t('dashboard.downloadModal.title')}
           </h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: 1.55 }}>
-            Your dashboard is ready. Now install the Windows app to start using{' '}
+            {t('dashboard.downloadModal.subtitle')}{' '}
             <kbd style={{
               background: 'var(--surface-3)', border: '1px solid var(--border)',
               borderRadius: '4px', padding: '0.1rem 0.4rem',
@@ -95,10 +99,7 @@ function DownloadModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Buttons */}
-        <a
-          href={DOWNLOAD_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer"
           style={{ display: 'block', textDecoration: 'none', marginBottom: '0.75rem' }}
         >
           <button style={{
@@ -108,7 +109,7 @@ function DownloadModal({ onClose }: { onClose: () => void }) {
             fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
           }}>
-            <Download size={16} /> Download for Windows
+            <Download size={16} /> {t('dashboard.downloadModal.download')}
           </button>
         </a>
         <button
@@ -120,7 +121,7 @@ function DownloadModal({ onClose }: { onClose: () => void }) {
             fontSize: '0.85rem', cursor: 'pointer',
           }}
         >
-          I'll do this later
+          {t('dashboard.downloadModal.later')}
         </button>
       </div>
     </div>
@@ -130,15 +131,14 @@ function DownloadModal({ onClose }: { onClose: () => void }) {
 // ─── Dashboard Page ───────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const [stats, setStats] = useState<Stats>({ instructions: 0, skills: 0, actions: 0 })
   const [recentActions, setRecentActions] = useState<RecentAction[]>([])
   const [loading, setLoading] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { loadData() }, [])
 
   async function loadData() {
     try {
@@ -151,20 +151,17 @@ export default function DashboardPage() {
       const instructions = await instructionsRes.json()
       const skills       = await skillsRes.json()
       const actionsData  = await actionsRes.json()
-
-      const actionsList = Array.isArray(actionsData) ? actionsData : actionsData?.data ?? []
+      const actionsList  = Array.isArray(actionsData) ? actionsData : actionsData?.data ?? []
 
       setStats({
         instructions: instructions?.length ?? 0,
         skills:       skills?.length       ?? 0,
         actions:      actionsList?.length  ?? 0,
       })
-
       setRecentActions(Array.isArray(actionsList) ? actionsList.slice(0, 5) : [])
 
       const hasImportedTemplates = (skills?.length ?? 0) > 4
       if (!hasImportedTemplates) setShowOnboarding(true)
-
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
     } finally {
@@ -172,16 +169,15 @@ export default function DashboardPage() {
     }
   }
 
-  // When onboarding completes (import or skip) → show download modal
   function handleOnboardingComplete() {
     setShowOnboarding(false)
     setShowDownloadModal(true)
   }
 
   const statCards = [
-    { label: 'Instructions', value: stats.instructions, icon: BookOpen, href: '/dashboard/instructions', color: 'var(--accent)' },
-    { label: 'Skills',       value: stats.skills,       icon: Zap,      href: '/dashboard/skills',       color: '#A78BFA' },
-    { label: 'Actions run',  value: stats.actions,      icon: History,  href: '/dashboard/history',       color: '#60A5FA' },
+    { label: t('dashboard.overview.statInstructions'), value: stats.instructions, icon: BookOpen, href: '/dashboard/instructions', color: 'var(--accent)' },
+    { label: t('dashboard.overview.statSkills'),       value: stats.skills,       icon: Zap,      href: '/dashboard/skills',       color: '#A78BFA' },
+    { label: t('dashboard.overview.statActions'),      value: stats.actions,      icon: History,  href: '/dashboard/history',      color: '#60A5FA' },
   ]
 
   return (
@@ -190,15 +186,15 @@ export default function DashboardPage() {
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '0.375rem', color: 'var(--text-primary)' }}>
-            Overview
+            {t('dashboard.overview.title')}
           </h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-            Your AI assistant at a glance.
+            {t('dashboard.overview.subtitle')}
           </p>
         </div>
 
         {loading ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading…</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{t('common.loading')}</div>
         ) : (
           <>
             {/* Stat cards */}
@@ -234,10 +230,10 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.15rem' }}>
-                        Download for Windows
+                        {t('dashboard.overview.downloadTitle')}
                       </div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        Get the desktop app to start using Ctrl + Space
+                        {t('dashboard.overview.downloadSub')}
                       </div>
                     </div>
                   </div>
@@ -249,17 +245,17 @@ export default function DashboardPage() {
             {/* Quick actions */}
             <div style={{ marginBottom: '2.5rem' }}>
               <h2 style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.875rem' }}>
-                Quick actions
+                {t('dashboard.overview.quickActions')}
               </h2>
               <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <Link href="/dashboard/instructions/new" style={{ textDecoration: 'none' }}>
                   <button className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto' }}>
-                    <Plus size={14} /> New instruction
+                    <Plus size={14} /> {t('dashboard.overview.newInstruction')}
                   </button>
                 </Link>
                 <Link href="/dashboard/skills/new" style={{ textDecoration: 'none' }}>
                   <button className="btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto' }}>
-                    <Plus size={14} /> New skill
+                    <Plus size={14} /> {t('dashboard.overview.newSkill')}
                   </button>
                 </Link>
               </div>
@@ -269,20 +265,20 @@ export default function DashboardPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.875rem' }}>
                 <h2 style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                  Recent actions
+                  {t('dashboard.overview.recentActions')}
                 </h2>
                 <Link href="/dashboard/history" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  View all <ArrowRight size={12} />
+                  {t('dashboard.overview.viewAll')} <ArrowRight size={12} />
                 </Link>
               </div>
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 {recentActions.length === 0 ? (
                   <div style={{ padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                    No actions yet. Press{' '}
+                    {t('dashboard.overview.noActionsYet')}{' '}
                     <kbd style={{ background: 'var(--surface-3)', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.1rem 0.4rem', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                       Ctrl + Space
                     </kbd>{' '}
-                    in the desktop app to get started.
+                    {t('dashboard.overview.noActionsYetSuffix')}
                   </div>
                 ) : (
                   recentActions.map((action, i) => (
@@ -306,10 +302,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Skills onboarding modal */}
       <TemplateOnboarding open={showOnboarding} onComplete={handleOnboardingComplete} />
-
-      {/* Download modal — shown after onboarding */}
       {showDownloadModal && <DownloadModal onClose={() => setShowDownloadModal(false)} />}
     </>
   )

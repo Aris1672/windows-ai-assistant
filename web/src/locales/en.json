@@ -1,0 +1,111 @@
+{
+  "common": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete?",
+    "active": "Active",
+    "off": "Off",
+    "loading": "Loading…",
+    "signOut": "Sign out",
+    "language": "Language"
+  },
+  "auth": {
+    "login": {
+      "heading": "Sign in to your account",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Your password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noAccount": "No account yet?",
+      "createOne": "Create one",
+      "errorInvalid": "Invalid email or password.",
+      "errorNetwork": "Unable to connect. Check your internet connection."
+    },
+    "register": {
+      "heading": "Create your account",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Min. 8 characters",
+      "confirmLabel": "Confirm Password",
+      "confirmPlaceholder": "Repeat your password",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "errorShort": "Password must be at least 8 characters.",
+      "errorMatch": "Passwords do not match.",
+      "errorFailed": "Registration failed.",
+      "errorNetwork": "Unable to connect. Check your internet connection."
+    }
+  },
+  "sidebar": {
+    "overview": "Overview",
+    "instructions": "Instructions",
+    "skills": "Skills",
+    "history": "History",
+    "adminPanel": "Admin panel"
+  },
+  "dashboard": {
+    "overview": {
+      "title": "Overview",
+      "subtitle": "Your AI assistant at a glance.",
+      "statInstructions": "Instructions",
+      "statSkills": "Skills",
+      "statActions": "Actions run",
+      "quickActions": "Quick actions",
+      "newInstruction": "New instruction",
+      "newSkill": "New skill",
+      "recentActions": "Recent actions",
+      "viewAll": "View all",
+      "noActionsYet": "No actions yet. Press",
+      "noActionsYetSuffix": "in the desktop app to get started.",
+      "downloadTitle": "Download for Windows",
+      "downloadSub": "Get the desktop app to start using Ctrl + Space"
+    },
+    "downloadModal": {
+      "title": "Get the desktop app",
+      "subtitle": "Your dashboard is ready. Now install the Windows app to start using",
+      "step1Label": "Download the installer",
+      "step1Sub": "Click the button below — it's free during beta.",
+      "step2Label": "Run & install",
+      "step2Sub": "Double-click the .exe and follow the setup wizard.",
+      "step3Label": "Press Ctrl + Space",
+      "step3Sub": "From any app, anywhere on Windows. That's it.",
+      "download": "Download for Windows",
+      "later": "I'll do this later"
+    },
+    "instructions": {
+      "title": "Instructions",
+      "subtitle": "Persistent rules that shape how the AI behaves — always active.",
+      "newBtn": "New instruction",
+      "empty": "No instructions yet.",
+      "createFirst": "Create your first instruction",
+      "fieldLabel": "Label",
+      "fieldInstruction": "Instruction",
+      "fieldApp": "Only when app",
+      "fieldAppPlaceholder": "e.g. Microsoft Excel",
+      "fieldFolder": "Only in folder",
+      "fieldFolderPlaceholder": "e.g. C:/Work/Invoices"
+    },
+    "skills": {
+      "title": "Skills",
+      "subtitle": "Named actions that appear in your command palette — triggered on demand.",
+      "newBtn": "New skill",
+      "empty": "No skills yet.",
+      "createFirst": "Create your first skill",
+      "fieldName": "Name",
+      "fieldDescription": "Description",
+      "fieldPrompt": "Prompt",
+      "fieldApp": "Only when app",
+      "fieldAppPlaceholder": "e.g. Microsoft Excel",
+      "fieldFolder": "Only in folder",
+      "fieldFolderPlaceholder": "e.g. C:/Work/Invoices",
+      "destructiveLabel": "Requires confirmation before executing",
+      "destructiveBadge": "Confirmation required"
+    }
+  }
+}

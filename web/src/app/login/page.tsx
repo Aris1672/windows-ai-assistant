@@ -3,8 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
+import '@/lib/i18n'
 
 export default function LoginPage() {
+  const { t } = useTranslation()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
@@ -17,12 +20,10 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // POST to our own Vercel API route — never touches Supabase directly from the browser.
-      // Traffic path: browser → Vercel (/api/auth/signin) → Supabase ✓
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // ensures session cookies are stored
+        credentials: 'include',
         body: JSON.stringify({ email, password })
       })
 
@@ -31,10 +32,10 @@ export default function LoginPage() {
         router.refresh()
       } else {
         const data = await res.json()
-        setError(data.error || 'Invalid email or password.')
+        setError(data.error || t('auth.login.errorInvalid'))
       }
     } catch {
-      setError('Unable to connect. Check your internet connection.')
+      setError(t('auth.login.errorNetwork'))
     } finally {
       setLoading(false)
     }
@@ -59,7 +60,7 @@ export default function LoginPage() {
             Windows <span>AI</span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Sign in to your account
+            {t('auth.login.heading')}
           </p>
         </div>
 
@@ -69,11 +70,11 @@ export default function LoginPage() {
             {error && <div className="error-banner">{error}</div>}
 
             <div>
-              <label className="form-label">Email</label>
+              <label className="form-label">{t('auth.login.emailLabel')}</label>
               <input
                 className="form-input"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t('auth.login.emailPlaceholder')}
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
@@ -83,11 +84,11 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="form-label">Password</label>
+              <label className="form-label">{t('auth.login.passwordLabel')}</label>
               <input
                 className="form-input"
                 type="password"
-                placeholder="Your password"
+                placeholder={t('auth.login.passwordPlaceholder')}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
@@ -98,7 +99,7 @@ export default function LoginPage() {
 
             <div style={{ marginTop: '0.25rem' }}>
               <button className="btn-primary" type="submit" disabled={loading}>
-                {loading ? 'Signing in…' : 'Sign in'}
+                {loading ? t('auth.login.submitting') : t('auth.login.submit')}
               </button>
             </div>
 
@@ -106,9 +107,9 @@ export default function LoginPage() {
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '1.25rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          No account yet?{' '}
+          {t('auth.login.noAccount')}{' '}
           <Link href="/register" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-            Create one
+            {t('auth.login.createOne')}
           </Link>
         </p>
 

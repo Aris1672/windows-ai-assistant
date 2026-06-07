@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import './LoginScreen.css'
 
 const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
@@ -8,6 +9,7 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element {
+  const { t, i18n } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -22,7 +24,6 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
     setError(null)
 
     try {
-      // Route through main process — renderer fetch() is blocked by CORS
       const result = await window.electronAPI.apiRequest({
         url: `${WEB_URL}/api/auth/login`,
         method: 'POST',
@@ -31,7 +32,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
 
       if (!result.ok || result.data === null) {
         const errData = result.data as { error?: string } | null
-        setError(errData?.error ?? 'Login failed. Check your credentials.')
+        setError(errData?.error ?? t('login.errorCredentials'))
         emailRef.current?.focus()
         return
       }
@@ -39,7 +40,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
       const successData = result.data as { access_token: string }
       onLogin(successData.access_token)
     } catch {
-      setError('Unable to connect. Check your internet connection.')
+      setError(t('login.errorNetwork'))
     } finally {
       setLoading(false)
     }
@@ -61,8 +62,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
             </defs>
           </svg>
           <div>
-            <p className="login-brand">AI Assistant</p>
-            <p className="login-tagline">Sign in to continue</p>
+            <p className="login-brand">{t('login.brand')}</p>
+            <p className="login-tagline">{t('login.tagline')}</p>
           </div>
         </div>
 
@@ -73,7 +74,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email address"
+            placeholder={t('login.emailPlaceholder')}
             autoFocus
             autoComplete="email"
           />
@@ -82,33 +83,41 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
+            placeholder={t('login.passwordPlaceholder')}
             autoComplete="current-password"
           />
 
-          {error && (
-            <p className="login-error">{error}</p>
-          )}
+          {error && <p className="login-error">{error}</p>}
 
           <button
             className="login-btn"
             type="submit"
             disabled={loading || !email.trim() || !password}
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
 
         <p className="login-register">
-          No account?{' '}
+          {t('login.noAccount')}{' '}
           <button
             type="button"
             className="login-link"
             onClick={() => window.electronAPI.openDashboard()}
           >
-            Register on the website ↗
+            {t('login.register')}
           </button>
         </p>
+
+        {/* Language toggle */}
+        <button
+          type="button"
+          className="login-link"
+          style={{ marginTop: '0.5rem', fontSize: '0.72rem', opacity: 0.5 }}
+          onClick={() => i18n.changeLanguage(i18n.language === 'ru' ? 'en' : 'ru')}
+        >
+          {i18n.language === 'ru' ? 'English' : 'Русский'}
+        </button>
 
       </div>
     </div>

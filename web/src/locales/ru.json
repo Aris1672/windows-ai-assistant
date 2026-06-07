@@ -1,0 +1,111 @@
+{
+  "common": {
+    "save": "Сохранить",
+    "saving": "Сохранение…",
+    "cancel": "Отмена",
+    "delete": "Удалить?",
+    "active": "Активна",
+    "off": "Выкл",
+    "loading": "Загрузка…",
+    "signOut": "Выйти",
+    "language": "Язык"
+  },
+  "auth": {
+    "login": {
+      "heading": "Войдите в аккаунт",
+      "emailLabel": "Эл. почта",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Пароль",
+      "passwordPlaceholder": "Ваш пароль",
+      "submit": "Войти",
+      "submitting": "Вход…",
+      "noAccount": "Нет аккаунта?",
+      "createOne": "Создать",
+      "errorInvalid": "Неверный email или пароль.",
+      "errorNetwork": "Нет соединения. Проверьте интернет."
+    },
+    "register": {
+      "heading": "Создайте аккаунт",
+      "emailLabel": "Эл. почта",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Пароль",
+      "passwordPlaceholder": "Мин. 8 символов",
+      "confirmLabel": "Подтвердите пароль",
+      "confirmPlaceholder": "Повторите пароль",
+      "submit": "Создать аккаунт",
+      "submitting": "Создание…",
+      "hasAccount": "Уже есть аккаунт?",
+      "signIn": "Войти",
+      "errorShort": "Пароль должен быть не менее 8 символов.",
+      "errorMatch": "Пароли не совпадают.",
+      "errorFailed": "Ошибка регистрации.",
+      "errorNetwork": "Нет соединения. Проверьте интернет."
+    }
+  },
+  "sidebar": {
+    "overview": "Обзор",
+    "instructions": "Инструкции",
+    "skills": "Навыки",
+    "history": "История",
+    "adminPanel": "Панель администратора"
+  },
+  "dashboard": {
+    "overview": {
+      "title": "Обзор",
+      "subtitle": "Ваш ИИ-ассистент с первого взгляда.",
+      "statInstructions": "Инструкции",
+      "statSkills": "Навыки",
+      "statActions": "Выполнено действий",
+      "quickActions": "Быстрые действия",
+      "newInstruction": "Новая инструкция",
+      "newSkill": "Новый навык",
+      "recentActions": "Недавние действия",
+      "viewAll": "Все",
+      "noActionsYet": "Нет действий. Нажмите",
+      "noActionsYetSuffix": "в приложении для Windows, чтобы начать.",
+      "downloadTitle": "Скачать для Windows",
+      "downloadSub": "Установите приложение и начните использовать Ctrl + Space"
+    },
+    "downloadModal": {
+      "title": "Получите приложение",
+      "subtitle": "Панель управления готова. Установите приложение Windows, чтобы начать использовать",
+      "step1Label": "Скачайте установщик",
+      "step1Sub": "Нажмите на кнопку ниже — бесплатно в период бета-теста.",
+      "step2Label": "Запустите установку",
+      "step2Sub": "Дважды щёлкните .exe и следуйте мастеру установки.",
+      "step3Label": "Нажмите Ctrl + Space",
+      "step3Sub": "Из любого приложения в Windows. Всё готово.",
+      "download": "Скачать для Windows",
+      "later": "Позже"
+    },
+    "instructions": {
+      "title": "Инструкции",
+      "subtitle": "Постоянные правила, определяющие поведение ИИ — всегда активны.",
+      "newBtn": "Новая инструкция",
+      "empty": "Нет инструкций.",
+      "createFirst": "Создайте первую инструкцию",
+      "fieldLabel": "Название",
+      "fieldInstruction": "Инструкция",
+      "fieldApp": "Только когда приложение",
+      "fieldAppPlaceholder": "напр. Microsoft Excel",
+      "fieldFolder": "Только в папке",
+      "fieldFolderPlaceholder": "напр. C:/Работа/Счета"
+    },
+    "skills": {
+      "title": "Навыки",
+      "subtitle": "Именованные действия в командной палитре — вызываются по запросу.",
+      "newBtn": "Новый навык",
+      "empty": "Нет навыков.",
+      "createFirst": "Создайте первый навык",
+      "fieldName": "Название",
+      "fieldDescription": "Описание",
+      "fieldPrompt": "Промпт",
+      "fieldApp": "Только когда приложение",
+      "fieldAppPlaceholder": "напр. Microsoft Excel",
+      "fieldFolder": "Только в папке",
+      "fieldFolderPlaceholder": "напр. C:/Работа/Счета",
+      "destructiveLabel": "Требует подтверждения перед выполнением",
+      "destructiveBadge": "Нужно подтверждение"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "signOut": "Sign out"
+  },
+  "login": {
+    "brand": "AI Assistant",
+    "tagline": "Sign in to continue",
+    "emailPlaceholder": "Email address",
+    "passwordPlaceholder": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "noAccount": "No account?",
+    "register": "Register on the website ↗",
+    "errorCredentials": "Login failed. Check your credentials.",
+    "errorNetwork": "Unable to connect. Check your internet connection."
+  },
+  "palette": {
+    "placeholder": "Ask anything…",
+    "stop": "Stop",
+    "footer": {
+      "escCancel": "Esc to cancel",
+      "escStop": "Esc to stop",
+      "escClose": "Esc to close",
+      "dashboard": "Dashboard ↗"
+    },
+    "actions": {
+      "insert_text": "Insert text",
+      "copy_to_clipboard": "Copy to clipboard",
+      "open_folder": "Open folder",
+      "open_file": "Open file",
+      "open_url": "Open URL",
+      "running": "Running…",
+      "done": "✓ Done"
+    },
+    "confirm": {
+      "prompt": "Run: {{label}}?",
+      "confirm": "Confirm ↵"
+    },
+    "update": {
+      "ready": "↑ v{{version}} ready to install",
+      "restart": "Restart & update"
+    },
+    "error": {
+      "http": "Something went wrong — please try again. (HTTP {{status}})",
+      "generic": "Something went wrong — please try again."
+    }
+  }
+}

@@ -1,11 +1,8 @@
 'use client'
 
-// Sign-out goes through our own Vercel API route — not supabase-browser.
-// Traffic path: browser → Vercel (/api/auth/signout) → Supabase  ✓
-// supabase-browser is NOT imported here.
-
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard,
   Zap,
@@ -15,25 +12,28 @@ import {
   ChevronRight,
   Shield,
 } from 'lucide-react'
-
-const NAV = [
-  { href: '/dashboard',              label: 'Overview',     icon: LayoutDashboard },
-  { href: '/dashboard/instructions', label: 'Instructions', icon: BookOpen },
-  { href: '/dashboard/skills',       label: 'Skills',       icon: Zap },
-  { href: '/dashboard/history',      label: 'History',      icon: History },
-]
+import '@/lib/i18n'
 
 export default function Sidebar({ userEmail, isAdmin = false }: { userEmail: string; isAdmin?: boolean }) {
+  const { t, i18n } = useTranslation()
   const pathname = usePathname()
   const router   = useRouter()
 
+  const NAV = [
+    { href: '/dashboard',              label: t('sidebar.overview'),      icon: LayoutDashboard },
+    { href: '/dashboard/instructions', label: t('sidebar.instructions'),  icon: BookOpen },
+    { href: '/dashboard/skills',       label: t('sidebar.skills'),        icon: Zap },
+    { href: '/dashboard/history',      label: t('sidebar.history'),       icon: History },
+  ]
+
   async function signOut() {
-    await fetch('/api/auth/signout', {
-      method: 'POST',
-      credentials: 'include',
-    })
+    await fetch('/api/auth/signout', { method: 'POST', credentials: 'include' })
     router.push('/login')
     router.refresh()
+  }
+
+  function toggleLanguage() {
+    i18n.changeLanguage(i18n.language === 'ru' ? 'en' : 'ru')
   }
 
   return (
@@ -86,7 +86,7 @@ export default function Sidebar({ userEmail, isAdmin = false }: { userEmail: str
             style={{ marginBottom: '4px', color: 'var(--error)' }}
           >
             <Shield size={15} strokeWidth={1.8} />
-            Admin panel
+            {t('sidebar.adminPanel')}
           </Link>
         )}
 
@@ -101,13 +101,24 @@ export default function Sidebar({ userEmail, isAdmin = false }: { userEmail: str
         }}>
           {userEmail}
         </div>
+
+        {/* Language toggle */}
+        <button
+          onClick={toggleLanguage}
+          className="nav-item"
+          style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left', marginBottom: '2px' }}
+        >
+          <span style={{ fontSize: '13px' }}>🌐</span>
+          {i18n.language === 'ru' ? 'English' : 'Русский'}
+        </button>
+
         <button
           onClick={signOut}
           className="nav-item"
           style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left' }}
         >
           <LogOut size={15} strokeWidth={1.8} />
-          Sign out
+          {t('common.signOut')}
         </button>
       </div>
     </aside>
