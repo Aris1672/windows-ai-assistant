@@ -290,10 +290,10 @@ async function fetchRecentActivity(
       .eq('user_id', userId)
       .eq('context_app', bundle.activeApp)
       .order('created_at', { ascending: false })
-      .limit(3)
+      .limit(2)
 
     if (bundle.activeFolder) {
-      query = query.eq('context_folder', bundle.activeFolder)
+      query = query.ilike('context_folder', `${bundle.activeFolder}%`)
     }
 
     const { data, error } = await query
@@ -301,10 +301,10 @@ async function fetchRecentActivity(
 
     return (data as RecentConversation[]).map((convo) => ({
       ...convo,
-      // Sort messages chronologically and cap at 6 (3 exchanges)
+      // Sort messages chronologically and cap at 4 (2 exchanges)
       messages: [...(convo.messages ?? [])]
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-        .slice(0, 6),
+        .slice(0, 4),
     }))
   } catch {
     return []
