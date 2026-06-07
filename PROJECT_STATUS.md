@@ -8,7 +8,7 @@
 
 **Current status:** Phases 1–5 complete. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends.
 
-**Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron), multilingual UI (`i18next`).
+**Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron).
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -33,12 +33,16 @@ root/                          ← npm workspaces root
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
 │       │   └── admin/         ← ✅ Done (overview, users, analytics, billing + activation, settings)
 │       ├── components/
-│       │   ├── Sidebar.tsx        ← ✅ Done
+│       │   ├── Sidebar.tsx        ← ✅ Done + i18n + language toggle
 │       │   └── AdminSidebar.tsx   ← ✅ Done
+│       ├── locales/
+│       │   ├── en.json            ← ✅ English strings (web)
+│       │   └── ru.json            ← ✅ Russian strings (web)
 │       └── lib/
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
 │           ├── auth.ts            ← ✅ Done (requireAuth: Bearer token + cookie fallback, jsonError, jsonOk)
 │           ├── assembler.ts       ← ✅ Done (instructions + skills + workflow memory injection)
+│           ├── i18n.ts            ← ✅ i18next config (EN/RU, localStorage detection)
 │           └── trial-subscription.ts ← ✅ Done (getUserSubscriptionStatus, markTrialExpiredIfNeeded, activateSubscription)
 └── app/                       ← Electron app (Windows desktop) — core working ✅
     └── src/
@@ -53,9 +57,14 @@ root/                          ← npm workspaces root
         │   └── index.ts           ← ✅ IPC bridge (electronAPI on window)
         └── renderer/src/
             ├── App.tsx            ← ✅ Auth gate (login ↔ palette)
+            ├── lib/
+            │   └── i18n.ts            ← ✅ i18next config (EN/RU, localStorage detection)
+            ├── locales/
+            │   ├── en.json            ← ✅ English strings
+            │   └── ru.json            ← ✅ Russian strings
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking
-            │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + i18n
+            │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
 
@@ -307,7 +316,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] **Confirm UI in palette** — `insert_text` requires confirm; safe actions fire immediately
 - [x] **Assembler system prompt update** — explicit ✅ can-do / ❌ cannot-do table; action XML format + examples
 - [x] Action menu — context-aware skills rendered as buttons in palette
-- [ ] Multilingual UI with `i18next`
+- [x] Multilingual UI with `i18next` — EN/RU, language toggle in palette footer + sidebar, localStorage persistence ← **DONE**
 - [x] Auto-updater (`electron-updater`) ← **DONE**
 - [x] Windows installer (`.exe`) packaging ← **DONE**
 
@@ -362,7 +371,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 27. ✅ Auto-updater — electron-updater, in-palette "Restart & update" banner ← **DONE**
 28. ✅ Dashboard download modal — appears after onboarding, guides user to install desktop app ← **DONE**
 29. ✅ Semantic skill filtering — fuzzy app name matching + system shell detection ← **DONE**
-30. [ ] Multilingual UI (`i18next`)
+30. ✅ Multilingual UI (`i18next`) — EN/RU for web dashboard + Electron palette, language toggle, localStorage persistence ← **DONE**
 
 ---
 
@@ -400,9 +409,9 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Phase 5 complete + Windows installer & auto-updater shipped.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅
-Remaining open items: Trial expiry emails, Multilingual UI.*
+*Last updated: Phase 5 complete + Windows installer & auto-updater shipped. Multilingual UI (i18next) complete.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅
+Remaining open items: Trial expiry emails.*
 
 ## Pricing & Billing Decisions
 
