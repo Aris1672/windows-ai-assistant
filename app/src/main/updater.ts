@@ -14,9 +14,15 @@ import { destroyTray } from './tray'
 import log from 'electron-log'
 
 export function initAutoUpdater(win: BrowserWindow): void {
-  // Enable file logging so issues are visible in %APPDATA%\AI-Assistant\logs\main.log
-  autoUpdater.logger = log
+  // Force file logging — creates %APPDATA%\AI-Assistant\logs\main.log
   log.transports.file.level = 'debug'
+  log.transports.file.resolvePathFn = () => {
+    const { app } = require('electron')
+    return require('path').join(app.getPath('userData'), 'logs', 'main.log')
+  }
+  log.info('[updater] initAutoUpdater called — logging active')
+
+  autoUpdater.logger = log
 
   // Tell the updater exactly where to look for releases
   autoUpdater.setFeedURL({
