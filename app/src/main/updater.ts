@@ -9,8 +9,23 @@
 import { ipcMain } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { BrowserWindow } from 'electron'
+import { unregisterHotkey } from './hotkey'
+import { destroyTray } from './tray'
+import log from 'electron-log'
 
 export function initAutoUpdater(win: BrowserWindow): void {
+  // Enable file logging so issues are visible in %APPDATA%\AI-Assistant\logs\main.log
+  autoUpdater.logger = log
+  log.transports.file.level = 'debug'
+
+  // Tell the updater exactly where to look for releases
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'Aris1672',
+    repo: 'windows-ai-assistant',
+    private: false,
+  })
+
   // Download silently in the background; install on next quit
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
@@ -46,6 +61,10 @@ export function initAutoUpdater(win: BrowserWindow): void {
   // ── IPC: renderer requests install ───────────────────────────────────────
 
   ipcMain.on('updater-install', () => {
+    // Unregister hotkey + destroy tray before installer runs,
+    // so Windows can replace the running .exe without being blocked.
+    unregisterHotkey()
+    destroyTray()
     autoUpdater.quitAndInstall()
   })
 
