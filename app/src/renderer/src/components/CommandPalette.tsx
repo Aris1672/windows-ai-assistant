@@ -207,6 +207,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   // Auto-updater state — set when a new version is downloaded and ready
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
+  const [updateDismissed, setUpdateDismissed] = useState(false)
 
   // ── Conversation thread ───────────────────────────────────────────────────
   // Committed exchanges — each submit appends the previous user+assistant turn.
@@ -834,35 +835,30 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         )}
 
         {/* Update banner */}
-        {updateVersion && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0.4rem 0.875rem',
-            background: 'rgba(0, 245, 160, 0.07)',
-            borderTop: '1px solid rgba(0, 245, 160, 0.15)',
-            flexShrink: 0,
-          }}>
-            <span style={{ fontSize: '0.75rem', color: 'rgba(0, 245, 160, 0.85)' }}>
-              {t('palette.update.ready', { version: updateVersion })}
-            </span>
-            <button
-              onClick={() => window.electronAPI.updaterInstall()}
-              style={{
-                padding: '0.2rem 0.625rem',
-                borderRadius: '4px',
-                border: '1px solid rgba(0, 245, 160, 0.3)',
-                background: 'rgba(0, 245, 160, 0.12)',
-                color: 'rgb(0, 245, 160)',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
-            >
-              {t('palette.update.restart')}
-            </button>
+        {updateVersion && !updateDismissed && (
+          <div className="update-banner">
+            <div className="update-banner__left">
+              <span className="update-banner__dot" />
+              <span className="update-banner__text">
+                {t('palette.update.label')}{' '}
+                <span className="update-banner__version">v{updateVersion}</span>{' '}
+                {t('palette.update.ready')}
+              </span>
+            </div>
+            <div className="update-banner__actions">
+              <button
+                className="update-banner__btn-install"
+                onClick={() => window.electronAPI.updaterInstall()}
+              >
+                {t('palette.update.restart')}
+              </button>
+              <button
+                className="update-banner__btn-later"
+                onClick={() => setUpdateDismissed(true)}
+              >
+                {t('palette.update.later')}
+              </button>
+            </div>
           </div>
         )}
 

@@ -45,12 +45,15 @@ app.whenReady().then(async () => {
 
   createPaletteWindow()
 
-  // ── Auto-updater (production only) ─────────────────────────────────────── NEW
-  if (!app.isPackaged === false) {
-    const win = getPaletteWindow()
-    if (win) initAutoUpdater(win)
+  // ── Auto-updater (production only) ───────────────────────────────────────
+  // Deferred so the palette window is guaranteed to exist when we attach listeners.
+  if (app.isPackaged) {
+    setTimeout(() => {
+      const win = getPaletteWindow()
+      if (win) initAutoUpdater(win)
+    }, 0)
   }
-  // ── End auto-updater ────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
 
   createTray({
     onShowPalette: async () => {

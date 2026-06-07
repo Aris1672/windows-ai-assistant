@@ -51,11 +51,16 @@ export function initAutoUpdater(win: BrowserWindow): void {
 
   // ── Initial check — delayed so the app is fully settled first ────────────
 
-  setTimeout(() => {
+  const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000 // 4 hours
+
+  function checkForUpdates(): void {
     autoUpdater.checkForUpdates().catch((err: Error) => {
       console.warn('[updater] check failed (non-fatal):', err.message)
     })
-  }, 5_000)
+  }
+
+  setTimeout(checkForUpdates, 5_000)
+  setInterval(checkForUpdates, CHECK_INTERVAL_MS)
 
   function send(payload: Record<string, unknown>): void {
     if (!win.isDestroyed()) {

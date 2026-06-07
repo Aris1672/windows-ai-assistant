@@ -38,8 +38,10 @@
       "confirm": "Confirm ↵"
     },
     "update": {
-      "ready": "↑ v{{version}} ready to install",
-      "restart": "Restart & update"
+      "label": "Update available —",
+      "ready": "is ready to install.",
+      "restart": "Restart & update",
+      "later": "Later"
     },
     "error": {
       "http": "Something went wrong — please try again. (HTTP {{status}})",
