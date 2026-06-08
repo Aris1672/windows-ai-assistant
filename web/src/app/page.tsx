@@ -294,9 +294,11 @@ export default function LandingPage() {
           height: '56px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span className="wordmark">
+          <a href="https://assistant24.tech/index.html" style={{ textDecoration: 'none' }}>
+            <span className="wordmark">
   ASSISTANT <span>24</span>
 </span>
+          </a>
 
           <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
             {/* Language switcher */}
