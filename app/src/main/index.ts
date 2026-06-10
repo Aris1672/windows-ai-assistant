@@ -10,9 +10,10 @@ import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow } from 
 import { getContext } from './context-detector'
 import type { ContextBundle } from './context-detector'
 import { store } from './store'
+import type { ContextClip } from './store'
 import { executeAction, ACTION_LABELS } from './actions'
 import type { Action } from './actions'
-import { initAutoUpdater } from './updater'                // ← NEW
+import { initAutoUpdater } from './updater'
 
 const WEB_URL = process.env['VITE_WEB_URL'] ?? 'https://your-app.vercel.app'
 
@@ -45,15 +46,12 @@ app.whenReady().then(async () => {
 
   createPaletteWindow()
 
-  // ── Auto-updater (production only) ───────────────────────────────────────
-  // Deferred so the palette window is guaranteed to exist when we attach listeners.
   if (app.isPackaged) {
     setTimeout(() => {
       const win = getPaletteWindow()
       if (win) initAutoUpdater(win)
     }, 0)
   }
-  // ─────────────────────────────────────────────────────────────────────────
 
   createTray({
     onShowPalette: async () => {
@@ -105,6 +103,30 @@ ipcMain.on('set-token', (_event, token: string | null) => {
 
 ipcMain.on('open-dashboard', () => {
   shell.openExternal(`${WEB_URL}/dashboard`)
+})
+
+// ─── Context Tray IPC ─────────────────────────────────────────────────────────
+
+ipcMain.handle('tray-get-clips', (): ContextClip[] => {
+  return store.trayGetClips()
+})
+
+ipcMain.handle(
+  'tray-add-clip',
+  (_event, clip: ContextClip): ContextClip[] => {
+    return store.trayAddClip(clip)
+  }
+)
+
+ipcMain.handle(
+  'tray-remove-clip',
+  (_event, index: number): ContextClip[] => {
+    return store.trayRemoveClip(index)
+  }
+)
+
+ipcMain.handle('tray-clear', (): void => {
+  store.trayClear()
 })
 
 // ─── Action Executor ─────────────────────────────────────────────────────────

@@ -13,10 +13,20 @@
 
 import { createUserClient } from './supabase'
 
+// ─── Context Clip (mirrors Electron store type) ───────────────────────────────
+
+export interface ContextClip {
+  text:      string
+  sourceApp: string | null
+  filePath:  string | null
+  addedAt:   string
+}
+
 export interface ContextBundle {
-  activeApp: string | null
+  activeApp:    string | null
   activeFolder: string | null
   selectedText: string | null
+  contextTray?: ContextClip[]   // ← pinned clips from the tray
 }
 
 export interface Skill {
@@ -120,6 +130,22 @@ Always respond in the same language the user writes in.`)
     if (bundle.selectedText) parts.push(`Selected text:\n"""\n${bundle.selectedText}\n"""`)
   }
 
+  // ── Context Tray block ─────────────────────────────────────────────────────
+  // Clips the user explicitly pinned across different apps/documents.
+  // Each clip is labelled with its source so Claude can reason about provenance.
+  const trayClips = bundle.contextTray ?? []
+  if (trayClips.length > 0) {
+    parts.push(`\n## Pinned Context (${trayClips.length} clip${trayClips.length > 1 ? 's' : ''})`)
+    parts.push(`The user has pinned the following content from other documents or apps. Use it alongside the current context to answer their question.`)
+    trayClips.forEach((clip, i) => {
+      const label = [
+        clip.sourceApp ?? 'Unknown app',
+        clip.filePath  ? `— ${clip.filePath.split(/[/\\]/).pop()}` : '',
+      ].filter(Boolean).join(' ')
+      parts.push(`\n### Clip ${i + 1} — ${label}\n"""\n${clip.text}\n"""`)
+    })
+  }
+
   // User instructions block
   if (activeInstructions.length > 0) {
     parts.push(`\n## User Instructions\nAlways follow these rules:`)
@@ -139,8 +165,6 @@ Always respond in the same language the user writes in.`)
   parts.push(`\nIf the user invokes a skill by name, execute it using the selected text and current context.`)
 
   // ── Workflow memory block ──────────────────────────────────────────────────
-  // Inject recent conversations from this context so Claude understands
-  // the user's patterns and can build on previous work.
   if (recentConversations.length > 0) {
     parts.push(`\n## Recent Activity`)
     parts.push(`These are the user's recent interactions in this context. Use them to understand their workflow, preferred style, and patterns — but do not repeat what was already done unless asked.`)
@@ -261,17 +285,12 @@ User: "close this document"
 
 // ─── Recent activity helpers ──────────────────────────────────────────────────
 
-/**
- * Fetches the last 3 conversations for the same app (and folder if available),
- * with up to 6 messages each. Non-fatal — returns [] on any error.
- */
 async function fetchRecentActivity(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   userId: string,
   bundle: ContextBundle
 ): Promise<RecentConversation[]> {
-  // Only inject history when we have app context — otherwise too generic to be useful
   if (!bundle.activeApp) return []
 
   try {
@@ -301,7 +320,6 @@ async function fetchRecentActivity(
 
     return (data as RecentConversation[]).map((convo) => ({
       ...convo,
-      // Sort messages chronologically and cap at 4 (2 exchanges)
       messages: [...(convo.messages ?? [])]
         .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         .slice(0, 4),

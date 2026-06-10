@@ -16,6 +16,13 @@ export interface ContextBundle {
   capturedAt: string
 }
 
+export interface ContextClip {
+  text:      string
+  sourceApp: string | null
+  filePath:  string | null
+  addedAt:   string
+}
+
 export type StreamEvent =
   | { type: 'chunk'; data: string }
   | { type: 'done' }
@@ -69,8 +76,13 @@ export interface ElectronAPI {
   onStreamEvent: (callback: (ev: StreamEvent) => void) => () => void
 
   // ── Action executor ──────────────────────────────────────────────────────
-  // conversationId links the action to its palette session in the history log.
   executeAction: (action: Action, conversationId?: string | null) => Promise<ActionResult>
+
+  // ── Context Tray ─────────────────────────────────────────────────────────
+  trayGetClips:    () => Promise<ContextClip[]>
+  trayAddClip:     (clip: ContextClip) => Promise<ContextClip[]>
+  trayRemoveClip:  (index: number) => Promise<ContextClip[]>
+  trayClear:       () => Promise<void>
 
   // Events pushed from the main process
   onPaletteShown:  (callback: () => void) => () => void
@@ -107,10 +119,14 @@ const api: ElectronAPI = {
   },
 
   // ── Action executor ───────────────────────────────────────────────────────
-  // Wraps action + conversationId in a single IPC payload so the main process
-  // can include the conversation link in the Supabase history record.
   executeAction: (action, conversationId = null) =>
     ipcRenderer.invoke('execute-action', { action, conversationId }),
+
+  // ── Context Tray ──────────────────────────────────────────────────────────
+  trayGetClips:   ()        => ipcRenderer.invoke('tray-get-clips'),
+  trayAddClip:    (clip)    => ipcRenderer.invoke('tray-add-clip', clip),
+  trayRemoveClip: (index)   => ipcRenderer.invoke('tray-remove-clip', index),
+  trayClear:      ()        => ipcRenderer.invoke('tray-clear'),
 
   // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {

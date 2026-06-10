@@ -2,9 +2,21 @@ import { app } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 
+// ─── Context Tray ─────────────────────────────────────────────────────────────
+
+export interface ContextClip {
+  text:       string
+  sourceApp:  string | null
+  filePath:   string | null
+  addedAt:    string   // ISO timestamp
+}
+
+// ─── Store schema ─────────────────────────────────────────────────────────────
+
 interface StoreData {
-  authToken?: string
-  userEmail?: string
+  authToken?:    string
+  userEmail?:    string
+  contextTray?:  ContextClip[]
 }
 
 function getStorePath(): string {
@@ -38,5 +50,32 @@ export const store = {
     const data = read()
     delete data[key]
     write(data)
-  }
+  },
+
+  // ── Context Tray helpers ──────────────────────────────────────────────────
+
+  trayGetClips(): ContextClip[] {
+    return read().contextTray ?? []
+  },
+
+  trayAddClip(clip: ContextClip): ContextClip[] {
+    const data = read()
+    const tray = data.contextTray ?? []
+    // Cap at 10 clips — drop oldest if full
+    const updated = [...tray, clip].slice(-10)
+    write({ ...data, contextTray: updated })
+    return updated
+  },
+
+  trayRemoveClip(index: number): ContextClip[] {
+    const data = read()
+    const tray = (data.contextTray ?? []).filter((_, i) => i !== index)
+    write({ ...data, contextTray: tray })
+    return tray
+  },
+
+  trayClear(): void {
+    const data = read()
+    write({ ...data, contextTray: [] })
+  },
 }

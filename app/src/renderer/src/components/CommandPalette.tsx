@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ContextBundle, Action } from '../types/electron'
+import type { ContextBundle, Action, ContextClip } from '../types/electron'
 
 const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
 
@@ -38,8 +38,6 @@ const ACTION_REQUIRES_CONFIRM: Record<Action['type'], boolean> = {
   open_url:          false,
 }
 
-// Returns a translated label for a given action type.
-// Replaces the former static ACTION_LABELS object.
 function getActionLabel(type: Action['type'], t: (key: string) => string): string {
   return t(`palette.actions.${type}`)
 }
@@ -92,6 +90,14 @@ function SpinnerIcon(): JSX.Element {
   return <span className="spinner" aria-label="Loading" />
 }
 
+function PinIcon(): JSX.Element {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/>
+    </svg>
+  )
+}
+
 // ─── SSE chunk parser ─────────────────────────────────────────────────────────
 
 interface ParsedChunk {
@@ -124,17 +130,9 @@ function parseSSEChunk(raw: string): ParsedChunk {
 }
 
 // ─── System shell detector ────────────────────────────────────────────────────
-// Returns true for file managers and OS shells — not "real work" apps.
-// When the active app is a system shell, no app-filtered skills are shown.
 
 const SYSTEM_SHELLS = [
-  'проводник',   // Windows Explorer (Russian)
-  'explorer',    // Windows Explorer (English)
-  'finder',      // macOS Finder
-  'nautilus',    // GNOME Files
-  'dolphin',     // KDE Dolphin
-  'thunar',      // XFCE Thunar
-  'files',       // GNOME Files alt name
+  'проводник', 'explorer', 'finder', 'nautilus', 'dolphin', 'thunar', 'files',
 ]
 
 function isSystemShell(app: string | null): boolean {
@@ -144,17 +142,9 @@ function isSystemShell(app: string | null): boolean {
 }
 
 // ─── Semantic app matcher ─────────────────────────────────────────────────────
-// Matches a user-typed filter (e.g. "Foxit PDF") against the active app name
-// (e.g. "Foxit PDF Reader 12.1.0") using word-level fuzzy matching.
-// Rules:
-//   1. Direct substring check in either direction
-//   2. Every significant word in the filter must appear (as a substring) in
-//      at least one word of the active app name
-// This means "excel" matches "Microsoft Excel 365", "pdf" matches "Foxit PDF
-// Reader", "foxit pdf" matches "Foxit PDF Reader 12", etc.
 
 function appMatchesFilter(filter: string | null, activeApp: string | null): boolean {
-  if (!filter) return true   // no filter → always visible
+  if (!filter) return true
   if (!activeApp) return false
 
   const normalize = (s: string): string =>
@@ -163,10 +153,8 @@ function appMatchesFilter(filter: string | null, activeApp: string | null): bool
   const f = normalize(filter)
   const a = normalize(activeApp)
 
-  // Fast path: one contains the other
   if (a.includes(f) || f.includes(a)) return true
 
-  // Word-level: every meaningful word in filter must match some word in app
   const noise = new Set(['the', 'a', 'an', 'and', 'or', 'for', 'of', 'in', 'on', 'at'])
   const fWords = f.split(' ').filter(w => w.length > 1 && !noise.has(w))
   const aWords = a.split(' ').filter(w => w.length > 1 && !noise.has(w))
@@ -181,6 +169,12 @@ function deriveActiveFolder(context: ContextBundle | null): string | null {
   return context?.activeFilePath
     ? (context.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null)
     : null
+}
+
+function clipSourceLabel(clip: ContextClip): string {
+  const app  = clip.sourceApp ?? 'Unknown'
+  const file = clip.filePath ? clip.filePath.split(/[/\\]/).pop() : null
+  return file ? `${app} — ${file}` : app
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -205,23 +199,23 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [skills, setSkills]             = useState<Skill[]>([])
   const [pendingSkill, setPendingSkill] = useState<Skill | null>(null)
 
-  // Auto-updater state — set when a new version is downloaded and ready
+  // ── Context Tray state ────────────────────────────────────────────────────
+  const [trayClips, setTrayClips]       = useState<ContextClip[]>([])
+  const [trayOpen, setTrayOpen]         = useState(false)
+
+  // Auto-updater state
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
 
   // ── Conversation thread ───────────────────────────────────────────────────
-  // Committed exchanges — each submit appends the previous user+assistant turn.
   interface ThreadMessage { role: 'user' | 'assistant'; text: string; isError?: boolean }
   const [messages, setMessages] = useState<ThreadMessage[]>([])
 
   // ── Workflow memory state ─────────────────────────────────────────────────
-  // conversationId is set after the first response completes.
-  // It's passed to executeAction so the action record links to its session.
   const [conversationId, setConversationId] = useState<string | null>(null)
 
-  // Refs for async callbacks that need current values without stale closures
-  const lastQueryRef        = useRef('')                                      // query text at submit time
-  const rawResponseRef      = useRef('')                                      // mirrors rawResponse for use in async callbacks
+  const lastQueryRef        = useRef('')
+  const rawResponseRef      = useRef('')
   const conversationCreationRef = useRef<Promise<string | null>>(Promise.resolve(null))
 
   const inputRef    = useRef<HTMLInputElement>(null)
@@ -253,6 +247,13 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     }).catch(() => {})
   }, [visible, token])
 
+  // ── Load tray clips on mount ───────────────────────────────────────────────
+  useEffect(() => {
+    window.electronAPI.trayGetClips()
+      .then(clips => setTrayClips(clips))
+      .catch(() => {})
+  }, [])
+
   // ── Keep rawResponseRef in sync ───────────────────────────────────────────
   useEffect(() => {
     rawResponseRef.current = rawResponse
@@ -273,7 +274,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       runAction(action)
     }
 
-    // Save the conversation + messages — fire-and-forget
     if (mode === 'done') {
       const capturedQuery    = lastQueryRef.current
       const capturedResponse = rawResponseRef.current
@@ -281,11 +281,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       conversationCreationRef.current
         .then(async (convId) => {
           if (!convId || !capturedQuery) return
-
-          // Store the ID so executeAction can link to this session
           setConversationId(convId)
-
-          // Batch-save both turns
           await window.electronAPI.apiRequest({
             url:     `${WEB_URL}/api/conversations/${convId}/messages`,
             method:  'POST',
@@ -298,15 +294,13 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             },
           })
         })
-        .catch(() => {})  // non-fatal
+        .catch(() => {})
     }
   }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Execute action ────────────────────────────────────────────────────────
   const runAction = useCallback(async (action: Action) => {
     setActionStatus('running')
-    // Pass conversationId so the action record links to this session.
-    // Uses functional ref pattern to avoid stale closure over state.
     const result = await window.electronAPI.executeAction(action, conversationId)
     if (result.ok) {
       setActionStatus('done')
@@ -317,18 +311,43 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     }
   }, [conversationId])
 
+  // ── Add current selection to tray ─────────────────────────────────────────
+  const addToTray = useCallback(async () => {
+    const text = context?.selectedText?.trim()
+    if (!text) return
+
+    const clip: ContextClip = {
+      text,
+      sourceApp: context?.activeApp    ?? null,
+      filePath:  context?.activeFilePath ?? null,
+      addedAt:   new Date().toISOString(),
+    }
+
+    const updated = await window.electronAPI.trayAddClip(clip)
+    setTrayClips(updated)
+    setTrayOpen(true)
+  }, [context])
+
+  // ── Remove a single clip ──────────────────────────────────────────────────
+  const removeClip = useCallback(async (index: number) => {
+    const updated = await window.electronAPI.trayRemoveClip(index)
+    setTrayClips(updated)
+    if (updated.length === 0) setTrayOpen(false)
+  }, [])
+
+  // ── Clear all clips ───────────────────────────────────────────────────────
+  const clearTray = useCallback(async () => {
+    await window.electronAPI.trayClear()
+    setTrayClips([])
+    setTrayOpen(false)
+  }, [])
+
   // ── Core streaming submit ─────────────────────────────────────────────────
   const submitQuery = useCallback((message: string): void => {
     if (!message || mode === 'thinking' || mode === 'streaming') return
 
-    // ── Build history snapshot BEFORE any state updates ─────────────────────
-    // We read `messages` (current committed turns) and the just-finished
-    // exchange from refs — both are synchronously available right now.
-    // After setMessages() fires, React state is async and we can't rely on it.
     const historySnapshot: { role: 'user' | 'assistant'; content: string }[] = [
-      // All previously committed turns
       ...messages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.text })),
-      // The exchange that just finished (about to be committed below)
       ...(lastQueryRef.current && rawResponseRef.current ? (() => {
         const { displayText: prevDisplay } = parseActionFromResponse(rawResponseRef.current)
         const prevText = prevDisplay || rawResponseRef.current
@@ -339,7 +358,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       })() : []),
     ]
 
-    // Commit the previous exchange (if any) to the conversation thread
     if (lastQueryRef.current && rawResponseRef.current) {
       const { displayText: prevDisplay } = parseActionFromResponse(rawResponseRef.current)
       const prevText = prevDisplay || rawResponseRef.current
@@ -350,7 +368,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       ])
     }
 
-    // Clear input and reset live response state
     setQuery('')
     setMode('thinking')
     setRawResponse('')
@@ -363,11 +380,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     setActionError(null)
     setConfirmed(false)
 
-    // Capture query for message saving after response
     lastQueryRef.current = message
 
-    // Create the conversation record in parallel with the stream.
-    // We don't await it here — the done effect will pick up the resolved ID.
     conversationCreationRef.current = window.electronAPI.apiRequest({
       url:     `${WEB_URL}/api/conversations`,
       method:  'POST',
@@ -385,7 +399,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       return null
     }).catch(() => null)
 
-    // Fire the stream — pass full history so Claude remembers previous turns
     window.electronAPI.streamContext({
       url: `${WEB_URL}/api/context`,
       token,
@@ -395,10 +408,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         activeFolder:     deriveActiveFolder(context),
         selectedText:     context?.selectedText     ?? null,
         screenshotBase64: context?.screenshotBase64 ?? null,
+        contextTray:      trayClips.length > 0 ? trayClips : undefined,  // ← tray clips
         history: historySnapshot,
       },
     })
-  }, [context, token, mode, messages])
+  }, [context, token, mode, messages, trayClips])
 
   // ── Submit from input field ───────────────────────────────────────────────
   const submit = useCallback((): void => {
@@ -420,55 +434,20 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     if (!pendingSkill) return
     setQuery(pendingSkill.name)
     submitQuery(pendingSkill.prompt)
+    setPendingSkill(null)
   }, [pendingSkill, submitQuery])
 
-  // ── Stream event listener ─────────────────────────────────────────────────
-  useEffect(() => {
-    const off = window.electronAPI.onStreamEvent((ev) => {
-      switch (ev.type) {
-        case 'auth-error':
-          onLogout()
-          break
-        case 'http-error':
-          setMode('error')
-          setRawResponse(t('palette.error.http', { status: ev.status }))
-          break
-        case 'error':
-          setMode('error')
-          setRawResponse(t('palette.error.generic'))
-          break
-        case 'done':
-          setMode('done')
-          break
-        case 'chunk': {
-          const { text, serverError } = parseSSEChunk(ev.data)
-          if (serverError) {
-            setMode('error')
-            setRawResponse(serverError)
-          } else if (text) {
-            setMode('streaming')
-            setRawResponse((prev) => prev + text)
-          }
-          break
-        }
-      }
-    })
-    return () => { off() }
-  }, [onLogout, t])
-
-  // ── IPC listeners ──────────────────────────────────────────────────────────
+  // ── Palette shown/hidden lifecycle ────────────────────────────────────────
   useEffect(() => {
     const offShown = window.electronAPI.onPaletteShown(() => {
       setVisible(true)
       setQuery('')
+      setMode('idle')
       setRawResponse('')
       rawResponseRef.current = ''
       setDisplayText('')
-      setMode('idle')
       setPendingAction(null)
       setPendingSkill(null)
-      setSkills([])
-      setConversationId(null)
       setMessages([])
       conversationCreationRef.current = Promise.resolve(null)
       lastQueryRef.current = ''
@@ -488,6 +467,34 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     })
 
     return () => { offShown(); offHidden(); offContext() }
+  }, [])
+
+  // ── Stream events ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const off = window.electronAPI.onStreamEvent((ev) => {
+      if (ev.type === 'chunk') {
+        const { text, serverError } = parseSSEChunk(ev.data)
+        if (serverError) {
+          setRawResponse(serverError)
+          setMode('error')
+        } else if (text) {
+          setMode('streaming')
+          setRawResponse(prev => prev + text)
+        }
+      } else if (ev.type === 'done') {
+        setMode('done')
+      } else if (ev.type === 'auth-error') {
+        setRawResponse('Session expired. Please sign in again.')
+        setMode('error')
+      } else if (ev.type === 'http-error') {
+        setRawResponse(`Server error (${ev.status}). Please try again.`)
+        setMode('error')
+      } else if (ev.type === 'error') {
+        setRawResponse('Connection error. Please try again.')
+        setMode('error')
+      }
+    })
+    return () => off()
   }, [])
 
   // ── Keyboard ───────────────────────────────────────────────────────────────
@@ -539,6 +546,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const showSkillStrip   = !busy && matchingSkills.length > 0 && !pendingSkill
   const showSkillConfirm = pendingSkill !== null && !busy
 
+  const canAddToTray = !!context?.selectedText?.trim() && !busy
+
   return (
     <div className={`palette-root ${visible ? 'palette-root--visible' : ''}`}>
       <div className={`palette ${visible ? 'palette--visible' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -558,7 +567,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    maxWidth: '340px',
+                    maxWidth: '260px',
                   }}
                 >
                   {deriveActiveFolder(context)}
@@ -567,16 +576,74 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             </div>
             {context.selectedText && (
               <span className="context-excerpt">
-                {context.selectedText.length > 72
-                  ? `"${context.selectedText.slice(0, 72)}…"`
+                {context.selectedText.length > 60
+                  ? `"${context.selectedText.slice(0, 60)}…"`
                   : `"${context.selectedText}"`}
               </span>
             )}
+
+            {/* Add to tray button — shown only when text is selected */}
+            {canAddToTray && (
+              <button
+                onClick={addToTray}
+                title="Pin this selection to the context tray"
+                style={{
+                  marginLeft: 'auto',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: '0.15rem 0.45rem',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(0, 245, 160, 0.2)',
+                  background: 'rgba(0, 245, 160, 0.06)',
+                  color: 'rgba(0, 245, 160, 0.7)',
+                  fontSize: '0.65rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  letterSpacing: '0.02em',
+                  transition: 'background 0.15s, border-color 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <PinIcon />
+                Pin
+              </button>
+            )}
+
+            {/* Tray badge — shown when clips exist */}
+            {trayClips.length > 0 && (
+              <button
+                onClick={() => setTrayOpen(o => !o)}
+                title={`${trayClips.length} pinned clip${trayClips.length > 1 ? 's' : ''}`}
+                style={{
+                  marginLeft: canAddToTray ? '0.3rem' : 'auto',
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: '0.15rem 0.45rem',
+                  borderRadius: '4px',
+                  border: `1px solid ${trayOpen ? 'rgba(0, 245, 160, 0.35)' : 'rgba(255,255,255,0.12)'}`,
+                  background: trayOpen ? 'rgba(0, 245, 160, 0.08)' : 'rgba(255,255,255,0.04)',
+                  color: trayOpen ? 'rgba(0, 245, 160, 0.85)' : 'rgba(255,255,255,0.45)',
+                  fontSize: '0.65rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <PinIcon />
+                {trayClips.length}
+              </button>
+            )}
+
             {context.screenshotBase64 && (
               <span
                 title="Screen captured — Claude can see what you're working on"
                 style={{
-                  marginLeft: 'auto',
+                  marginLeft: trayClips.length > 0 || canAddToTray ? '0.3rem' : 'auto',
                   fontSize: '0.65rem',
                   color: 'rgba(255,255,255,0.25)',
                   letterSpacing: '0.04em',
@@ -586,6 +653,115 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 ◉ vision
               </span>
             )}
+          </div>
+        )}
+
+        {/* ── Context Tray panel ─────────────────────────────────────────── */}
+        {trayOpen && trayClips.length > 0 && (
+          <div style={{
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            background: 'rgba(0,0,0,0.15)',
+            flexShrink: 0,
+          }}>
+            {/* Tray header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.4rem 0.75rem 0.25rem',
+            }}>
+              <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Pinned context
+              </span>
+              <button
+                onClick={clearTray}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.25)',
+                  fontSize: '0.65rem',
+                  cursor: 'pointer',
+                  padding: '0.1rem 0.3rem',
+                  borderRadius: '3px',
+                }}
+              >
+                Clear all
+              </button>
+            </div>
+
+            {/* Clip list */}
+            <div style={{
+              maxHeight: '120px',
+              overflowY: 'auto',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(255,255,255,0.1) transparent',
+              padding: '0 0.75rem 0.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.375rem',
+            }}>
+              {trayClips.map((clip, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                    padding: '0.3rem 0.5rem',
+                    borderRadius: '5px',
+                    border: '1px solid rgba(0, 245, 160, 0.1)',
+                    background: 'rgba(0, 245, 160, 0.04)',
+                  }}
+                >
+                  {/* Clip source label + preview */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '0.6rem',
+                      color: 'rgba(0, 245, 160, 0.5)',
+                      marginBottom: '0.15rem',
+                      letterSpacing: '0.02em',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {clipSourceLabel(clip)}
+                    </div>
+                    <div style={{
+                      fontSize: '0.73rem',
+                      color: 'rgba(255,255,255,0.55)',
+                      lineHeight: 1.4,
+                      overflow: 'hidden',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      wordBreak: 'break-word',
+                    }}>
+                      {clip.text}
+                    </div>
+                  </div>
+
+                  {/* Remove button */}
+                  <button
+                    onClick={() => removeClip(i)}
+                    title="Remove this clip"
+                    style={{
+                      flexShrink: 0,
+                      background: 'none',
+                      border: 'none',
+                      color: 'rgba(255,255,255,0.2)',
+                      fontSize: '0.8rem',
+                      lineHeight: 1,
+                      cursor: 'pointer',
+                      padding: '0.1rem 0.25rem',
+                      borderRadius: '3px',
+                      marginTop: '0.05rem',
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -627,9 +803,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                   lineHeight: 1.4,
                 }}
               >
-                {skill.is_destructive && (
-                  <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>⚠</span>
-                )}
+                {skill.is_destructive && <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>⚠</span>}
                 {skill.name}
               </button>
             ))}
@@ -705,13 +879,12 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           )}
         </div>
 
-        {/* Conversation thread — shown whenever there's history or a live turn */}
+        {/* Conversation thread */}
         {(messages.length > 0 || hasResponse || mode === 'thinking') && (
           <>
             <div className="divider" />
             <div className="response-area" ref={responseRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
 
-              {/* ── Committed history ── */}
               {messages.map((msg, i) => (
                 <div
                   key={i}
@@ -750,7 +923,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 </div>
               ))}
 
-              {/* ── Live turn: current user query (while pending response) ── */}
               {lastQueryRef.current && (mode === 'thinking' || mode === 'streaming') && (
                 <div style={{ display: 'flex', flexDirection: 'row-reverse', marginBottom: '0.5rem' }}>
                   <p
@@ -774,7 +946,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 </div>
               )}
 
-              {/* ── Live turn: assistant response ── */}
               {mode === 'thinking' && !hasResponse && (
                 <div className="thinking-dots" style={{ paddingLeft: '0.1rem' }}>
                   <span className="dot" /><span className="dot" /><span className="dot" />
@@ -792,7 +963,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
                 </p>
               )}
 
-              {/* ── Action button (live turn only) ── */}
               {showActionBtn && (
                 <div className="action-row">
                   {actionStatus === 'error' && actionError && (

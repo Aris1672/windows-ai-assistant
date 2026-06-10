@@ -61,6 +61,7 @@ export async function POST(request: Request) {
     message:           string
     skillId?:          string | null
     history?:          { role: 'user' | 'assistant'; content: string }[]
+    contextTray?:      { text: string; sourceApp: string; filePath?: string | null; timestamp: number }[]
   }
 
   try {
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
         activeApp:    body.activeApp    ?? null,
         activeFolder: body.activeFolder ?? null,
         selectedText: body.selectedText ?? null,
+        contextTray:  body.contextTray  ?? [],
       },
       accessToken
     )
