@@ -88,6 +88,14 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'action_type is required' }, { status: 400 });
     }
 
+    // Map incoming status values to what the DB constraint expects
+    const statusMap: Record<string, string> = {
+      done:    'completed',
+      success: 'completed',
+      error:   'failed',
+    }
+    const dbStatus = statusMap[status] ?? status
+
     // 1. Insert into actions table — this is what feeds History + Analytics
     const { data: action, error: actionError } = await supabase
       .from('actions')
@@ -98,7 +106,7 @@ export async function POST(req: NextRequest) {
         context_app:     context_app     || null,
         context_folder:  context_folder  || null,
         conversation_id: conversation_id || null,
-        status,
+        status: dbStatus,
       })
       .select()
       .single();
