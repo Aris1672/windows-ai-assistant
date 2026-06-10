@@ -1,5 +1,4 @@
 // web/src/app/api/actions/route.ts
-// Updated to track token consumption after each Claude call
 
 import { requireAuth } from '@/lib/auth';
 import { createUserClient } from '@/lib/supabase';
@@ -72,12 +71,17 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      action_id,
+      // Fields sent by Electron syncActionHistory
       action_type,
+      action_label,
+      context_app,
+      context_folder,
+      conversation_id,
+      status = 'done',
+      // Optional token fields (future use)
       input_tokens = 0,
       output_tokens = 0,
       model = 'claude-sonnet-4-6',
-      status = 'success',
       result,
       error: errorMsg,
     } = body;
@@ -86,64 +90,52 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'action_type is required' }, { status: 400 });
     }
 
-    const total_tokens = input_tokens + output_tokens;
-    const cost_usd = total_tokens * TOKEN_RATE_USD;
-
-    // 1. Create token_usage record
-    const { data: tokenUsage, error: tokenError } = await supabase
-      .from('token_usage')
+    // 1. Insert into actions table — this is what feeds History + Analytics
+    const { data: action, error: actionError } = await supabase
+      .from('actions')
       .insert({
-        user_id: user.id,
-        action_id: action_id || null,
+        user_id:         user.id,
+        action_type,
+        action_label:    action_label    || action_type,
+        context_app:     context_app     || null,
+        context_folder:  context_folder  || null,
+        conversation_id: conversation_id || null,
+        status,
+        result:          result          || null,
+        error:           errorMsg        || null,
+      })
+      .select()
+      .single();
+
+    if (actionError) throw actionError;
+
+    // 2. Track tokens if provided (non-zero)
+    const total_tokens = input_tokens + output_tokens;
+    if (total_tokens > 0) {
+      const cost_usd = total_tokens * TOKEN_RATE_USD;
+
+      await supabase.from('token_usage').insert({
+        user_id:      user.id,
+        action_id:    action.id,
         input_tokens,
         output_tokens,
         total_tokens,
         cost_usd,
         action_type,
         model,
-      })
-      .select()
-      .single();
+      });
 
-    if (tokenError) throw tokenError;
-
-    // 2. Update user totals
-    const { error: incrementError } = await supabase.rpc('increment_user_tokens', {
-      user_id: user.id,
-      tokens_count: total_tokens,
-      cost: cost_usd,
-    });
-
-    if (incrementError) throw incrementError;
-
-    // 3. Update the action record (if action_id provided)
-    if (action_id) {
-      const { error: updateError } = await supabase
-        .from('actions')
-        .update({
-          status,
-          result: result || null,
-          error: errorMsg || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', action_id)
-        .eq('user_id', user.id);
-
-      if (updateError) throw updateError;
+      await supabase.rpc('increment_user_tokens', {
+        user_id:      user.id,
+        tokens_count: total_tokens,
+        cost:         cost_usd,
+      });
     }
 
-    return Response.json({
-      success: true,
-      data: {
-        token_usage_id: tokenUsage.id,
-        total_tokens,
-        cost_usd,
-        input_tokens,
-        output_tokens,
-      },
-    });
+    return Response.json({ success: true, data: { action_id: action.id } });
+
   } catch (error) {
     console.error('POST /api/actions error:', error);
-    return Response.json({ error: 'Failed to save action and tokens' }, { status: 500 });
+    return Response.json({ error: 'Failed to save action' }, { status: 500 });
   }
 }

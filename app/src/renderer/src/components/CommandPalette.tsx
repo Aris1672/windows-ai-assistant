@@ -217,6 +217,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const lastQueryRef        = useRef('')
   const rawResponseRef      = useRef('')
   const conversationCreationRef = useRef<Promise<string | null>>(Promise.resolve(null))
+  const contextRef          = useRef<ContextBundle | null>(null)
 
   const inputRef    = useRef<HTMLInputElement>(null)
   const responseRef = useRef<HTMLDivElement>(null)
@@ -259,6 +260,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     rawResponseRef.current = rawResponse
   }, [rawResponse])
 
+  // ── Keep contextRef in sync ───────────────────────────────────────────────
+  useEffect(() => {
+    contextRef.current = context
+  }, [context])
+
   // ── Parse action + save conversation when streaming finishes ─────────────
   useEffect(() => {
     if (mode !== 'done' && mode !== 'error') return
@@ -278,10 +284,14 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       const capturedQuery    = lastQueryRef.current
       const capturedResponse = rawResponseRef.current
 
+      const capturedContext = contextRef.current
+
       conversationCreationRef.current
         .then(async (convId) => {
           if (!convId || !capturedQuery) return
           setConversationId(convId)
+
+          // Save messages to conversation
           await window.electronAPI.apiRequest({
             url:     `${WEB_URL}/api/conversations/${convId}/messages`,
             method:  'POST',
@@ -293,6 +303,23 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
               ],
             },
           })
+
+          // Log AI query to actions table — feeds History + Analytics
+          window.electronAPI.apiRequest({
+            url:     `${WEB_URL}/api/actions`,
+            method:  'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: {
+              action_type:     'query',
+              action_label:    capturedQuery.slice(0, 100),
+              context_app:     capturedContext?.activeApp ?? null,
+              context_folder:  capturedContext?.activeFilePath
+                ? capturedContext.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null
+                : null,
+              status:          'done',
+              conversation_id: convId,
+            },
+          }).catch(() => {})
         })
         .catch(() => {})
     }
