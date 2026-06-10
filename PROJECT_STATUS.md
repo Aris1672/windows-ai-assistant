@@ -6,7 +6,7 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends.
+**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data.
 
 **Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron).
 
@@ -23,7 +23,7 @@ root/                          ← npm workspaces root
 │       │   │   ├── user/          ← ✅ GET + PUT (done)
 │       │   │   ├── instructions/  ← ✅ GET + POST + PATCH + DELETE (done)
 │       │   │   ├── skills/        ← ✅ GET + POST + PATCH + DELETE (done)
-│       │   │   ├── actions/               ← ✅ GET (paginated history) + POST (sync from Electron)
+│       │   │   ├── actions/               ← ✅ GET (paginated history) + POST (sync from Electron — both AI queries and write-actions logged; status values mapped to DB constraint)
 │       │   │   ├── conversations/         ← ✅ POST — create conversation per palette session
 │       │   │   ├── conversations/[id]/messages/ ← ✅ POST — batch save message exchanges
 │       │   │   ├── auth/signout/  ← ✅ POST — server-side sign out (done)
@@ -63,7 +63,7 @@ root/                          ← npm workspaces root
             │   ├── en.json            ← ✅ English strings
             │   └── ru.json            ← ✅ Russian strings
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + i18n
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + i18n
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -330,7 +330,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Token tracking schema — token_usage + billing_records tables, RLS policies, increment_user_tokens() function
 - [x] Real-time token tracking — /api/context updated to capture input/output tokens after every Claude call
 - [x] Trial/subscription system — 7-day trial auto-created on signup; subscription_status, trial_ended_at, subscription_ends_at fields live
-- [x] /api/actions updated — accepts token counts, creates token_usage records, updates user monthly totals
+- [x] /api/actions updated — inserts into actions table on every call (AI queries + write-actions); status values mapped to DB constraint (done→completed, error→failed); token tracking optional
 - [x] Token cost validated — Claude Sonnet 4-6 at ~$0.0000041/token; avg query costs $0.01–0.02; €19.90/month pricing confirmed healthy
 - [x] Admin billing dashboard (/admin/billing) — per-user token spend, trial status, days remaining, payment records
 - [x] Usage analytics in admin panel — actions/day chart, status breakdown, top apps, top action types
@@ -375,6 +375,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 29. ✅ Semantic skill filtering — fuzzy app name matching + system shell detection ← **DONE**
 30. ✅ Multilingual UI (`i18next`) — EN/RU for web dashboard + Electron palette, language toggle, localStorage persistence ← **DONE**
 31. ✅ Context Tray — multi-clip context builder across palette sessions; "Add to tray" pin button, tray panel UI with remove/clear, persisted in store.ts, injected into assembler system prompt ← **DONE**
+32. ✅ Action logging fixed — /api/actions now inserts every AI query + write-action into actions table; CommandPalette fires POST after each stream completes; status constraint bug fixed (completed/failed/confirmed/cancelled) ← **DONE**
 
 ---
 
@@ -410,11 +411,12 @@ ANTHROPIC_API_KEY=
 - Dashboard pages call their own Vercel API routes via `fetch({ credentials: 'include' })` — never Supabase directly. The `requireAuth` helper accepts both a Bearer token (Electron) and a Supabase session cookie (web), extracting the real access token in both cases so all downstream code is identical
 - All Supabase and Claude traffic is routed through Vercel — required for access from Russia and other restricted regions
 - **Context Tray** solves cross-document and cross-app AI tasks — user cherry-picks relevant clips from any source; clips persist across palette open/close cycles and are injected as labelled context blocks in the assembler; capped at 10 clips (oldest dropped automatically)
+- `actions.status` check constraint only allows `completed`, `confirmed`, `cancelled`, `failed` — the route maps incoming `done`→`completed` and `error`→`failed` before inserting
 
 ---
 
-*Last updated: Phase 5 complete + Windows installer & auto-updater shipped. Multilingual UI (i18next) complete. Context Tray shipped.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅
+*Last updated: Context Tray shipped. Action logging fixed — History + Analytics dashboards now receive live data from all AI queries and write-actions.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅
 Remaining open items: Trial expiry emails.*
 
 ## Pricing & Billing Decisions
