@@ -82,8 +82,6 @@ export async function POST(req: NextRequest) {
       input_tokens = 0,
       output_tokens = 0,
       model = 'claude-sonnet-4-6',
-      result,
-      error: errorMsg,
     } = body;
 
     if (!action_type) {
@@ -101,8 +99,6 @@ export async function POST(req: NextRequest) {
         context_folder:  context_folder  || null,
         conversation_id: conversation_id || null,
         status,
-        result:          result          || null,
-        error:           errorMsg        || null,
       })
       .select()
       .single();
