@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     message:           string
     skillId?:          string | null
     history?:          { role: 'user' | 'assistant'; content: string }[]
-    contextTray?:      { text: string; sourceApp: string; filePath?: string | null; timestamp: number }[]
+    contextTray?:      { text: string; sourceApp: string; filePath?: string | null; addedAt: number }[]
   }
 
   try {
