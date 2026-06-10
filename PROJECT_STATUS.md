@@ -6,7 +6,7 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phases 1–5 complete. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends.
+**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends.
 
 **Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron).
 
@@ -27,7 +27,7 @@ root/                          ← npm workspaces root
 │       │   │   ├── conversations/         ← ✅ POST — create conversation per palette session
 │       │   │   ├── conversations/[id]/messages/ ← ✅ POST — batch save message exchanges
 │       │   │   ├── auth/signout/  ← ✅ POST — server-side sign out (done)
-│       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection, real-time token tracking
+│       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection, real-time token tracking, context tray passthrough
 │       │   ├── dashboard/     ← ✅ All pages fully wired to real data
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
@@ -41,7 +41,7 @@ root/                          ← npm workspaces root
 │       └── lib/
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
 │           ├── auth.ts            ← ✅ Done (requireAuth: Bearer token + cookie fallback, jsonError, jsonOk)
-│           ├── assembler.ts       ← ✅ Done (instructions + skills + workflow memory injection)
+│           ├── assembler.ts       ← ✅ Done (instructions + skills + workflow memory + context tray injection)
 │           ├── i18n.ts            ← ✅ i18next config (EN/RU, localStorage detection)
 │           └── trial-subscription.ts ← ✅ Done (getUserSubscriptionStatus, markTrialExpiredIfNeeded, activateSubscription)
 └── app/                       ← Electron app (Windows desktop) — core working ✅
@@ -52,7 +52,7 @@ root/                          ← npm workspaces root
         │   ├── tray.ts            ← ✅ System tray icon + menu
         │   ├── hotkey.ts          ← ✅ Ctrl+Space global hotkey
         │   ├── context-detector.ts ← ✅ Active app, file path, selected text
-        │   └── store.ts           ← ✅ Persistent local store (token, prefs)
+        │   └── store.ts           ← ✅ Persistent local store (token, prefs, contextTray)
         ├── preload/
         │   └── index.ts           ← ✅ IPC bridge (electronAPI on window)
         └── renderer/src/
@@ -63,7 +63,7 @@ root/                          ← npm workspaces root
             │   ├── en.json            ← ✅ English strings
             │   └── ru.json            ← ✅ Russian strings
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + i18n
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + i18n
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -216,7 +216,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 2. **Active file / folder path** — matches context conditions on Skills and Instructions
 3. **Selected text** — what the user has highlighted
 4. **Screenshot (optional, Phase 4)** — sent to Claude Vision
-5. **Assembled context** — fetched from Supabase, merged by Vercel
+5. **Context Tray** — user-curated clips saved across palette sessions (text + source app + file path)
+6. **Assembled context** — fetched from Supabase, merged by Vercel
 
 ---
 
@@ -325,6 +326,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Workflow memory — conversations + messages saved per session; assembler injects recent activity into system prompt
 - [x] Action history synced to Supabase — POST /api/actions called after every execution, linked to conversation_id
 - [x] Pre-built skill templates (Developer, Writer, Finance, Support, etc.)
+- [x] Context Tray — multi-clip context builder; user pins selected text from any app across palette sessions; tray persists in store.ts, injected into system prompt as labelled blocks; max 10 clips (oldest dropped); "Add to tray" button in palette + tray panel with per-clip remove + clear all
 - [x] Token tracking schema — token_usage + billing_records tables, RLS policies, increment_user_tokens() function
 - [x] Real-time token tracking — /api/context updated to capture input/output tokens after every Claude call
 - [x] Trial/subscription system — 7-day trial auto-created on signup; subscription_status, trial_ended_at, subscription_ends_at fields live
@@ -372,6 +374,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 28. ✅ Dashboard download modal — appears after onboarding, guides user to install desktop app ← **DONE**
 29. ✅ Semantic skill filtering — fuzzy app name matching + system shell detection ← **DONE**
 30. ✅ Multilingual UI (`i18next`) — EN/RU for web dashboard + Electron palette, language toggle, localStorage persistence ← **DONE**
+31. ✅ Context Tray — multi-clip context builder across palette sessions; "Add to tray" pin button, tray panel UI with remove/clear, persisted in store.ts, injected into assembler system prompt ← **DONE**
 
 ---
 
@@ -406,11 +409,12 @@ ANTHROPIC_API_KEY=
 - `supabase.ts` exports three clients: `createServerSupabaseClient` (cookies/SSR), `createUserClient` (Bearer token for Electron), `createAdminClient` (service role, server-only). `supabase-browser.ts` has been deleted — no Supabase JS ever runs in the browser
 - Dashboard pages call their own Vercel API routes via `fetch({ credentials: 'include' })` — never Supabase directly. The `requireAuth` helper accepts both a Bearer token (Electron) and a Supabase session cookie (web), extracting the real access token in both cases so all downstream code is identical
 - All Supabase and Claude traffic is routed through Vercel — required for access from Russia and other restricted regions
+- **Context Tray** solves cross-document and cross-app AI tasks — user cherry-picks relevant clips from any source; clips persist across palette open/close cycles and are injected as labelled context blocks in the assembler; capped at 10 clips (oldest dropped automatically)
 
 ---
 
-*Last updated: Phase 5 complete + Windows installer & auto-updater shipped. Multilingual UI (i18next) complete.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅
+*Last updated: Phase 5 complete + Windows installer & auto-updater shipped. Multilingual UI (i18next) complete. Context Tray shipped.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅
 Remaining open items: Trial expiry emails.*
 
 ## Pricing & Billing Decisions
