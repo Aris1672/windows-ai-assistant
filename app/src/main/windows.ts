@@ -32,6 +32,8 @@ export function createPaletteWindow(): BrowserWindow {
     }
   })
 
+  paletteWindow.webContents.openDevTools({ mode: 'detach' })
+
   // Auto-hide when the user clicks away
   paletteWindow.on('blur', () => {
     // Small timeout so clicking a button inside the window doesn't immediately close it
