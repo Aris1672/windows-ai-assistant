@@ -896,6 +896,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
               e.target.style.height = `${e.target.scrollHeight}px`
             }}
             onKeyDown={(e) => {
+              console.log('[key]', e.key, 'shiftKey:', e.shiftKey, 'shiftRef:', shiftHeldRef.current, 'code:', e.code)
               if (e.key === 'Enter' && (e.shiftKey || shiftHeldRef.current)) {
                 e.preventDefault()
                 if (pendingSkill) { confirmSkill() } else { submit() }
