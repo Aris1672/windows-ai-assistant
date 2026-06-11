@@ -219,7 +219,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const conversationCreationRef = useRef<Promise<string | null>>(Promise.resolve(null))
   const contextRef          = useRef<ContextBundle | null>(null)
 
-  const inputRef    = useRef<HTMLInputElement>(null)
+  const inputRef    = useRef<HTMLTextAreaElement>(null)
   const responseRef = useRef<HTMLDivElement>(null)
 
   // ── Derived: active folder + matching skills ───────────────────────────────
@@ -879,13 +879,19 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           <span className="input-icon">
             {busy ? <SpinnerIcon /> : <SearchIcon />}
           </span>
-          <input
+          <textarea
             ref={inputRef}
             className="input"
+            rows={1}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              // Auto-resize: shrink to auto first, then grow to content
+              e.target.style.height = 'auto'
+              e.target.style.height = `${e.target.scrollHeight}px`
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault()
                 if (pendingSkill) { confirmSkill() } else { submit() }
               }
@@ -894,8 +900,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
             autoComplete="off"
             spellCheck={false}
             disabled={busy}
+            style={{ resize: 'none', overflow: 'hidden', maxHeight: '140px' }}
           />
-          {query && !busy && <kbd className="input-kbd">↵</kbd>}
+          {query && !busy && <kbd className="input-kbd">⇧↵</kbd>}
           {busy && (
             <button
               className="cancel-btn"
