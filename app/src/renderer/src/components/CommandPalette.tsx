@@ -891,7 +891,7 @@ if (e.key === 'Escape') {
               e.target.style.height = `${e.target.scrollHeight}px`
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
                 if (pendingSkill) { confirmSkill() } else { submit() }
               }
@@ -902,7 +902,7 @@ if (e.key === 'Escape') {
             disabled={busy}
             style={{ resize: 'none', overflow: 'hidden', maxHeight: '140px' }}
           />
-          {query && !busy && <kbd className="input-kbd">⇧↵</kbd>}
+          {query && !busy && <kbd className="input-kbd">↵</kbd>}
           {busy && (
             <button
               className="cancel-btn"
