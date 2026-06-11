@@ -221,7 +221,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   const inputRef    = useRef<HTMLTextAreaElement>(null)
   const responseRef = useRef<HTMLDivElement>(null)
-  const shiftHeldRef = useRef(false)
 
   // ── Derived: active folder + matching skills ───────────────────────────────
   const activeFolder = deriveActiveFolder(context)
@@ -528,11 +527,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // ── Keyboard ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Shift') {
-        shiftHeldRef.current = e.type === 'keydown'
-        return
-      }
-      if (e.key === 'Escape') {
+if (e.key === 'Escape') {
         if (pendingSkill) {
           setPendingSkill(null)
         } else if (mode === 'thinking' || mode === 'streaming') {
@@ -896,8 +891,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
               e.target.style.height = `${e.target.scrollHeight}px`
             }}
             onKeyDown={(e) => {
-              console.log('[key]', e.key, 'shiftKey:', e.shiftKey, 'shiftRef:', shiftHeldRef.current, 'code:', e.code)
-              if (e.key === 'Enter' && (e.shiftKey || shiftHeldRef.current)) {
+              if (e.key === 'Enter' && e.shiftKey) {
                 e.preventDefault()
                 if (pendingSkill) { confirmSkill() } else { submit() }
               }
