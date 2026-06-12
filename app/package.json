@@ -21,7 +21,8 @@
     "i18next-browser-languagedetector": "^8.2.1",
     "mammoth": "^1.12.0",
     "pdf-parse": "^2.4.5",
-    "react-i18next": "^17.0.8"
+    "react-i18next": "^17.0.8",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",
@@ -29,6 +30,7 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",
+    "@types/xlsx": "^0.0.35",
     "@vitejs/plugin-react": "^4.2.1",
     "electron": "^29.1.0",
     "electron-builder": "^24.13.3",

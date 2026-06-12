@@ -7,6 +7,11 @@
 
 import { promises as fs } from 'fs'
 import * as path from 'path'
+import * as XLSX from 'xlsx'
+import mammoth from 'mammoth'
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pdfParse = require('pdf-parse')
 
 const MAX_CHARS = 12000 // ~3,000 tokens — keeps context focused
 
@@ -57,9 +62,8 @@ async function readText(filePath: string): Promise<string> {
 
 async function readDocx(filePath: string): Promise<string | null> {
   try {
-    const mammoth = await import('mammoth')
-    const buffer  = await fs.readFile(filePath)
-    const result  = await mammoth.extractRawText({ buffer })
+    const buffer = await fs.readFile(filePath)
+    const result = await mammoth.extractRawText({ buffer })
     return result.value || null
   } catch {
     return null
@@ -68,10 +72,8 @@ async function readDocx(filePath: string): Promise<string | null> {
 
 async function readPdf(filePath: string): Promise<string | null> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const pdfParse = require('pdf-parse')
-    const buffer   = await fs.readFile(filePath)
-    const result   = await pdfParse(buffer)
+    const buffer = await fs.readFile(filePath)
+    const result = await pdfParse(buffer)
     return result.text || null
   } catch {
     return null
@@ -80,7 +82,6 @@ async function readPdf(filePath: string): Promise<string | null> {
 
 async function readXlsx(filePath: string): Promise<string | null> {
   try {
-    const XLSX  = await import('xlsx')
     const wb    = XLSX.readFile(filePath)
     const lines: string[] = []
     for (const sheetName of wb.SheetNames) {
