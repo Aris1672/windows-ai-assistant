@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 
 // ─── Update this URL with every new release ───────────────────────────────────
 // Path: web/src/app/api/download/route.ts
-const LATEST_VERSION = 'v0.5.8'
-const INSTALLER_NAME = `AI-Assistant-Setup-0.5.8.exe`
+const LATEST_VERSION = 'v0.5.9'
+const INSTALLER_NAME = `AI-Assistant-Setup-0.5.9.exe`
 const DOWNLOAD_URL   = `https://github.com/Aris1672/windows-ai-assistant/releases/download/${LATEST_VERSION}/${INSTALLER_NAME}`
 // ─────────────────────────────────────────────────────────────────────────────
 

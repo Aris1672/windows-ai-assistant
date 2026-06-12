@@ -16,18 +16,18 @@ export interface ContextBundle {
   capturedAt: string
 }
 
-export interface FileContent {
-  filePath:  string
-  fileName:  string
-  content:   string
-  truncated: boolean
-}
-
 export interface ContextClip {
   text:      string
   sourceApp: string | null
   filePath:  string | null
   addedAt:   string
+}
+
+export interface FileRef {
+  filePath:  string
+  fileName:  string
+  content:   string
+  truncated: boolean
 }
 
 export type StreamEvent =
@@ -85,18 +85,18 @@ export interface ElectronAPI {
   // ── Action executor ──────────────────────────────────────────────────────
   executeAction: (action: Action, conversationId?: string | null) => Promise<ActionResult>
 
-  // ── File Reference Resolver ──────────────────────────────────────────────
-  resolveFileRefs: (params: {
-    query:          string
-    activeFolder:   string | null
-    activeFilePath: string | null
-  }) => Promise<FileContent[]>
-
   // ── Context Tray ─────────────────────────────────────────────────────────
   trayGetClips:    () => Promise<ContextClip[]>
   trayAddClip:     (clip: ContextClip) => Promise<ContextClip[]>
   trayRemoveClip:  (index: number) => Promise<ContextClip[]>
   trayClear:       () => Promise<void>
+
+  // ── File Reference Resolver ───────────────────────────────────────────────
+  resolveFileRefs: (params: {
+    query:          string
+    activeFolder:   string | null
+    activeFilePath: string | null
+  }) => Promise<FileRef[]>
 
   // Events pushed from the main process
   onPaletteShown:  (callback: () => void) => () => void
@@ -136,21 +136,14 @@ const api: ElectronAPI = {
   executeAction: (action, conversationId = null) =>
     ipcRenderer.invoke('execute-action', { action, conversationId }),
 
-  // ── File Reference Resolver ──────────────────────────────────────────────
-  resolveFileRefs: (params: {
-    query:          string
-    activeFolder:   string | null
-    activeFilePath: string | null
-  }) => Promise<FileContent[]>
-
-  // ── File Reference Resolver ───────────────────────────────────────────────
-  resolveFileRefs: (params) => ipcRenderer.invoke('resolve-file-refs', params),
-
   // ── Context Tray ──────────────────────────────────────────────────────────
   trayGetClips:   ()        => ipcRenderer.invoke('tray-get-clips'),
   trayAddClip:    (clip)    => ipcRenderer.invoke('tray-add-clip', clip),
   trayRemoveClip: (index)   => ipcRenderer.invoke('tray-remove-clip', index),
   trayClear:      ()        => ipcRenderer.invoke('tray-clear'),
+
+  // ── File Reference Resolver ───────────────────────────────────────────────
+  resolveFileRefs: (params) => ipcRenderer.invoke('resolve-file-refs', params),
 
   // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {
