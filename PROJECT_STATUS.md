@@ -6,7 +6,7 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows.
+**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB.
 
 **Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron).
 
@@ -63,7 +63,7 @@ root/                          ← npm workspaces root
             │   ├── en.json            ← ✅ English strings
             │   └── ru.json            ← ✅ Russian strings
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + i18n
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -377,6 +377,9 @@ When `Ctrl + Space` fires, the Electron app captures:
 31. ✅ Context Tray — multi-clip context builder across palette sessions; "Add to tray" pin button, tray panel UI with remove/clear, persisted in store.ts, injected into assembler system prompt ← **DONE**
 32. ✅ Action logging fixed — /api/actions now inserts every AI query + write-action into actions table; CommandPalette fires POST after each stream completes; status constraint bug fixed (completed/failed/confirmed/cancelled) ← **DONE**
 33. ✅ Multiline palette input — textarea replaces single-line input; auto-expands up to 140px (~6 rows); Enter submits, Shift+Enter inserts newline ← **DONE**
+34. ✅ Vision indicator turns amber when screenshot is captured and Claude Vision is active ← **DONE**
+35. ✅ Dashboard button URL fixed — fallback hardcoded to production Vercel URL; dev mode reads from .env ← **DONE**
+36. ✅ supabase_schema.sql fully updated — now includes token_usage, billing_records, all users columns, increment_user_tokens() RPC, and migration script ← **DONE**
 
 ---
 
@@ -417,7 +420,7 @@ ANTHROPIC_API_KEY=
 ---
 
 *Last updated: Context Tray shipped. Action logging fixed — History + Analytics dashboards now receive live data from all AI queries and write-actions.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅
 Remaining open items: Trial expiry emails.*
 
 ## Pricing & Billing Decisions
