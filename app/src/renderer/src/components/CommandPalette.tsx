@@ -672,7 +672,7 @@ if (e.key === 'Escape') {
                 style={{
                   marginLeft: trayClips.length > 0 || canAddToTray ? '0.3rem' : 'auto',
                   fontSize: '0.65rem',
-                  color: 'rgba(255,255,255,0.25)',
+                  color: '#f59e0b',
                   letterSpacing: '0.04em',
                   flexShrink: 0,
                 }}
