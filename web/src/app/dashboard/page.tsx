@@ -154,9 +154,9 @@ export default function DashboardPage() {
       const actionsList  = Array.isArray(actionsData) ? actionsData : actionsData?.data ?? []
 
       setStats({
-        instructions: instructions?.length ?? 0,
-        skills:       skills?.length       ?? 0,
-        actions:      actionsList?.length  ?? 0,
+        instructions: instructions?.length                ?? 0,
+        skills:       skills?.length                     ?? 0,
+        actions:      actionsData?.pagination?.total     ?? actionsList?.length ?? 0,
       })
       setRecentActions(Array.isArray(actionsList) ? actionsList.slice(0, 5) : [])
 
