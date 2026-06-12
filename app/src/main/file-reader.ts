@@ -10,9 +10,6 @@ import * as path from 'path'
 import * as XLSX from 'xlsx'
 import mammoth from 'mammoth'
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pdfParse = require('pdf-parse')
-
 const MAX_CHARS = 12000 // ~3,000 tokens — keeps context focused
 
 export interface FileContent {
@@ -72,8 +69,10 @@ async function readDocx(filePath: string): Promise<string | null> {
 
 async function readPdf(filePath: string): Promise<string | null> {
   try {
-    const buffer = await fs.readFile(filePath)
-    const result = await pdfParse(buffer)
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const pdfParse = require('pdf-parse')
+    const buffer   = await fs.readFile(filePath)
+    const result   = await pdfParse(buffer)
     return result.text || null
   } catch {
     return null
