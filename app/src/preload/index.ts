@@ -16,6 +16,13 @@ export interface ContextBundle {
   capturedAt: string
 }
 
+export interface FileContent {
+  filePath:  string
+  fileName:  string
+  content:   string
+  truncated: boolean
+}
+
 export interface ContextClip {
   text:      string
   sourceApp: string | null
@@ -78,6 +85,13 @@ export interface ElectronAPI {
   // ── Action executor ──────────────────────────────────────────────────────
   executeAction: (action: Action, conversationId?: string | null) => Promise<ActionResult>
 
+  // ── File Reference Resolver ──────────────────────────────────────────────
+  resolveFileRefs: (params: {
+    query:          string
+    activeFolder:   string | null
+    activeFilePath: string | null
+  }) => Promise<FileContent[]>
+
   // ── Context Tray ─────────────────────────────────────────────────────────
   trayGetClips:    () => Promise<ContextClip[]>
   trayAddClip:     (clip: ContextClip) => Promise<ContextClip[]>
@@ -121,6 +135,16 @@ const api: ElectronAPI = {
   // ── Action executor ───────────────────────────────────────────────────────
   executeAction: (action, conversationId = null) =>
     ipcRenderer.invoke('execute-action', { action, conversationId }),
+
+  // ── File Reference Resolver ──────────────────────────────────────────────
+  resolveFileRefs: (params: {
+    query:          string
+    activeFolder:   string | null
+    activeFilePath: string | null
+  }) => Promise<FileContent[]>
+
+  // ── File Reference Resolver ───────────────────────────────────────────────
+  resolveFileRefs: (params) => ipcRenderer.invoke('resolve-file-refs', params),
 
   // ── Context Tray ──────────────────────────────────────────────────────────
   trayGetClips:   ()        => ipcRenderer.invoke('tray-get-clips'),

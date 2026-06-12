@@ -22,11 +22,19 @@ export interface ContextClip {
   addedAt:   string
 }
 
+export interface FileRef {
+  filePath:  string
+  fileName:  string
+  content:   string
+  truncated: boolean
+}
+
 export interface ContextBundle {
   activeApp:    string | null
   activeFolder: string | null
   selectedText: string | null
   contextTray?: ContextClip[]   // ← pinned clips from the tray
+  fileRefs?:    FileRef[]        // ← auto-resolved files from query
 }
 
 export interface Skill {
@@ -143,6 +151,19 @@ Always respond in the same language the user writes in.`)
         clip.filePath  ? `— ${clip.filePath.split(/[/\\]/).pop()}` : '',
       ].filter(Boolean).join(' ')
       parts.push(`\n### Clip ${i + 1} — ${label}\n"""\n${clip.text}\n"""`)
+    })
+  }
+
+  // ── File references block ────────────────────────────────────────────────
+  // Files automatically found and read from the user's file system
+  // based on file names mentioned in the query.
+  const fileRefs = bundle.fileRefs ?? []
+  if (fileRefs.length > 0) {
+    parts.push(`\n## Referenced Files (${fileRefs.length} file${fileRefs.length > 1 ? 's' : ''})`)
+    parts.push(`The following files were automatically found and read from the user's computer based on their query. Use this content to answer the question.`)
+    fileRefs.forEach((ref, i) => {
+      const truncNote = ref.truncated ? ' *(truncated)*' : ''
+      parts.push(`\n### File ${i + 1} — ${ref.fileName}${truncNote}\n\`\`\`\n${ref.content}\n\`\`\``)
     })
   }
 

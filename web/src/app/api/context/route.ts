@@ -62,6 +62,7 @@ export async function POST(request: Request) {
     skillId?:          string | null
     history?:          { role: 'user' | 'assistant'; content: string }[]
     contextTray?:      { text: string; sourceApp: string; filePath?: string | null; addedAt: string }[]
+    fileRefs?:         { filePath: string; fileName: string; content: string; truncated: boolean }[]
   }
 
   try {
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
         activeFolder: body.activeFolder ?? null,
         selectedText: body.selectedText ?? null,
         contextTray:  (body.contextTray ?? []).map(c => ({ ...c, filePath: c.filePath ?? null })),
+        fileRefs:     body.fileRefs ?? [],
       },
       accessToken
     )

@@ -381,6 +381,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 35. ✅ Dashboard button URL fixed — fallback hardcoded to production Vercel URL; dev mode reads from .env ← **DONE**
 36. ✅ supabase_schema.sql fully updated — now includes token_usage, billing_records, all users columns, increment_user_tokens() RPC, and migration script ← **DONE**
 37. ✅ User dashboard actions counter fixed — was stuck at 20 (page limit); now reads pagination.total from /api/actions response ← **DONE**
+38. 🔜 File search as context — automatic file detection from query text, content extraction, injection into Claude context ← **IN PROGRESS**
 
 ---
 
@@ -422,7 +423,8 @@ ANTHROPIC_API_KEY=
 
 *Last updated: Context Tray shipped. Action logging fixed — History + Analytics dashboards now receive live data from all AI queries and write-actions.
 Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅
-Remaining open items: Trial expiry emails.*
+Remaining open items: Trial expiry emails.
+In progress: File search as context (automatic file detection + reading from query text).*
 
 ## Pricing & Billing Decisions
 

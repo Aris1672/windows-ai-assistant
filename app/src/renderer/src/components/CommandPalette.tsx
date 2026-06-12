@@ -6,6 +6,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ContextBundle, Action, ContextClip } from '../types/electron'
 
+// FileRef mirrors the type from file-reader.ts
+interface FileRef { filePath: string; fileName: string; content: string; truncated: boolean }
+
 const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
 
 type Mode = 'idle' | 'thinking' | 'streaming' | 'done' | 'error'
@@ -275,6 +278,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     setActionStatus('idle')
     setActionError(null)
     setConfirmed(false)
+    setResolvedFiles([])
 
     if (action && !ACTION_REQUIRES_CONFIRM[action.type]) {
       runAction(action)
@@ -370,7 +374,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   }, [])
 
   // ── Core streaming submit ─────────────────────────────────────────────────
-  const submitQuery = useCallback((message: string): void => {
+  const submitQuery = useCallback(async (message: string): Promise<void> => {
     if (!message || mode === 'thinking' || mode === 'streaming') return
 
     const historySnapshot: { role: 'user' | 'assistant'; content: string }[] = [
@@ -406,6 +410,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     setActionStatus('idle')
     setActionError(null)
     setConfirmed(false)
+    setResolvedFiles([])
 
     lastQueryRef.current = message
 
@@ -426,6 +431,17 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       return null
     }).catch(() => null)
 
+    // Resolve file references from query — silent, capped at 5 s
+    let fileRefs: FileRef[] = []
+    try {
+      fileRefs = await window.electronAPI.resolveFileRefs({
+        query:          message,
+        activeFolder:   deriveActiveFolder(context),
+        activeFilePath: context?.activeFilePath ?? null,
+      })
+      if (fileRefs.length > 0) setResolvedFiles(fileRefs)
+    } catch { /* non-fatal */ }
+
     window.electronAPI.streamContext({
       url: `${WEB_URL}/api/context`,
       token,
@@ -435,7 +451,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         activeFolder:     deriveActiveFolder(context),
         selectedText:     context?.selectedText     ?? null,
         screenshotBase64: context?.screenshotBase64 ?? null,
-        contextTray:      trayClips.length > 0 ? trayClips : undefined,  // ← tray clips
+        contextTray:      trayClips.length > 0 ? trayClips : undefined,
+        fileRefs:         fileRefs.length > 0 ? fileRefs : undefined,
         history: historySnapshot,
       },
     })
@@ -678,6 +695,22 @@ if (e.key === 'Escape') {
                 }}
               >
                 ◉ vision
+              </span>
+            )}
+
+            {resolvedFiles.length > 0 && (
+              <span
+                title={resolvedFiles.map(f => f.fileName).join(', ')}
+                style={{
+                  marginLeft: '0.3rem',
+                  fontSize: '0.65rem',
+                  color: '#34d399',
+                  letterSpacing: '0.04em',
+                  flexShrink: 0,
+                  cursor: 'default',
+                }}
+              >
+                ◈ {resolvedFiles.length} file{resolvedFiles.length > 1 ? 's' : ''} found
               </span>
             )}
           </div>
