@@ -15,7 +15,7 @@ import { executeAction, ACTION_LABELS } from './actions'
 import type { Action } from './actions'
 import { initAutoUpdater } from './updater'
 
-const WEB_URL = process.env['VITE_WEB_URL'] ?? 'https://your-app.vercel.app'
+const WEB_URL = process.env['VITE_WEB_URL'] ?? 'https://windows-ai-assistant-web.vercel.app'
 
 // ─── Single Instance Lock ────────────────────────────────────────────────────
 
