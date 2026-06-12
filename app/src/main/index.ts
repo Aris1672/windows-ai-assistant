@@ -1,160 +1,348 @@
 /**
- * app/src/preload/index.ts
+ * app/src/main/index.ts
  */
 
-import { contextBridge, ipcRenderer } from 'electron'
+import { app, ipcMain, shell, net } from 'electron'
+import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { createTray, destroyTray } from './tray'
+import { registerHotkey, unregisterHotkey } from './hotkey'
+import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow } from './windows'
+import { getContext } from './context-detector'
+import type { ContextBundle } from './context-detector'
+import { store } from './store'
+import type { ContextClip } from './store'
+import { executeAction, ACTION_LABELS } from './actions'
+import type { Action } from './actions'
+import { initAutoUpdater } from './updater'
+import { findFileRefs } from './file-finder'
+import { readFileContent } from './file-reader'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+const WEB_URL = process.env['VITE_WEB_URL'] ?? 'https://windows-ai-assistant-web.vercel.app'
 
-export interface ContextBundle {
-  activeApp: string | null
-  activeAppPath: string | null
-  activeWindowTitle: string | null
-  activeFilePath: string | null
-  selectedText: string | null
-  screenshotBase64: string | null
-  capturedAt: string
+// ─── Single Instance Lock ─────────────────────────────────────────────────────
+
+const gotLock = app.requestSingleInstanceLock()
+
+if (!gotLock) {
+  app.quit()
+  process.exit(0)
 }
 
-export interface ContextClip {
-  text:      string
-  sourceApp: string | null
-  filePath:  string | null
-  addedAt:   string
+app.on('second-instance', () => {
+  const win = getPaletteWindow()
+  if (win) showPalette()
+})
+
+// ─── Last known context ───────────────────────────────────────────────────────
+
+let lastContext: ContextBundle | null = null
+
+// ─── App Ready ────────────────────────────────────────────────────────────────
+
+app.whenReady().then(async () => {
+  electronApp.setAppUserModelId('com.yourcompany.windowsai')
+
+  app.on('browser-window-created', (_, window) => {
+    optimizer.watchWindowShortcuts(window)
+  })
+
+  createPaletteWindow()
+
+  if (app.isPackaged) {
+    setTimeout(() => {
+      const win = getPaletteWindow()
+      if (win) initAutoUpdater(win)
+    }, 0)
+  }
+
+  createTray({
+    onShowPalette: async () => {
+      const context = await getContext()
+      lastContext = context
+      showPalette(context)
+    },
+    onQuit: () => {
+      unregisterHotkey()
+      destroyTray()
+      app.quit()
+    }
+  })
+
+  registerHotkey({
+    onTrigger: async () => {
+      const win = getPaletteWindow()
+      if (!win) return
+
+      if (win.isVisible()) {
+        hidePalette()
+      } else {
+        const context = await getContext()
+        lastContext = context
+        showPalette(context)
+      }
+    }
+  })
+
+  console.log('[App] Ready. Ctrl+Space to open the palette.')
+})
+
+// ─── IPC Handlers ─────────────────────────────────────────────────────────────
+
+ipcMain.on('hide-palette', () => hidePalette())
+
+ipcMain.handle('get-context', async () => {
+  return await getContext()
+})
+
+ipcMain.handle('get-token', () => store.get('authToken', undefined) ?? null)
+ipcMain.on('set-token', (_event, token: string | null) => {
+  if (token) {
+    store.set('authToken', token)
+  } else {
+    store.delete('authToken')
+  }
+})
+
+ipcMain.on('open-dashboard', () => {
+  shell.openExternal(`${WEB_URL}/dashboard`)
+})
+
+// ─── Context Tray IPC ─────────────────────────────────────────────────────────
+
+ipcMain.handle('tray-get-clips', (): ContextClip[] => {
+  return store.trayGetClips()
+})
+
+ipcMain.handle(
+  'tray-add-clip',
+  (_event, clip: ContextClip): ContextClip[] => {
+    return store.trayAddClip(clip)
+  }
+)
+
+ipcMain.handle(
+  'tray-remove-clip',
+  (_event, index: number): ContextClip[] => {
+    return store.trayRemoveClip(index)
+  }
+)
+
+ipcMain.handle('tray-clear', (): void => {
+  store.trayClear()
+})
+
+// ─── Action Executor ──────────────────────────────────────────────────────────
+
+ipcMain.handle(
+  'execute-action',
+  async (_event, { action, conversationId }: { action: Action; conversationId: string | null }) => {
+    const token = store.get('authToken', undefined) ?? null
+
+    try {
+      await executeAction(action)
+
+      if (token) {
+        syncActionHistory({
+          token,
+          actionType:     action.type,
+          actionLabel:    ACTION_LABELS[action.type],
+          contextApp:     lastContext?.activeApp    ?? null,
+          contextFolder:  lastContext?.activeFilePath
+            ? lastContext.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null
+            : null,
+          status:         'done',
+          conversationId: conversationId ?? null,
+        }).catch((err) => console.warn('[sync-action] failed:', err))
+      }
+
+      return { ok: true }
+
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[execute-action] error:', message)
+
+      if (token) {
+        syncActionHistory({
+          token,
+          actionType:     action.type,
+          actionLabel:    ACTION_LABELS[action.type],
+          contextApp:     lastContext?.activeApp    ?? null,
+          contextFolder:  lastContext?.activeFilePath
+            ? lastContext.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null
+            : null,
+          status:         'error',
+          conversationId: conversationId ?? null,
+        }).catch((err) => console.warn('[sync-action] failed:', err))
+      }
+
+      return { ok: false, error: message }
+    }
+  }
+)
+
+// ─── Action History Sync ──────────────────────────────────────────────────────
+
+async function syncActionHistory({
+  token,
+  actionType,
+  actionLabel,
+  contextApp,
+  contextFolder,
+  status,
+  conversationId,
+}: {
+  token:           string
+  actionType:      string
+  actionLabel:     string
+  contextApp:      string | null
+  contextFolder:   string | null
+  status:          'done' | 'error'
+  conversationId:  string | null
+}): Promise<void> {
+  await net.fetch(`${WEB_URL}/api/actions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization:  `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      action_type:     actionType,
+      action_label:    actionLabel,
+      context_app:     contextApp,
+      context_folder:  contextFolder,
+      status,
+      conversation_id: conversationId,
+    }),
+  })
 }
 
-export type StreamEvent =
-  | { type: 'chunk'; data: string }
-  | { type: 'done' }
-  | { type: 'auth-error' }
-  | { type: 'http-error'; status: number }
-  | { type: 'error' }
+// ─── File Reference Resolver ──────────────────────────────────────────────────
 
-export interface ApiResponse {
-  ok: boolean
-  status: number
-  data: unknown
-}
+ipcMain.handle(
+  'resolve-file-refs',
+  async (
+    _event,
+    { query, activeFolder, activeFilePath }: {
+      query:          string
+      activeFolder:   string | null
+      activeFilePath: string | null
+    }
+  ) => {
+    try {
+      const foundFiles = await findFileRefs(query, activeFolder, activeFilePath)
+      const results = await Promise.all(foundFiles.map(f => readFileContent(f.filePath)))
+      return results.filter(Boolean)
+    } catch (err) {
+      console.error('[resolve-file-refs] error:', err)
+      return []
+    }
+  }
+)
 
-export type Action =
-  | { type: 'insert_text';       text: string }
-  | { type: 'copy_to_clipboard'; text: string }
-  | { type: 'open_folder';       path: string }
-  | { type: 'open_file';         path: string }
-  | { type: 'open_url';          url: string  }
+// ─── Generic API Request Proxy ────────────────────────────────────────────────
 
-export interface ActionResult {
-  ok: boolean
-  error?: string
-}
+ipcMain.handle(
+  'api-request',
+  async (
+    _event,
+    {
+      url,
+      method = 'POST',
+      headers = {},
+      body
+    }: {
+      url: string
+      method?: string
+      headers?: Record<string, string>
+      body?: object
+    }
+  ) => {
+    try {
+      const res = await net.fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: body !== undefined ? JSON.stringify(body) : undefined
+      })
 
-export interface ElectronAPI {
-  // Window control
-  hidePalette: () => void
+      const data = await res.json()
+      return { ok: res.ok, status: res.status, data }
+    } catch (err: unknown) {
+      console.error('[api-request] error:', err)
+      return { ok: false, status: 0, data: null }
+    }
+  }
+)
 
-  // Context snapshot
-  getContext: () => Promise<ContextBundle>
+// ─── Streaming API Proxy ──────────────────────────────────────────────────────
 
-  // Auth token (persisted in userData/store.json)
-  getToken: () => Promise<string | null>
-  setToken: (token: string | null) => void
+let streamAbort: AbortController | null = null
 
-  // Navigation
-  openDashboard: () => void
+ipcMain.on(
+  'stream-context',
+  async (
+    event,
+    { url, token, body }: { url: string; token: string; body: object }
+  ) => {
+    streamAbort?.abort()
+    streamAbort = new AbortController()
+    const { signal } = streamAbort
 
-  // ── Generic API proxy (JSON request/response) ────────────────────────────
-  apiRequest: (params: {
-    url: string
-    method?: string
-    headers?: Record<string, string>
-    body?: object
-  }) => Promise<ApiResponse>
+    try {
+      const res = await net.fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      })
 
-  // ── Streaming API proxy (SSE) ────────────────────────────────────────────
-  streamContext: (params: { url: string; token: string; body: object }) => void
-  cancelStream: () => void
-  onStreamEvent: (callback: (ev: StreamEvent) => void) => () => void
+      if (res.status === 401) {
+        event.sender.send('stream-event', { type: 'auth-error' })
+        return
+      }
+      if (!res.ok) {
+        event.sender.send('stream-event', { type: 'http-error', status: res.status })
+        return
+      }
 
-  // ── Action executor ──────────────────────────────────────────────────────
-  executeAction: (action: Action, conversationId?: string | null) => Promise<ActionResult>
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
 
-  // ── Context Tray ─────────────────────────────────────────────────────────
-  trayGetClips:    () => Promise<ContextClip[]>
-  trayAddClip:     (clip: ContextClip) => Promise<ContextClip[]>
-  trayRemoveClip:  (index: number) => Promise<ContextClip[]>
-  trayClear:       () => Promise<void>
+      while (true) {
+        if (signal.aborted) break
+        const { done, value } = await reader.read()
+        if (done) break
+        if (signal.aborted) break
+        event.sender.send('stream-event', {
+          type: 'chunk',
+          data: decoder.decode(value, { stream: true })
+        })
+      }
 
-  // Events pushed from the main process
-  onPaletteShown:  (callback: () => void) => () => void
-  onPaletteHidden: (callback: () => void) => () => void
-  onContextData:   (callback: (ctx: ContextBundle) => void) => () => void
+      if (!signal.aborted) {
+        event.sender.send('stream-event', { type: 'done' })
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      console.error('[stream-context] error:', err)
+      event.sender.send('stream-event', { type: 'error' })
+    }
+  }
+)
 
-  // ── Auto-updater ─────────────────────────────────────────────────────────
-  onUpdaterEvent: (callback: (ev: Record<string, string>) => void) => () => void
-  updaterInstall: () => void
-}
+ipcMain.on('cancel-stream', () => {
+  streamAbort?.abort()
+  streamAbort = null
+})
 
-// ─── Implementation ──────────────────────────────────────────────────────────
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
 
-const api: ElectronAPI = {
-  hidePalette: () => ipcRenderer.send('hide-palette'),
+app.on('window-all-closed', () => {
+  // intentionally empty — tray app stays alive
+})
 
-  getContext: () => ipcRenderer.invoke('get-context'),
-
-  getToken: () => ipcRenderer.invoke('get-token'),
-  setToken: (token) => ipcRenderer.send('set-token', token),
-
-  openDashboard: () => ipcRenderer.send('open-dashboard'),
-
-  // ── Generic API proxy ─────────────────────────────────────────────────────
-  apiRequest: (params) => ipcRenderer.invoke('api-request', params),
-
-  // ── Streaming API proxy ───────────────────────────────────────────────────
-  streamContext: (params) => ipcRenderer.send('stream-context', params),
-  cancelStream:  () => ipcRenderer.send('cancel-stream'),
-  onStreamEvent: (cb) => {
-    const fn = (_: Electron.IpcRendererEvent, ev: StreamEvent) => cb(ev)
-    ipcRenderer.on('stream-event', fn)
-    return () => ipcRenderer.off('stream-event', fn)
-  },
-
-  // ── Action executor ───────────────────────────────────────────────────────
-  executeAction: (action, conversationId = null) =>
-    ipcRenderer.invoke('execute-action', { action, conversationId }),
-
-  // ── Context Tray ──────────────────────────────────────────────────────────
-  trayGetClips:   ()        => ipcRenderer.invoke('tray-get-clips'),
-  trayAddClip:    (clip)    => ipcRenderer.invoke('tray-add-clip', clip),
-  trayRemoveClip: (index)   => ipcRenderer.invoke('tray-remove-clip', index),
-  trayClear:      ()        => ipcRenderer.invoke('tray-clear'),
-
-  // ── Main-process events ───────────────────────────────────────────────────
-  onPaletteShown: (cb) => {
-    const fn = () => cb()
-    ipcRenderer.on('palette-shown', fn)
-    return () => ipcRenderer.off('palette-shown', fn)
-  },
-
-  onPaletteHidden: (cb) => {
-    const fn = () => cb()
-    ipcRenderer.on('palette-hidden', fn)
-    return () => ipcRenderer.off('palette-hidden', fn)
-  },
-
-  onContextData: (cb) => {
-    const fn = (_: Electron.IpcRendererEvent, ctx: ContextBundle) => cb(ctx)
-    ipcRenderer.on('context-data', fn)
-    return () => ipcRenderer.off('context-data', fn)
-  },
-
-  // ── Auto-updater ──────────────────────────────────────────────────────────
-  onUpdaterEvent: (cb) => {
-    const fn = (_: Electron.IpcRendererEvent, ev: Record<string, string>) => cb(ev)
-    ipcRenderer.on('updater-event', fn)
-    return () => ipcRenderer.off('updater-event', fn)
-  },
-  updaterInstall: () => ipcRenderer.send('updater-install'),
-}
-
-// Expose under window.electronAPI — never expose the raw ipcRenderer
-contextBridge.exposeInMainWorld('electronAPI', api)
+app.on('before-quit', () => {
+  unregisterHotkey()
+  destroyTray()
+})
