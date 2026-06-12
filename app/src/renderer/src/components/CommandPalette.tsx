@@ -206,6 +206,9 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [trayClips, setTrayClips]       = useState<ContextClip[]>([])
   const [trayOpen, setTrayOpen]         = useState(false)
 
+  // File reference state
+  const [resolvedFiles, setResolvedFiles] = useState<FileRef[]>([])
+
   // Auto-updater state
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
