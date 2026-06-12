@@ -1,6 +1,8 @@
 -- ============================================================
 -- Windows AI Assistant — Supabase Schema
--- Run this in full in the Supabase SQL Editor
+-- Updated to reflect live DB as of v0.4.5
+-- Run this in full in the Supabase SQL Editor (fresh setup only)
+-- For existing DBs use the migration script at the bottom
 -- ============================================================
 
 
@@ -13,29 +15,45 @@ create extension if not exists "uuid-ossp";
 
 -- ============================================================
 -- USERS
--- Mirrors auth.users; stores profile and subscription info.
+-- Mirrors auth.users; stores profile, subscription, and
+-- token usage info.
 -- ============================================================
 
 create table public.users (
-  id            uuid primary key references auth.users(id) on delete cascade,
-  email         text not null,
-  display_name  text,
-  role          text not null default 'user' check (role in ('user', 'admin')),
-  tier          text not null default 'free' check (tier in ('free', 'pro', 'enterprise')),
-  created_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  id                      uuid primary key references auth.users(id) on delete cascade,
+  email                   text not null,
+  display_name            text,
+  role                    text not null default 'user' check (role in ('user', 'admin')),
+  tier                    text not null default 'free' check (tier in ('free', 'pro', 'enterprise')),
+  created_at              timestamptz not null default now(),
+  updated_at              timestamptz not null default now(),
+  is_admin                boolean not null default false,
+  is_blocked              boolean not null default false,
+  trial_started_at        timestamptz,
+  trial_ended_at          timestamptz,
+  subscription_status     varchar default 'trial' check (subscription_status in ('trial', 'active', 'expired', 'cancelled')),
+  subscription_started_at timestamptz,
+  subscription_ends_at    timestamptz,
+  last_payment_at         timestamptz,
+  tokens_used_this_month  integer not null default 0,
+  tokens_used_all_time    integer not null default 0,
+  estimated_cost_usd      numeric not null default 0
 );
 
 -- Auto-create a users row when a new auth user signs up
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer as $$
 begin
-  insert into public.users (id, email, display_name)
+  insert into public.users (id, email, display_name, trial_started_at, trial_ended_at, subscription_status)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1))
+    coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1)),
+    now(),
+    now() + interval '14 days',
+    'trial'
   );
+  perform public.seed_defaults_for_user(new.id);
   return new;
 end;
 $$;
@@ -57,6 +75,24 @@ create trigger users_updated_at
   before update on public.users
   for each row execute procedure public.set_updated_at();
 
+-- Increment token usage counters
+create or replace function public.increment_user_tokens(
+  user_id      uuid,
+  tokens_count integer,
+  cost         numeric
+)
+returns void language plpgsql security definer as $$
+begin
+  update public.users
+  set
+    tokens_used_this_month = tokens_used_this_month + tokens_count,
+    tokens_used_all_time   = tokens_used_all_time   + tokens_count,
+    estimated_cost_usd     = estimated_cost_usd     + cost,
+    updated_at             = now()
+  where id = user_id;
+end;
+$$;
+
 
 -- ============================================================
 -- INSTRUCTIONS  (Layer 2)
@@ -67,17 +103,17 @@ create trigger users_updated_at
 create table public.instructions (
   id               uuid primary key default uuid_generate_v4(),
   user_id          uuid not null references public.users(id) on delete cascade,
-  label            text not null,                -- e.g. "Formal tone"
-  instruction_text text not null,                -- sent to Claude
-  context_app      text,                         -- e.g. "Microsoft Excel" — null = always active
-  context_folder   text,                         -- e.g. "C:/Work/Invoices" — null = always active
+  label            text not null,
+  instruction_text text not null,
+  context_app      text,
+  context_folder   text,
   is_active        boolean not null default true,
   sort_order       integer not null default 0,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
 
-create index idx_instructions_user_id on public.instructions(user_id);
+create index idx_instructions_user_id     on public.instructions(user_id);
 create index idx_instructions_user_active on public.instructions(user_id, is_active);
 
 create trigger instructions_updated_at
@@ -87,26 +123,25 @@ create trigger instructions_updated_at
 
 -- ============================================================
 -- SKILLS  (Layer 3)
--- Reusable named actions. Surfaced in the command palette
--- when context_app / context_folder match the active context.
+-- Reusable named actions surfaced in the command palette.
 -- ============================================================
 
 create table public.skills (
   id               uuid primary key default uuid_generate_v4(),
   user_id          uuid not null references public.users(id) on delete cascade,
-  name             text not null,                -- e.g. "Prepare meeting summary"
-  description      text,                         -- shown in palette
-  prompt           text not null,                -- the instruction sent to Claude when skill fires
-  context_app      text,                         -- only surface when this app is active
-  context_folder   text,                         -- only surface in this folder
-  is_destructive   boolean not null default false, -- true = require confirmation before executing
+  name             text not null,
+  description      text,
+  prompt           text not null,
+  context_app      text,
+  context_folder   text,
+  is_destructive   boolean not null default false,
   is_active        boolean not null default true,
   sort_order       integer not null default 0,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
 
-create index idx_skills_user_id on public.skills(user_id);
+create index idx_skills_user_id     on public.skills(user_id);
 create index idx_skills_user_active on public.skills(user_id, is_active);
 
 create trigger skills_updated_at
@@ -122,15 +157,15 @@ create trigger skills_updated_at
 create table public.conversations (
   id               uuid primary key default uuid_generate_v4(),
   user_id          uuid not null references public.users(id) on delete cascade,
-  title            text,                         -- auto-generated summary (future)
-  context_app      text,                         -- active app when conversation started
-  context_folder   text,                         -- active folder when conversation started
-  context_text     text,                         -- selected text when conversation started
+  title            text,
+  context_app      text,
+  context_folder   text,
+  context_text     text,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now()
 );
 
-create index idx_conversations_user_id on public.conversations(user_id);
+create index idx_conversations_user_id      on public.conversations(user_id);
 create index idx_conversations_user_created on public.conversations(user_id, created_at desc);
 
 create trigger conversations_updated_at
@@ -153,13 +188,13 @@ create table public.messages (
 );
 
 create index idx_messages_conversation_id on public.messages(conversation_id);
-create index idx_messages_user_id on public.messages(user_id);
+create index idx_messages_user_id         on public.messages(user_id);
 
 
 -- ============================================================
 -- ACTIONS
--- Log of every skill execution and action taken.
--- Used for history view and future workflow learning.
+-- Log of every AI query and write-action taken.
+-- Feeds History page and Analytics dashboard.
 -- ============================================================
 
 create table public.actions (
@@ -167,41 +202,84 @@ create table public.actions (
   user_id          uuid not null references public.users(id) on delete cascade,
   conversation_id  uuid references public.conversations(id) on delete set null,
   skill_id         uuid references public.skills(id) on delete set null,
-  action_type      text not null,                -- e.g. "skill", "freeform", "builtin"
-  action_label     text not null,                -- human-readable label
+  action_type      text not null,
+  action_label     text not null,
   context_app      text,
   context_folder   text,
   context_text     text,
-  status           text not null default 'completed' check (status in ('completed', 'confirmed', 'cancelled', 'failed')),
+  status           text not null default 'completed'
+                   check (status in ('completed', 'confirmed', 'cancelled', 'failed')),
   created_at       timestamptz not null default now()
 );
 
-create index idx_actions_user_id on public.actions(user_id);
+create index idx_actions_user_id      on public.actions(user_id);
 create index idx_actions_user_created on public.actions(user_id, created_at desc);
 
 
 -- ============================================================
--- ROW LEVEL SECURITY
--- Users can only access their own data.
--- Admin role bypasses all RLS.
+-- TOKEN USAGE
+-- Detailed per-call token and cost tracking.
 -- ============================================================
 
-alter table public.users         enable row level security;
-alter table public.instructions  enable row level security;
-alter table public.skills        enable row level security;
-alter table public.conversations enable row level security;
-alter table public.messages      enable row level security;
-alter table public.actions       enable row level security;
+create table public.token_usage (
+  id             bigint generated always as identity primary key,
+  user_id        uuid not null references public.users(id) on delete cascade,
+  action_id      uuid references public.actions(id) on delete set null,
+  input_tokens   integer not null default 0,
+  output_tokens  integer not null default 0,
+  total_tokens   integer not null default 0,
+  cost_usd       numeric not null default 0,
+  action_type    varchar,
+  model          varchar,
+  created_at     timestamptz not null default now()
+);
+
+create index idx_token_usage_user_id      on public.token_usage(user_id);
+create index idx_token_usage_user_created on public.token_usage(user_id, created_at desc);
+
+
+-- ============================================================
+-- BILLING RECORDS
+-- Manual subscription activations and payment history.
+-- ============================================================
+
+create table public.billing_records (
+  id                        bigint generated always as identity primary key,
+  user_id                   uuid not null references public.users(id) on delete cascade,
+  amount_usd                numeric not null default 0,
+  payment_date              timestamptz,
+  subscription_period_start timestamptz,
+  subscription_period_end   timestamptz,
+  status                    varchar,
+  notes                     text,
+  created_at                timestamptz not null default now(),
+  updated_at                timestamptz not null default now()
+);
+
+create index idx_billing_records_user_id on public.billing_records(user_id);
+
+
+-- ============================================================
+-- ROW LEVEL SECURITY
+-- ============================================================
+
+alter table public.users          enable row level security;
+alter table public.instructions   enable row level security;
+alter table public.skills         enable row level security;
+alter table public.conversations  enable row level security;
+alter table public.messages       enable row level security;
+alter table public.actions        enable row level security;
+alter table public.token_usage    enable row level security;
+alter table public.billing_records enable row level security;
 
 -- Helper: is the current user an admin?
 create or replace function public.is_admin()
 returns boolean language sql security definer as $$
   select exists (
     select 1 from public.users
-    where id = auth.uid() and role = 'admin'
+    where id = auth.uid() and (role = 'admin' or is_admin = true)
   );
 $$;
-
 
 -- USERS
 create policy "Users can view own profile"
@@ -213,10 +291,9 @@ create policy "Users can update own profile"
   using (id = auth.uid())
   with check (id = auth.uid());
 
-create policy "Admins can view all users"
+create policy "Admins can manage all users"
   on public.users for all
   using (public.is_admin());
-
 
 -- INSTRUCTIONS
 create policy "Users can manage own instructions"
@@ -228,7 +305,6 @@ create policy "Admins can view all instructions"
   on public.instructions for select
   using (public.is_admin());
 
-
 -- SKILLS
 create policy "Users can manage own skills"
   on public.skills for all
@@ -238,7 +314,6 @@ create policy "Users can manage own skills"
 create policy "Admins can view all skills"
   on public.skills for select
   using (public.is_admin());
-
 
 -- CONVERSATIONS
 create policy "Users can manage own conversations"
@@ -250,7 +325,6 @@ create policy "Admins can view all conversations"
   on public.conversations for select
   using (public.is_admin());
 
-
 -- MESSAGES
 create policy "Users can manage own messages"
   on public.messages for all
@@ -260,7 +334,6 @@ create policy "Users can manage own messages"
 create policy "Admins can view all messages"
   on public.messages for select
   using (public.is_admin());
-
 
 -- ACTIONS
 create policy "Users can manage own actions"
@@ -272,46 +345,102 @@ create policy "Admins can view all actions"
   on public.actions for select
   using (public.is_admin());
 
+-- TOKEN USAGE
+create policy "Users can view own token usage"
+  on public.token_usage for select
+  using (user_id = auth.uid());
+
+create policy "Service can insert token usage"
+  on public.token_usage for insert
+  with check (user_id = auth.uid());
+
+create policy "Admins can view all token usage"
+  on public.token_usage for select
+  using (public.is_admin());
+
+-- BILLING RECORDS
+create policy "Users can view own billing records"
+  on public.billing_records for select
+  using (user_id = auth.uid());
+
+create policy "Admins can manage all billing records"
+  on public.billing_records for all
+  using (public.is_admin());
+
 
 -- ============================================================
 -- SEED: DEFAULT INSTRUCTIONS + SKILLS FOR NEW USERS
--- Called after a new user is created via the trigger below.
 -- ============================================================
 
 create or replace function public.seed_defaults_for_user(p_user_id uuid)
 returns void language plpgsql security definer as $$
 begin
 
-  -- Default instructions (Layer 2)
   insert into public.instructions (user_id, label, instruction_text, sort_order) values
-    (p_user_id, 'Concise responses',   'Keep all responses concise and to the point. Avoid unnecessary padding.', 0),
-    (p_user_id, 'Friendly tone',       'Use a friendly, professional tone in all responses.', 1);
+    (p_user_id, 'Concise responses', 'Keep all responses concise and to the point. Avoid unnecessary padding.', 0),
+    (p_user_id, 'Friendly tone',     'Use a friendly, professional tone in all responses.', 1);
 
-  -- Default skills (Layer 3) — no context conditions, available everywhere
   insert into public.skills (user_id, name, description, prompt, sort_order) values
-    (p_user_id, 'Summarize',           'Summarize the selected text',          'Summarize the following text clearly and concisely:\n\n{{selected_text}}', 0),
-    (p_user_id, 'Rewrite professionally', 'Rewrite selected text in a professional tone', 'Rewrite the following text in a clear, professional tone:\n\n{{selected_text}}', 1),
-    (p_user_id, 'Explain this',        'Explain the selected text or code',    'Explain the following in plain language:\n\n{{selected_text}}', 2),
-    (p_user_id, 'Fix grammar',         'Fix grammar and spelling errors',       'Fix all grammar and spelling errors in the following text. Return only the corrected text:\n\n{{selected_text}}', 3);
+    (p_user_id, 'Summarize',             'Summarize the selected text',                  'Summarize the following text clearly and concisely:\n\n{{selected_text}}', 0),
+    (p_user_id, 'Rewrite professionally','Rewrite selected text in a professional tone', 'Rewrite the following text in a clear, professional tone:\n\n{{selected_text}}', 1),
+    (p_user_id, 'Explain this',          'Explain the selected text or code',            'Explain the following in plain language:\n\n{{selected_text}}', 2),
+    (p_user_id, 'Fix grammar',           'Fix grammar and spelling errors',              'Fix all grammar and spelling errors in the following text. Return only the corrected text:\n\n{{selected_text}}', 3);
 
 end;
 $$;
 
--- Extend the new user trigger to also seed defaults
-create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
-begin
-  insert into public.users (id, email, display_name)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'display_name', split_part(new.email, '@', 1))
-  );
-  perform public.seed_defaults_for_user(new.id);
-  return new;
-end;
-$$;
 
+-- ============================================================
+-- MIGRATION SCRIPT
+-- For existing databases — run ONLY if your DB already exists.
+-- Skip this section for fresh installations.
+-- ============================================================
+
+/*
+
+-- Add missing columns to users
+alter table public.users
+  add column if not exists is_admin                boolean not null default false,
+  add column if not exists is_blocked              boolean not null default false,
+  add column if not exists trial_started_at        timestamptz,
+  add column if not exists trial_ended_at          timestamptz,
+  add column if not exists subscription_status     varchar default 'trial',
+  add column if not exists subscription_started_at timestamptz,
+  add column if not exists subscription_ends_at    timestamptz,
+  add column if not exists last_payment_at         timestamptz,
+  add column if not exists tokens_used_this_month  integer not null default 0,
+  add column if not exists tokens_used_all_time    integer not null default 0,
+  add column if not exists estimated_cost_usd      numeric not null default 0;
+
+-- Create token_usage if not exists
+create table if not exists public.token_usage (
+  id             bigint generated always as identity primary key,
+  user_id        uuid not null references public.users(id) on delete cascade,
+  action_id      uuid references public.actions(id) on delete set null,
+  input_tokens   integer not null default 0,
+  output_tokens  integer not null default 0,
+  total_tokens   integer not null default 0,
+  cost_usd       numeric not null default 0,
+  action_type    varchar,
+  model          varchar,
+  created_at     timestamptz not null default now()
+);
+
+-- Create billing_records if not exists
+create table if not exists public.billing_records (
+  id                        bigint generated always as identity primary key,
+  user_id                   uuid not null references public.users(id) on delete cascade,
+  amount_usd                numeric not null default 0,
+  payment_date              timestamptz,
+  subscription_period_start timestamptz,
+  subscription_period_end   timestamptz,
+  status                    varchar,
+  notes                     text,
+  created_at                timestamptz not null default now(),
+  updated_at                timestamptz not null default now()
+);
+
+*/
 
 -- ============================================================
 -- DONE
