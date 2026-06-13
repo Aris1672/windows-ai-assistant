@@ -55,6 +55,55 @@ export function extractFileNameCandidates(query: string): string[] {
   return [...candidates].filter(c => c.length >= 2).slice(0, 5)
 }
 
+// ─── Build search locations ───────────────────────────────────────────────────
+
+async function buildSearchDirs(
+  activeFolder: string | null,
+  activeFilePath: string | null
+): Promise<string[]> {
+  const dirs: string[] = []
+  const seen = new Set<string>()
+
+  const add = (d: string) => {
+    if (!seen.has(d)) { seen.add(d); dirs.push(d) }
+  }
+
+  // 1. Active context — highest priority
+  if (activeFolder)   add(activeFolder)
+  if (activeFilePath) add(path.dirname(activeFilePath))
+
+  // 2. Standard user folders
+  const home = os.homedir()
+  add(path.join(home, 'Documents'))
+  add(path.join(home, 'Desktop'))
+  add(path.join(home, 'Downloads'))
+
+  // 3. Home root itself (depth-1 scan catches top-level files)
+  add(home)
+
+  // 4. OneDrive — very common on Windows
+  const oneDrive = process.env['OneDrive'] ?? process.env['ONEDRIVE']
+  if (oneDrive) {
+    add(oneDrive)
+    add(path.join(oneDrive, 'Documents'))
+    add(path.join(oneDrive, 'Desktop'))
+    add(path.join(oneDrive, 'Downloads'))
+  }
+
+  // 5. Windows lettered drives (C–Z) — depth-1 only, fast
+  if (process.platform === 'win32') {
+    for (const letter of 'CDEFGHIJKLMNOPQRSTUVWXYZ') {
+      const drive = `${letter}:\\`
+      try {
+        await fs.access(drive)
+        add(drive)
+      } catch { /* drive not present */ }
+    }
+  }
+
+  return dirs
+}
+
 // ─── Main search function ─────────────────────────────────────────────────────
 
 export async function findFileRefs(
@@ -65,26 +114,16 @@ export async function findFileRefs(
   const candidates = extractFileNameCandidates(query)
   if (candidates.length === 0) return []
 
-  // Build search locations in priority order
-  const searchDirs: string[] = []
-  if (activeFolder) searchDirs.push(activeFolder)
-  if (activeFilePath) {
-    const parent = path.dirname(activeFilePath)
-    if (!searchDirs.includes(parent)) searchDirs.push(parent)
-  }
-  const home = os.homedir()
-  searchDirs.push(
-    path.join(home, 'Documents'),
-    path.join(home, 'Desktop'),
-    path.join(home, 'Downloads'),
-  )
+  const searchDirs = await buildSearchDirs(activeFolder, activeFilePath)
 
   const results: FoundFile[] = []
   const seen = new Set<string>()
 
   for (const dir of searchDirs) {
     for (const candidate of candidates) {
-      const matches = await searchDir(dir, candidate, 2)
+      // Use depth-1 for drive roots to keep it fast; depth-2 elsewhere
+      const depth = dir.match(/^[A-Z]:\\$/i) ? 1 : 2
+      const matches = await searchDir(dir, candidate, depth)
       for (const m of matches) {
         if (!seen.has(m.filePath)) {
           seen.add(m.filePath)
