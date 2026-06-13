@@ -1,8 +1,5 @@
 /**
  * app/src/main/file-finder.ts
- *
- * Extracts file name references from a user query and searches
- * the file system to locate matching files.
  */
 
 import { promises as fs } from 'fs'
@@ -31,13 +28,13 @@ export interface FoundFile {
 export function extractFileNameCandidates(query: string): string[] {
   const candidates = new Set<string>()
 
-  // 1. Quoted strings: "Q1 report" or 'financial summary'
+  // 1. Quoted strings
   const quoted = query.match(/["']([^"']{2,60})["']/g)
   if (quoted) {
     quoted.forEach(q => candidates.add(q.replace(/["']/g, '').trim()))
   }
 
-  // 2. Patterns like "the Q1 report", "our invoice", "last month's budget"
+  // 2. Patterns like "the Q1 report", "our invoice"
   const pattern = new RegExp(
     `([\\w\\s'-]{2,40})\\s+(?:${DOC_KEYWORDS.join('|')})`,
     'gi'
@@ -48,7 +45,7 @@ export function extractFileNameCandidates(query: string): string[] {
     if (term.length >= 2) candidates.add(term)
   }
 
-  // 3. Explicit file extensions mentioned: "Q1.pdf", "budget.xlsx"
+  // 3. Explicit file extensions: "Q1.pdf", "budget.xlsx"
   const withExt = query.match(/[\w\s'-]{2,40}\.(docx?|xlsx?|pdf|txt|md|csv)/gi)
   if (withExt) withExt.forEach(f => candidates.add(f.trim()))
 
@@ -68,39 +65,30 @@ async function buildSearchDirs(
     if (!seen.has(d)) { seen.add(d); dirs.push(d) }
   }
 
-  // 1. Active context — highest priority
   if (activeFolder)   add(activeFolder)
   if (activeFilePath) add(path.dirname(activeFilePath))
 
-  // 2. Standard user folders
   const home = os.homedir()
+  add(path.join(home, 'Downloads'))
   add(path.join(home, 'Documents'))
   add(path.join(home, 'Desktop'))
-  add(path.join(home, 'Downloads'))
-
-  // 3. Home root itself (depth-1 scan catches top-level files)
   add(home)
 
-  // 4. OneDrive — very common on Windows
   const oneDrive = process.env['OneDrive'] ?? process.env['ONEDRIVE']
   if (oneDrive) {
     add(oneDrive)
     add(path.join(oneDrive, 'Documents'))
-    add(path.join(oneDrive, 'Desktop'))
     add(path.join(oneDrive, 'Downloads'))
   }
 
-  // 5. Windows lettered drives (C–Z) — depth-1 only, fast
   if (process.platform === 'win32') {
     for (const letter of 'CDEFGHIJKLMNOPQRSTUVWXYZ') {
       const drive = `${letter}:\\`
-      try {
-        await fs.access(drive)
-        add(drive)
-      } catch { /* drive not present */ }
+      try { await fs.access(drive); add(drive) } catch { /* skip */ }
     }
   }
 
+  console.log('[file-finder] search dirs:', dirs)
   return dirs
 }
 
@@ -112,6 +100,7 @@ export async function findFileRefs(
   activeFilePath: string | null
 ): Promise<FoundFile[]> {
   const candidates = extractFileNameCandidates(query)
+  console.log('[file-finder] candidates:', candidates)
   if (candidates.length === 0) return []
 
   const searchDirs = await buildSearchDirs(activeFolder, activeFilePath)
@@ -121,7 +110,6 @@ export async function findFileRefs(
 
   for (const dir of searchDirs) {
     for (const candidate of candidates) {
-      // Use depth-1 for drive roots to keep it fast; depth-2 elsewhere
       const depth = dir.match(/^[A-Z]:\\$/i) ? 1 : 2
       const matches = await searchDir(dir, candidate, depth)
       for (const m of matches) {
@@ -150,21 +138,21 @@ async function searchDir(
   let entries: string[]
   try {
     entries = await fs.readdir(dir)
-  } catch {
+  } catch (err) {
+    console.log('[file-finder] cannot read dir:', dir, String(err))
     return results
   }
 
   const candidateLower = candidate.toLowerCase()
 
-  // Check files at this level
   for (const entry of entries) {
     const ext = path.extname(entry).toLowerCase()
     if (SUPPORTED_EXTENSIONS.has(ext) && entry.toLowerCase().includes(candidateLower)) {
+      console.log('[file-finder] MATCH:', path.join(dir, entry))
       results.push({ filePath: path.join(dir, entry), fileName: entry })
     }
   }
 
-  // Recurse into subdirs if nothing found yet
   if (results.length === 0 && maxDepth > 1) {
     for (const entry of entries.slice(0, 30)) {
       if (entry.startsWith('.')) continue
@@ -176,9 +164,7 @@ async function searchDir(
           results.push(...sub)
           if (results.length >= 3) break
         }
-      } catch {
-        // skip inaccessible dirs
-      }
+      } catch { /* skip */ }
     }
   }
 
