@@ -14,9 +14,10 @@ export interface ContextClip {
 // ─── Store schema ─────────────────────────────────────────────────────────────
 
 interface StoreData {
-  authToken?:    string
-  userEmail?:    string
-  contextTray?:  ContextClip[]
+  authToken?:     string
+  refreshToken?:  string
+  userEmail?:     string
+  contextTray?:   ContextClip[]
 }
 
 function getStorePath(): string {

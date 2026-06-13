@@ -6,7 +6,7 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length.
+**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation.
 
 **Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. File search as context is now fully shipped.
 
@@ -27,7 +27,7 @@ root/                          ← npm workspaces root
 │       │   │   ├── conversations/         ← ✅ POST — create conversation per palette session
 │       │   │   ├── conversations/[id]/messages/ ← ✅ POST — batch save message exchanges
 │       │   │   ├── auth/signout/  ← ✅ POST — server-side sign out (done)
-│       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection, real-time token tracking, context tray passthrough
+│       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection, real-time token tracking, context tray passthrough, max_tokens 64000
 │       │   ├── dashboard/     ← ✅ All pages fully wired to real data
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
@@ -41,7 +41,7 @@ root/                          ← npm workspaces root
 │       └── lib/
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
 │           ├── auth.ts            ← ✅ Done (requireAuth: Bearer token + cookie fallback, jsonError, jsonOk)
-│           ├── assembler.ts       ← ✅ Done (instructions + skills + workflow memory + context tray injection)
+│           ├── assembler.ts       ← ✅ Done (instructions + skills + workflow memory + context tray injection + document-level action routing)
 │           ├── i18n.ts            ← ✅ i18next config (EN/RU, localStorage detection)
 │           └── trial-subscription.ts ← ✅ Done (getUserSubscriptionStatus, markTrialExpiredIfNeeded, activateSubscription)
 └── app/                       ← Electron app (Windows desktop) — core working ✅
@@ -65,7 +65,7 @@ root/                          ← npm workspaces root
             │   ├── en.json            ← ✅ English strings
             │   └── ru.json            ← ✅ Russian strings
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n + file search indicator
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n + file search indicator + truncation-safe action parsing
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -384,6 +384,9 @@ When `Ctrl + Space` fires, the Electron app captures:
 36. ✅ supabase_schema.sql fully updated — now includes token_usage, billing_records, all users columns, increment_user_tokens() RPC, and migration script ← **DONE**
 37. ✅ User dashboard actions counter fixed — was stuck at 20 (page limit); now reads pagination.total from /api/actions response ← **DONE**
 38. ✅ File search as context — automatic file detection from query text, content extraction (txt/md/csv/json/docx/pdf/xlsx), injection into Claude context ← **DONE**
+39. ✅ Document-level action routing — `assembler.ts` now distinguishes short text (→ `insert_text`) from file/document output (→ `copy_to_clipboard`); examples updated; action table descriptions clarified ← **DONE**
+40. ✅ `max_tokens` raised to 64000 — supports full contract/document generation without truncation ← **DONE**
+41. ✅ Truncation-safe action parsing — `parseActionFromResponse` in `CommandPalette.tsx` handles streams cut before `</action>` closes; extracts partial content and fires action instead of silently dropping it ← **DONE**
 
 ---
 
@@ -420,11 +423,15 @@ ANTHROPIC_API_KEY=
 - All Supabase and Claude traffic is routed through Vercel — required for access from Russia and other restricted regions
 - **Context Tray** solves cross-document and cross-app AI tasks — user cherry-picks relevant clips from any source; clips persist across palette open/close cycles and are injected as labelled context blocks in the assembler; capped at 10 clips (oldest dropped automatically)
 - `actions.status` check constraint only allows `completed`, `confirmed`, `cancelled`, `failed` — the route maps incoming `done`→`completed` and `error`→`failed` before inserting
+- **Document-level action routing rule**: `insert_text` = short selected-text transformations only; `copy_to_clipboard` = any output derived from files or longer than ~500 words. Decision point lives in `assembler.ts` MANDATORY RULE section.
+- `max_tokens` is set to 64000 (model maximum for Sonnet) — required for full document generation. Cost impact is negligible at $0.0000041/token even for large outputs.
+- `parseActionFromResponse` has a truncation fallback: if stream ends before `</action>` closes, partial content is still extracted and the action fires. Prevents silent failures on large outputs.
+- When testing locally, ensure `VITE_WEB_URL=http://localhost:3000` is set in `app/.env` — otherwise the Electron app calls the production Vercel URL and local changes have no effect.
 
 ---
 
-*Last updated: File search as context shipped (v0.6.1). Automatic file detection from query text, multi-format reading (txt/md/csv/json/docx/pdf/xlsx), content injection into Claude context, file indicator in palette UI.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅
+*Last updated: Document-level action routing fixed (v0.6.2). Agent correctly routes file/document tasks to `copy_to_clipboard` and short text to `insert_text`. `max_tokens` raised to 64000. Action parsing hardened against stream truncation. Local dev tip: set `VITE_WEB_URL=http://localhost:3000` in `app/.env` to test against local server.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅
 Remaining open items: Trial expiry emails (Vercel Cron).*
 
 ## Pricing & Billing Decisions

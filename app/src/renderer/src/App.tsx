@@ -15,8 +15,9 @@ export default function App(): JSX.Element | null {
     })
   }, [])
 
-  const handleLogin = (newToken: string): void => {
+  const handleLogin = (newToken: string, refreshToken: string): void => {
     window.electronAPI.setToken(newToken)
+    window.electronAPI.setRefreshToken(refreshToken)
     setToken(newToken)
   }
 

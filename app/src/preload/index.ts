@@ -65,6 +65,7 @@ export interface ElectronAPI {
   // Auth token (persisted in userData/store.json)
   getToken: () => Promise<string | null>
   setToken: (token: string | null) => void
+  setRefreshToken: (token: string | null) => void
 
   // Navigation
   openDashboard: () => void
@@ -117,6 +118,7 @@ const api: ElectronAPI = {
 
   getToken: () => ipcRenderer.invoke('get-token'),
   setToken: (token) => ipcRenderer.send('set-token', token),
+  setRefreshToken: (token) => ipcRenderer.send('set-refresh-token', token),
 
   openDashboard: () => ipcRenderer.send('open-dashboard'),
 

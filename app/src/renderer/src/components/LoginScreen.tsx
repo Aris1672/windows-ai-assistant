@@ -5,7 +5,7 @@ import './LoginScreen.css'
 const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
 
 interface LoginScreenProps {
-  onLogin: (token: string) => void
+  onLogin: (accessToken: string, refreshToken: string) => void
 }
 
 export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element {
@@ -37,8 +37,8 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
         return
       }
 
-      const successData = result.data as { access_token: string }
-      onLogin(successData.access_token)
+      const successData = result.data as { access_token: string; refresh_token: string }
+      onLogin(successData.access_token, successData.refresh_token ?? '')
     } catch {
       setError(t('login.errorNetwork'))
     } finally {

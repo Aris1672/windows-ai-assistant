@@ -103,6 +103,14 @@ ipcMain.on('set-token', (_event, token: string | null) => {
   }
 })
 
+ipcMain.on('set-refresh-token', (_event, token: string | null) => {
+  if (token) {
+    store.set('refreshToken', token)
+  } else {
+    store.delete('refreshToken')
+  }
+})
+
 ipcMain.on('open-dashboard', () => {
   shell.openExternal(`${WEB_URL}/dashboard`)
 })
@@ -281,59 +289,96 @@ ipcMain.handle(
 
 // ─── Streaming API Proxy ──────────────────────────────────────────────────────
 
+// ─── Token Refresh ────────────────────────────────────────────────────────────
+
+async function tryRefreshToken(): Promise<string | null> {
+  const refreshToken = store.get('refreshToken', undefined)
+  if (!refreshToken) return null
+
+  try {
+    const res = await net.fetch(`${WEB_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+    if (!res.ok) return null
+
+    const data = await res.json() as { access_token: string; refresh_token: string }
+    store.set('authToken', data.access_token)
+    store.set('refreshToken', data.refresh_token)
+    console.log('[token-refresh] Token refreshed successfully')
+    return data.access_token
+  } catch (err) {
+    console.error('[token-refresh] Failed:', err)
+    return null
+  }
+}
+
 let streamAbort: AbortController | null = null
 
 ipcMain.on(
   'stream-context',
   async (
     event,
-    { url, token, body }: { url: string; token: string; body: object }
+    { url, token: initialToken, body }: { url: string; token: string; body: object }
   ) => {
     streamAbort?.abort()
     streamAbort = new AbortController()
     const { signal } = streamAbort
 
-    try {
-      const res = await net.fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
-      })
-
-      if (res.status === 401) {
-        event.sender.send('stream-event', { type: 'auth-error' })
-        return
-      }
-      if (!res.ok) {
-        event.sender.send('stream-event', { type: 'http-error', status: res.status })
-        return
-      }
-
-      const reader = res.body!.getReader()
-      const decoder = new TextDecoder()
-
-      while (true) {
-        if (signal.aborted) break
-        const { done, value } = await reader.read()
-        if (done) break
-        if (signal.aborted) break
-        event.sender.send('stream-event', {
-          type: 'chunk',
-          data: decoder.decode(value, { stream: true })
+    const doStream = async (token: string, isRetry = false): Promise<void> => {
+      try {
+        const res = await net.fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
         })
-      }
 
-      if (!signal.aborted) {
-        event.sender.send('stream-event', { type: 'done' })
+        if (res.status === 401) {
+          if (!isRetry) {
+            // Silent refresh — try once before giving up
+            const newToken = await tryRefreshToken()
+            if (newToken) {
+              await doStream(newToken, true)
+              return
+            }
+          }
+          event.sender.send('stream-event', { type: 'auth-error' })
+          return
+        }
+        if (!res.ok) {
+          event.sender.send('stream-event', { type: 'http-error', status: res.status })
+          return
+        }
+
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+
+        while (true) {
+          if (signal.aborted) break
+          const { done, value } = await reader.read()
+          if (done) break
+          if (signal.aborted) break
+          event.sender.send('stream-event', {
+            type: 'chunk',
+            data: decoder.decode(value, { stream: true })
+          })
+        }
+
+        if (!signal.aborted) {
+          event.sender.send('stream-event', { type: 'done' })
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return
+        console.error('[stream-context] error:', err)
+        event.sender.send('stream-event', { type: 'error' })
       }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') return
-      console.error('[stream-context] error:', err)
-      event.sender.send('stream-event', { type: 'error' })
     }
+
+    await doStream(initialToken)
   }
 )
 
