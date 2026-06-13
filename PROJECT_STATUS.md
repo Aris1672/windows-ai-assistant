@@ -8,7 +8,7 @@
 
 **Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length.
 
-**Next immediate step:** Beta test is running — collect real token consumption data. Remaining items: trial expiry email reminders (Vercel Cron).
+**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. File search as context is now fully shipped.
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -47,11 +47,13 @@ root/                          ← npm workspaces root
 └── app/                       ← Electron app (Windows desktop) — core working ✅
     └── src/
         ├── main/
-        │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy
+        │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy, resolve-file-refs IPC
         │   ├── windows.ts         ← ✅ Palette window (frameless, always-on-top) + hidePaletteForAction()
         │   ├── tray.ts            ← ✅ System tray icon + menu
         │   ├── hotkey.ts          ← ✅ Ctrl+Space global hotkey
         │   ├── context-detector.ts ← ✅ Active app, file path, selected text
+        │   ├── file-finder.ts     ← ✅ Extracts file name candidates from query, searches filesystem
+        │   └── file-reader.ts     ← ✅ Reads txt/md/csv/json/docx/pdf/xlsx and returns plain text
         │   └── store.ts           ← ✅ Persistent local store (token, prefs, contextTray)
         ├── preload/
         │   └── index.ts           ← ✅ IPC bridge (electronAPI on window)
@@ -63,7 +65,7 @@ root/                          ← npm workspaces root
             │   ├── en.json            ← ✅ English strings
             │   └── ru.json            ← ✅ Russian strings
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n + file search indicator
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -381,7 +383,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 35. ✅ Dashboard button URL fixed — fallback hardcoded to production Vercel URL; dev mode reads from .env ← **DONE**
 36. ✅ supabase_schema.sql fully updated — now includes token_usage, billing_records, all users columns, increment_user_tokens() RPC, and migration script ← **DONE**
 37. ✅ User dashboard actions counter fixed — was stuck at 20 (page limit); now reads pagination.total from /api/actions response ← **DONE**
-38. 🔜 File search as context — automatic file detection from query text, content extraction, injection into Claude context ← **IN PROGRESS**
+38. ✅ File search as context — automatic file detection from query text, content extraction (txt/md/csv/json/docx/pdf/xlsx), injection into Claude context ← **DONE**
 
 ---
 
@@ -421,10 +423,9 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: Context Tray shipped. Action logging fixed — History + Analytics dashboards now receive live data from all AI queries and write-actions.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅
-Remaining open items: Trial expiry emails.
-In progress: File search as context (automatic file detection + reading from query text).*
+*Last updated: File search as context shipped (v0.6.1). Automatic file detection from query text, multi-format reading (txt/md/csv/json/docx/pdf/xlsx), content injection into Claude context, file indicator in palette UI.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅
+Remaining open items: Trial expiry emails (Vercel Cron).*
 
 ## Pricing & Billing Decisions
 
