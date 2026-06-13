@@ -229,9 +229,15 @@ ipcMain.handle(
     }
   ) => {
     try {
+      console.log('[resolve-file-refs] query:', query)
+      console.log('[resolve-file-refs] activeFolder:', activeFolder)
+      console.log('[resolve-file-refs] activeFilePath:', activeFilePath)
       const foundFiles = await findFileRefs(query, activeFolder, activeFilePath)
+      console.log('[resolve-file-refs] found files:', foundFiles)
       const results = await Promise.all(foundFiles.map(f => readFileContent(f.filePath)))
-      return results.filter(Boolean)
+      const filtered = results.filter(Boolean)
+      console.log('[resolve-file-refs] returning:', filtered.map(r => r?.fileName))
+      return filtered
     } catch (err) {
       console.error('[resolve-file-refs] error:', err)
       return []
