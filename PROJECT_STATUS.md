@@ -6,9 +6,9 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation.
+**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation. Session persistence fixed — refresh token now stored in `store.ts`, silently refreshed on 401 in main process; users never see "Session expired" unless refresh itself fails.
 
-**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. File search as context is now fully shipped.
+**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. Session persistence and file search as context are fully shipped.
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -27,6 +27,7 @@ root/                          ← npm workspaces root
 │       │   │   ├── conversations/         ← ✅ POST — create conversation per palette session
 │       │   │   ├── conversations/[id]/messages/ ← ✅ POST — batch save message exchanges
 │       │   │   ├── auth/signout/  ← ✅ POST — server-side sign out (done)
+│   │   │   ├── auth/refresh/  ← ✅ POST — exchanges refresh_token for new access_token + refresh_token via Supabase
 │       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection, real-time token tracking, context tray passthrough, max_tokens 64000
 │       │   ├── dashboard/     ← ✅ All pages fully wired to real data
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
@@ -47,18 +48,18 @@ root/                          ← npm workspaces root
 └── app/                       ← Electron app (Windows desktop) — core working ✅
     └── src/
         ├── main/
-        │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy, resolve-file-refs IPC
+        │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy, resolve-file-refs IPC, silent token refresh on 401
         │   ├── windows.ts         ← ✅ Palette window (frameless, always-on-top) + hidePaletteForAction()
         │   ├── tray.ts            ← ✅ System tray icon + menu
         │   ├── hotkey.ts          ← ✅ Ctrl+Space global hotkey
         │   ├── context-detector.ts ← ✅ Active app, file path, selected text
         │   ├── file-finder.ts     ← ✅ Extracts file name candidates from query, searches filesystem
         │   └── file-reader.ts     ← ✅ Reads txt/md/csv/json/docx/pdf/xlsx and returns plain text
-        │   └── store.ts           ← ✅ Persistent local store (token, prefs, contextTray)
+        │   └── store.ts           ← ✅ Persistent local store (authToken, refreshToken, prefs, contextTray)
         ├── preload/
-        │   └── index.ts           ← ✅ IPC bridge (electronAPI on window)
+        │   └── index.ts           ← ✅ IPC bridge (electronAPI on window) + setRefreshToken
         └── renderer/src/
-            ├── App.tsx            ← ✅ Auth gate (login ↔ palette)
+            ├── App.tsx            ← ✅ Auth gate (login ↔ palette) + refresh token persistence on login
             ├── lib/
             │   └── i18n.ts            ← ✅ i18next config (EN/RU, localStorage detection)
             ├── locales/
@@ -66,7 +67,7 @@ root/                          ← npm workspaces root
             │   └── ru.json            ← ✅ Russian strings
             ├── components/
             │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n + file search indicator + truncation-safe action parsing
-            │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores token + i18n
+            │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores access_token + refresh_token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
 
@@ -387,6 +388,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 39. ✅ Document-level action routing — `assembler.ts` now distinguishes short text (→ `insert_text`) from file/document output (→ `copy_to_clipboard`); examples updated; action table descriptions clarified ← **DONE**
 40. ✅ `max_tokens` raised to 64000 — supports full contract/document generation without truncation ← **DONE**
 41. ✅ Truncation-safe action parsing — `parseActionFromResponse` in `CommandPalette.tsx` handles streams cut before `</action>` closes; extracts partial content and fires action instead of silently dropping it ← **DONE**
+42. ✅ Session persistence — refresh token stored in `store.ts`; `main/index.ts` silently refreshes on 401 and retries stream; new `/api/auth/refresh` Vercel endpoint exchanges refresh_token with Supabase; users never see "Session expired" during normal use ← **DONE**
 
 ---
 
@@ -427,11 +429,12 @@ ANTHROPIC_API_KEY=
 - `max_tokens` is set to 64000 (model maximum for Sonnet) — required for full document generation. Cost impact is negligible at $0.0000041/token even for large outputs.
 - `parseActionFromResponse` has a truncation fallback: if stream ends before `</action>` closes, partial content is still extracted and the action fires. Prevents silent failures on large outputs.
 - When testing locally, ensure `VITE_WEB_URL=http://localhost:3000` is set in `app/.env` — otherwise the Electron app calls the production Vercel URL and local changes have no effect.
+- **Session refresh architecture**: refresh token is stored in `store.json` alongside access token. On 401, `tryRefreshToken()` in `main/index.ts` calls `/api/auth/refresh` → Supabase `/auth/v1/token?grant_type=refresh_token` → updates both tokens in store → retries stream. Renderer never knows the refresh happened. `auth-error` is only sent if the refresh itself fails.
 
 ---
 
-*Last updated: Document-level action routing fixed (v0.6.2). Agent correctly routes file/document tasks to `copy_to_clipboard` and short text to `insert_text`. `max_tokens` raised to 64000. Action parsing hardened against stream truncation. Local dev tip: set `VITE_WEB_URL=http://localhost:3000` in `app/.env` to test against local server.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅
+*Last updated: Session persistence fixed (v0.6.3). Refresh token now stored in store.ts; main process silently refreshes on 401 and retries the stream; new /api/auth/refresh Vercel endpoint; users never see "Session expired" during normal use.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅
 Remaining open items: Trial expiry emails (Vercel Cron).*
 
 ## Pricing & Billing Decisions
