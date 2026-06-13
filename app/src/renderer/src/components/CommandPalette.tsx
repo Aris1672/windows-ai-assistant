@@ -54,7 +54,26 @@ interface ParsedResponse {
 
 function parseActionFromResponse(raw: string): ParsedResponse {
   const match = raw.match(/<action\s+type="([^"]+)">([\s\S]*?)<\/action>/)
-  if (!match) return { displayText: raw.trim(), action: null }
+  if (!match) {
+    // Fallback: stream was truncated before </action> closed.
+    // Still execute the action with whatever content arrived — don't silently drop it.
+    const truncated = raw.match(/<action\s+type="([^"]+)">([\s\S]*)$/)
+    if (truncated) {
+      const [, type, partialContent] = truncated
+      const displayText = raw.replace(/<action[\s\S]*$/, '').trim()
+      const value = partialContent.trim()
+      let action: Action | null = null
+      switch (type) {
+        case 'insert_text':       action = { type: 'insert_text',       text: value }; break
+        case 'copy_to_clipboard': action = { type: 'copy_to_clipboard', text: value }; break
+        case 'open_folder':       action = { type: 'open_folder',       path: value }; break
+        case 'open_file':         action = { type: 'open_file',         path: value }; break
+        case 'open_url':          action = { type: 'open_url',          url:  value }; break
+      }
+      return { displayText, action }
+    }
+    return { displayText: raw.trim(), action: null }
+  }
 
   const [fullMatch, type, content] = match
   const displayText = raw.replace(fullMatch, '').trim()

@@ -140,7 +140,7 @@ export async function POST(request: Request) {
 
         const claudeStream = await anthropic.messages.stream({
           model:      'claude-sonnet-4-6',
-          max_tokens: 1024,
+          max_tokens: 64000,
           system:     assembled.systemPrompt,
           messages,
         })
@@ -161,6 +161,10 @@ export async function POST(request: Request) {
         const outputTokens  = finalMessage.usage.output_tokens
         const totalTokens   = inputTokens + outputTokens
         const costUsd       = totalTokens * TOKEN_RATE_USD
+
+        console.log('Stop reason:', finalMessage.stop_reason)
+        console.log('Input tokens:', inputTokens)
+        console.log('Output tokens:', outputTokens)
 
         try {
           const supabase = createUserClient(accessToken)
