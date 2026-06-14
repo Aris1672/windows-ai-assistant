@@ -259,6 +259,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // File reference state
   const [resolvedFiles, setResolvedFiles] = useState<FileRef[]>([])
   const [attachedFiles, setAttachedFiles] = useState<FileRef[]>([])
+  const [hoveredMsgIdx, setHoveredMsgIdx] = useState<number | null>(null)
 
   // Auto-updater state
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
@@ -1108,7 +1109,10 @@ if (e.key === 'Escape') {
                     marginBottom: '0.5rem',
                     gap: '0.5rem',
                     alignItems: 'flex-start',
+                    position: 'relative',
                   }}
+                  onMouseEnter={() => setHoveredMsgIdx(i)}
+                  onMouseLeave={() => setHoveredMsgIdx(null)}
                 >
                   <p
                     className="response-text"
@@ -1134,6 +1138,32 @@ if (e.key === 'Escape') {
                   >
                     {msg.text}
                   </p>
+                  {/* Pin button — only on assistant messages, visible on hover */}
+                  {msg.role === 'assistant' && hoveredMsgIdx === i && (
+                    <button
+                      title="Pin response"
+                      onClick={() => window.electronAPI.pinResponse(msg.text)}
+                      style={{
+                        flexShrink: 0,
+                        alignSelf: 'flex-start',
+                        marginTop: '0.2rem',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '2px',
+                        color: 'rgba(251,191,36,0.75)',
+                        lineHeight: 1,
+                        transition: 'color 0.15s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.color = 'rgba(251,191,36,1)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'rgba(251,191,36,0.75)')}
+                    >
+                      {/* Thumbtack icon */}
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 3a1 1 0 0 1 .707 1.707L13 8.414V13l3 3v2h-4v4l-1 1-1-1v-4H6v-2l3-3V8.414L5.293 4.707A1 1 0 0 1 6 3h10z"/>
+                      </svg>
+                    </button>
+                  )}
                 </div>
               ))}
 

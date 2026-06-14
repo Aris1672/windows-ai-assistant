@@ -102,6 +102,10 @@ export interface ElectronAPI {
   // ── File Picker ───────────────────────────────────────────────────────────
   pickFile: () => Promise<FileRef | null>
 
+  // ── Pin Response ──────────────────────────────────────────────────────────
+  pinResponse: (text: string) => Promise<void>
+  closePin:    () => Promise<void>
+
   // Events pushed from the main process
   onPaletteShown:  (callback: () => void) => () => void
   onPaletteHidden: (callback: () => void) => () => void
@@ -152,6 +156,10 @@ const api: ElectronAPI = {
 
   // ── File Picker ───────────────────────────────────────────────────────────
   pickFile: () => ipcRenderer.invoke('pick-file'),
+
+  // ── Pin Response ──────────────────────────────────────────────────────────
+  pinResponse: (text) => ipcRenderer.invoke('pin-response', text),
+  closePin:    ()     => ipcRenderer.invoke('close-pin'),
 
   // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {

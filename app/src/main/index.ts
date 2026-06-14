@@ -6,7 +6,7 @@ import { app, ipcMain, shell, net, dialog } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray, destroyTray } from './tray'
 import { registerHotkey, unregisterHotkey } from './hotkey'
-import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow } from './windows'
+import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow, openPinWindow, closePinWindow } from './windows'
 import { getContext } from './context-detector'
 import type { ContextBundle } from './context-detector'
 import { store } from './store'
@@ -275,6 +275,16 @@ ipcMain.handle('pick-file', async () => {
     console.error('[pick-file] error:', err)
     return null
   }
+})
+
+// ─── Pin Response ─────────────────────────────────────────────────────────────
+
+ipcMain.handle('pin-response', (_event, text: string) => {
+  openPinWindow(text)
+})
+
+ipcMain.handle('close-pin', () => {
+  closePinWindow()
 })
 
 // ─── Generic API Request Proxy ────────────────────────────────────────────────

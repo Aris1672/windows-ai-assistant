@@ -33,10 +33,10 @@ Instead of typing `Summarise report.pdf`, click the attach button to open a nati
 - File is read via the existing `file-reader.ts` and injected as a `fileRef` — reuses the full existing pipeline
 - A small filename chip appears in the palette confirming the attachment (like the existing file search indicator)
 - User types their query normally — file content is already in context
-- **Why:** Faster than typing filenames; works for users who don't remember exact names; trusted Windows pattern.
+- **Why:** Faster than typing filenames; works for users who don't remember exact names; trusted Windows pattern. -> **DONE**
 
 ### 5. Pin a Response
-Let the user pin an AI response so it stays visible as a floating note while working in another app.
+Let the user pin an AI response so it stays visible as a floating note while working in another app. 
 - Small "pin" icon on any AI response
 - Opens a minimal always-on-top window with the pinned text
 - User can copy from it at any time
