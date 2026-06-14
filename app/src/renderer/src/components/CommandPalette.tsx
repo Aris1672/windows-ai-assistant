@@ -1055,7 +1055,7 @@ if (e.key === 'Escape') {
                 background: 'rgba(124, 111, 255, 0.12)',
                 border: '1px solid rgba(124, 111, 255, 0.25)',
                 fontSize: '0.72rem',
-                color: 'rgba(255,255,255,0.65)',
+                color: 'rgba(255,255,255,0.9)',
               }}>
                 📎 {f.fileName}
                 <button
