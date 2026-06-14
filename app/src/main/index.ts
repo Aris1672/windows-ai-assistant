@@ -2,7 +2,7 @@
  * app/src/main/index.ts
  */
 
-import { app, ipcMain, shell, net } from 'electron'
+import { app, ipcMain, shell, net, dialog } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray, destroyTray } from './tray'
 import { registerHotkey, unregisterHotkey } from './hotkey'
@@ -252,6 +252,30 @@ ipcMain.handle(
     }
   }
 )
+
+// ─── File Picker ──────────────────────────────────────────────────────────────
+
+ipcMain.handle('pick-file', async () => {
+  const win = getPaletteWindow()
+  const result = await dialog.showOpenDialog(win!, {
+    title: 'Attach file',
+    properties: ['openFile'],
+    filters: [
+      { name: 'Supported files', extensions: ['txt', 'md', 'csv', 'json', 'docx', 'pdf', 'xlsx', 'xls'] },
+      { name: 'All files', extensions: ['*'] },
+    ],
+  })
+
+  if (result.canceled || result.filePaths.length === 0) return null
+
+  try {
+    const fileRef = await readFileContent(result.filePaths[0])
+    return fileRef ?? null
+  } catch (err) {
+    console.error('[pick-file] error:', err)
+    return null
+  }
+})
 
 // ─── Generic API Request Proxy ────────────────────────────────────────────────
 

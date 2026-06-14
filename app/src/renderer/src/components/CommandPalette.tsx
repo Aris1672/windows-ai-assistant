@@ -258,6 +258,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   // File reference state
   const [resolvedFiles, setResolvedFiles] = useState<FileRef[]>([])
+  const [attachedFiles, setAttachedFiles] = useState<FileRef[]>([])
 
   // Auto-updater state
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
@@ -395,6 +396,17 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     }
   }, [conversationId])
 
+  // ── Attach file via picker ───────────────────────────────────────────────
+  const pickFile = useCallback(async () => {
+    const fileRef = await window.electronAPI.pickFile()
+    if (!fileRef) return
+    setAttachedFiles(prev => {
+      // Avoid duplicates
+      if (prev.some(f => f.filePath === fileRef.filePath)) return prev
+      return [...prev, fileRef]
+    })
+  }, [])
+
   // ── Add current selection to tray ─────────────────────────────────────────
   const addToTray = useCallback(async () => {
     const text = context?.selectedText?.trim()
@@ -464,6 +476,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     setActionError(null)
     setConfirmed(false)
     setResolvedFiles([])
+    setAttachedFiles([])
 
     lastQueryRef.current = message
 
@@ -485,13 +498,17 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     }).catch(() => null)
 
     // Resolve file references from query — silent, capped at 5 s
-    let fileRefs: FileRef[] = []
+    // Also merge any manually attached files
+    let fileRefs: FileRef[] = [...attachedFiles]
     try {
-      fileRefs = await window.electronAPI.resolveFileRefs({
+      const autoRefs = await window.electronAPI.resolveFileRefs({
         query:          message,
         activeFolder:   deriveActiveFolder(context),
         activeFilePath: context?.activeFilePath ?? null,
       })
+      // Merge, avoiding duplicates by filePath
+      const existingPaths = new Set(fileRefs.map(f => f.filePath))
+      fileRefs = [...fileRefs, ...autoRefs.filter(f => !existingPaths.has(f.filePath))]
       if (fileRefs.length > 0) setResolvedFiles(fileRefs)
     } catch { /* non-fatal */ }
 
@@ -989,6 +1006,27 @@ if (e.key === 'Escape') {
             style={{ resize: 'none', overflow: 'hidden', maxHeight: '140px' }}
           />
           {query && !busy && <kbd className="input-kbd">↵</kbd>}
+          <button
+            onClick={pickFile}
+            disabled={busy}
+            title="Attach file"
+            style={{
+              flexShrink: 0,
+              background: 'transparent',
+              border: 'none',
+              cursor: busy ? 'default' : 'pointer',
+              padding: '0 0.25rem',
+              opacity: busy ? 0.3 : 0.5,
+              fontSize: '1rem',
+              lineHeight: 1,
+              color: 'rgba(255,255,255,0.7)',
+              transition: 'opacity 0.15s',
+            }}
+            onMouseEnter={e => { if (!busy) (e.target as HTMLElement).style.opacity = '1' }}
+            onMouseLeave={e => { if (!busy) (e.target as HTMLElement).style.opacity = '0.5' }}
+          >
+            📎
+          </button>
           {busy && (
             <button
               className="cancel-btn"
@@ -998,6 +1036,46 @@ if (e.key === 'Escape') {
             </button>
           )}
         </div>
+
+        {/* Attached file chips */}
+        {attachedFiles.length > 0 && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.35rem',
+            padding: '0.35rem 0.75rem 0.1rem',
+          }}>
+            {attachedFiles.map((f, i) => (
+              <span key={f.filePath} style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                padding: '0.15rem 0.5rem',
+                borderRadius: '4px',
+                background: 'rgba(124, 111, 255, 0.12)',
+                border: '1px solid rgba(124, 111, 255, 0.25)',
+                fontSize: '0.72rem',
+                color: 'rgba(255,255,255,0.65)',
+              }}>
+                📎 {f.fileName}
+                <button
+                  onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    fontSize: '0.7rem',
+                    color: 'rgba(255,255,255,0.35)',
+                    lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
 
 
         {/* Context hint — shown when idle, no query, no conversation, no selection */}

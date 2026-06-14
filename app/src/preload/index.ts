@@ -99,6 +99,9 @@ export interface ElectronAPI {
     activeFilePath: string | null
   }) => Promise<FileRef[]>
 
+  // ── File Picker ───────────────────────────────────────────────────────────
+  pickFile: () => Promise<FileRef | null>
+
   // Events pushed from the main process
   onPaletteShown:  (callback: () => void) => () => void
   onPaletteHidden: (callback: () => void) => () => void
@@ -146,6 +149,9 @@ const api: ElectronAPI = {
 
   // ── File Reference Resolver ───────────────────────────────────────────────
   resolveFileRefs: (params) => ipcRenderer.invoke('resolve-file-refs', params),
+
+  // ── File Picker ───────────────────────────────────────────────────────────
+  pickFile: () => ipcRenderer.invoke('pick-file'),
 
   // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {
