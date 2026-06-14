@@ -1025,7 +1025,9 @@ if (e.key === 'Escape') {
             onMouseEnter={e => { if (!busy) (e.target as HTMLElement).style.opacity = '1' }}
             onMouseLeave={e => { if (!busy) (e.target as HTMLElement).style.opacity = '0.8' }}
           >
-            📎
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
           </button>
           {busy && (
             <button
@@ -1057,7 +1059,7 @@ if (e.key === 'Escape') {
                 fontSize: '0.72rem',
                 color: 'rgba(255,255,255,0.9)',
               }}>
-                📎 {f.fileName}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline',verticalAlign:'middle',marginRight:'3px'}}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>{f.fileName}
                 <button
                   onClick={() => setAttachedFiles(prev => prev.filter((_, idx) => idx !== i))}
                   style={{
