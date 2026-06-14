@@ -1005,7 +1005,7 @@ if (e.key === 'Escape') {
           <p style={{
             margin: '0.4rem 0.75rem 0.1rem',
             fontSize: '0.72rem',
-            color: 'rgba(251, 191, 36, 0.6)',
+            color: 'rgba(251, 191, 36, 0.8)',
             lineHeight: 1.5,
           }}>
             {getContextHint(context?.activeApp ?? null, t)}
