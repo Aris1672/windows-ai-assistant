@@ -199,6 +199,37 @@ function clipSourceLabel(clip: ContextClip): string {
   return file ? `${app} — ${file}` : app
 }
 
+// ─── Context hint ─────────────────────────────────────────────────────────────
+
+function getContextHint(activeApp: string | null, t: (key: string) => string): string {
+  if (!activeApp) return t('palette.hint.generic')
+
+  const a = activeApp.toLowerCase()
+
+  if (/word|libreoffice writer|wordpad|notepad|sublime|atom|obsidian/.test(a))
+    return t('palette.hint.editor')
+
+  if (/chrome|edge|firefox|opera|brave|safari/.test(a))
+    return t('palette.hint.browser')
+
+  if (/outlook|thunderbird|mailspring|mail/.test(a))
+    return t('palette.hint.email')
+
+  if (/excel|libreoffice calc|numbers|sheets/.test(a))
+    return t('palette.hint.spreadsheet')
+
+  if (/acrobat|sumatra|foxit|pdf/.test(a))
+    return t('palette.hint.pdf')
+
+  if (/code|cursor|webstorm|intellij|pycharm|rider|vim|nvim/.test(a))
+    return t('palette.hint.code')
+
+  if (isSystemShell(activeApp))
+    return t('palette.hint.explorer')
+
+  return t('palette.hint.generic')
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommandPalette({ token, onLogout }: CommandPaletteProps): JSX.Element {
@@ -967,6 +998,31 @@ if (e.key === 'Escape') {
             </button>
           )}
         </div>
+
+
+        {/* Context hint — shown when idle, no query typed, no conversation, no selection */}
+        {mode === 'idle' && !query && messages.length === 0 && !context?.selectedText && (
+          <p style={{
+            margin: '0.4rem 0.75rem 0.1rem',
+            fontSize: '0.72rem',
+            color: 'rgba(255,255,255,0.28)',
+            lineHeight: 1.5,
+          }}>
+            {getContextHint(context?.activeApp ?? null, t)}
+          </p>
+        )}
+
+        {/* Context hint — shown when idle, no query, no conversation, no selection */}
+        {mode === 'idle' && !query && messages.length === 0 && !context?.selectedText && (
+          <p style={{
+            margin: '0.4rem 0.75rem 0.1rem',
+            fontSize: '0.72rem',
+            color: 'rgba(255,255,255,0.28)',
+            lineHeight: 1.5,
+          }}>
+            {getContextHint(context?.activeApp ?? null, t)}
+          </p>
+        )}
 
         {/* Conversation thread */}
         {(messages.length > 0 || hasResponse || mode === 'thinking') && (
