@@ -1066,7 +1066,7 @@ if (e.key === 'Escape') {
                     cursor: 'pointer',
                     padding: 0,
                     fontSize: '0.7rem',
-                    color: 'rgba(255,255,255,0.35)',
+                    color: '#34d399',
                     lineHeight: 1,
                   }}
                 >
