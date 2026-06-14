@@ -1000,24 +1000,12 @@ if (e.key === 'Escape') {
         </div>
 
 
-        {/* Context hint — shown when idle, no query typed, no conversation, no selection */}
-        {mode === 'idle' && !query && messages.length === 0 && !context?.selectedText && (
-          <p style={{
-            margin: '0.4rem 0.75rem 0.1rem',
-            fontSize: '0.72rem',
-            color: 'rgba(255,255,255,0.28)',
-            lineHeight: 1.5,
-          }}>
-            {getContextHint(context?.activeApp ?? null, t)}
-          </p>
-        )}
-
         {/* Context hint — shown when idle, no query, no conversation, no selection */}
         {mode === 'idle' && !query && messages.length === 0 && !context?.selectedText && (
           <p style={{
             margin: '0.4rem 0.75rem 0.1rem',
             fontSize: '0.72rem',
-            color: 'rgba(255,255,255,0.28)',
+            color: 'rgba(251, 191, 36, 0.6)',
             lineHeight: 1.5,
           }}>
             {getContextHint(context?.activeApp ?? null, t)}
