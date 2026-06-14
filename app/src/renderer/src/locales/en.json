@@ -48,14 +48,14 @@
       "generic": "Something went wrong — please try again."
     },
     "hint": {
-      "editor": "Select the text you want to work with, then press Ctrl+Space — or mention a file in your request, e.g. \"Summarise contract.docx\"",
-      "browser": "Select text on the page to rewrite, translate, or summarise it — or mention a file, e.g. \"Compare this with Q2.xlsx\"",
-      "email": "Select text from an email to rewrite or summarise it — or ask me to draft something, e.g. \"Write a follow-up based on offer.docx\"",
-      "spreadsheet": "Select cells to analyse or format — or compare files without opening them, e.g. \"Compare Q1.xlsx with Q2.xlsx\"",
-      "pdf": "Select text from the PDF to work with it — or ask directly, e.g. \"Summarise report.pdf\"",
-      "code": "Select the code you want to explain, fix, or rewrite — or mention a file, e.g. \"Review logic in utils.ts\"",
+      "editor": "Select and copy (Ctrl+C) the text you want to work with, then press Ctrl+Space — or mention a file in your request, e.g. \"Summarise contract.docx\"",
+      "browser": "Select and copy (Ctrl+C) text on the page to rewrite, translate, or summarise it — or mention a file, e.g. \"Compare this with Q2.xlsx\"",
+      "email": "Select and copy (Ctrl+C) text from an email to rewrite or summarise it — or ask me to draft something, e.g. \"Write a follow-up based on offer.docx\"",
+      "spreadsheet": "Select and copy (Ctrl+C) cells to analyse or format — or compare files without opening them, e.g. \"Compare Q1.xlsx with Q2.xlsx\"",
+      "pdf": "Select and copy (Ctrl+C) text from the PDF to work with it — or ask directly, e.g. \"Summarise report.pdf\"",
+      "code": "Select and copy (Ctrl+C) the code you want to explain, fix, or rewrite — or mention a file, e.g. \"Review logic in utils.ts\"",
       "explorer": "You can work with files directly — try \"Summarise report.pdf\" or \"Compare Q1.xlsx with Q2.xlsx\" without opening them",
-      "generic": "Select any text and press Ctrl+Space to work with it — or mention a file in your request, e.g. \"Summarise notes.docx\""
+      "generic": "Select and copy (Ctrl+C) any text, then press Ctrl+Space to work with it — or mention a file in your request, e.g. \"Summarise notes.docx\""
     }
   }
 }
