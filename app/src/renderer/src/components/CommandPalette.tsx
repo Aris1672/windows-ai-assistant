@@ -1004,9 +1004,9 @@ if (e.key === 'Escape') {
         {mode === 'idle' && !query && messages.length === 0 && !context?.selectedText && (
           <p style={{
             margin: '0.4rem 0.75rem 0.1rem',
-            fontSize: '0.72rem',
-            color: '#34d399',
-            //color:"#f59e0b",
+            fontSize: '0.72rem',            
+            //color: '#34d3b0',
+            color:"#f59e0b",
             lineHeight: 1.5,
           }}>
             {getContextHint(context?.activeApp ?? null, t)}
