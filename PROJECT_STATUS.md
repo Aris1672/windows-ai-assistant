@@ -6,7 +6,7 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation. Session persistence fixed — refresh token now stored in `store.ts`, silently refreshed on 401 in main process; users never see "Session expired" unless refresh itself fails.
+**Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation. Session persistence fixed — refresh token now stored in `store.ts`, silently refreshed on 401 in main process; users never see "Session expired" unless refresh itself fails. Context hints shipped — amber hint text shown in the palette when no text is selected, guiding users to select+copy (Ctrl+C) first or use file commands directly; 8 cases covered (editor, browser, email, spreadsheet, pdf, code, explorer, generic); fully bilingual EN/RU.
 
 **Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. Session persistence and file search as context are fully shipped.
 
@@ -37,8 +37,8 @@ root/                          ← npm workspaces root
 │       │   ├── Sidebar.tsx        ← ✅ Done + i18n + language toggle
 │       │   └── AdminSidebar.tsx   ← ✅ Done
 │       ├── locales/
-│       │   ├── en.json            ← ✅ English strings (web)
-│       │   └── ru.json            ← ✅ Russian strings (web)
+│       │   ├── en.json            ← ✅ English strings + palette.hint (8 context hints) (web)
+│       │   └── ru.json            ← ✅ Russian strings + palette.hint (8 context hints) (web)
 │       └── lib/
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
 │           ├── auth.ts            ← ✅ Done (requireAuth: Bearer token + cookie fallback, jsonError, jsonOk)
@@ -63,10 +63,10 @@ root/                          ← npm workspaces root
             ├── lib/
             │   └── i18n.ts            ← ✅ i18next config (EN/RU, localStorage detection)
             ├── locales/
-            │   ├── en.json            ← ✅ English strings
-            │   └── ru.json            ← ✅ Russian strings
+            │   ├── en.json            ← ✅ English strings + palette.hint (8 context hints)
+            │   └── ru.json            ← ✅ Russian strings + palette.hint (8 context hints)
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n + file search indicator + truncation-safe action parsing
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n + file search indicator + truncation-safe action parsing + context hints (no-selection state)
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores access_token + refresh_token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -389,6 +389,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 40. ✅ `max_tokens` raised to 64000 — supports full contract/document generation without truncation ← **DONE**
 41. ✅ Truncation-safe action parsing — `parseActionFromResponse` in `CommandPalette.tsx` handles streams cut before `</action>` closes; extracts partial content and fires action instead of silently dropping it ← **DONE**
 42. ✅ Session persistence — refresh token stored in `store.ts`; `main/index.ts` silently refreshes on 401 and retries stream; new `/api/auth/refresh` Vercel endpoint exchanges refresh_token with Supabase; users never see "Session expired" during normal use ← **DONE**
+43. ✅ Context hints — amber hint shown in palette when no text is selected and no conversation active; 8 app-aware cases (editor, browser, email, spreadsheet, pdf, code, explorer, generic); instructs user to Select+Copy (Ctrl+C) then Ctrl+Space, or use file commands directly; fully bilingual EN/RU ← **DONE**
 
 ---
 
@@ -430,11 +431,12 @@ ANTHROPIC_API_KEY=
 - `parseActionFromResponse` has a truncation fallback: if stream ends before `</action>` closes, partial content is still extracted and the action fires. Prevents silent failures on large outputs.
 - When testing locally, ensure `VITE_WEB_URL=http://localhost:3000` is set in `app/.env` — otherwise the Electron app calls the production Vercel URL and local changes have no effect.
 - **Session refresh architecture**: refresh token is stored in `store.json` alongside access token. On 401, `tryRefreshToken()` in `main/index.ts` calls `/api/auth/refresh` → Supabase `/auth/v1/token?grant_type=refresh_token` → updates both tokens in store → retries stream. Renderer never knows the refresh happened. `auth-error` is only sent if the refresh itself fails.
+- **Context hint logic**: `getContextHint()` in `CommandPalette.tsx` matches `activeApp` via regex to one of 8 hint keys. Hint renders only when `mode === 'idle' && !query && messages.length === 0 && !context?.selectedText`. Color: `rgba(251, 191, 36, 0.8)` (amber 80%). Key UX insight: the app requires Select → Copy (Ctrl+C) → Ctrl+Space, which is the reverse of what users expect — the hint corrects this at the exact moment they make the mistake.
 
 ---
 
-*Last updated: Session persistence fixed (v0.6.3). Refresh token now stored in store.ts; main process silently refreshes on 401 and retries the stream; new /api/auth/refresh Vercel endpoint; users never see "Session expired" during normal use.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅
+*Last updated: Context hints shipped (v0.6.4). Amber hint shown in palette when no text is selected; 8 app-aware cases; guides user to Select+Copy (Ctrl+C) → Ctrl+Space; fully bilingual EN/RU.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅, Context hints ✅
 Remaining open items: Trial expiry emails (Vercel Cron).*
 
 ## Pricing & Billing Decisions
