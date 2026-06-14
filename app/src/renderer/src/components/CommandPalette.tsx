@@ -1016,14 +1016,14 @@ if (e.key === 'Escape') {
               border: 'none',
               cursor: busy ? 'default' : 'pointer',
               padding: '0 0.25rem',
-              opacity: busy ? 0.3 : 0.5,
+              opacity: busy ? 0.3 : 0.8,
               fontSize: '1rem',
               lineHeight: 1,
-              color: 'rgba(255,255,255,0.7)',
+              color: 'rgba(251, 191, 36, 0.8)',
               transition: 'opacity 0.15s',
             }}
             onMouseEnter={e => { if (!busy) (e.target as HTMLElement).style.opacity = '1' }}
-            onMouseLeave={e => { if (!busy) (e.target as HTMLElement).style.opacity = '0.5' }}
+            onMouseLeave={e => { if (!busy) (e.target as HTMLElement).style.opacity = '0.8' }}
           >
             📎
           </button>
