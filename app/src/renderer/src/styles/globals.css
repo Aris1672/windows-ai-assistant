@@ -262,6 +262,9 @@ body {
 .palette--visible {
   transform: translateY(0) scale(1);
 }
+.palette--expanded {
+  height: 80vh;
+}
 
 /* ── Context strip ─────────────────────────────────────────────────────────── */
 .context-strip {

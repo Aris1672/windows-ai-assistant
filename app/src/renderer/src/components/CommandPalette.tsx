@@ -738,7 +738,7 @@ if (e.key === 'Escape') {
 
   return (
     <div className={`palette-root ${visible ? 'palette-root--visible' : ''}`}>
-      <div className={`palette ${visible ? 'palette--visible' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div className={`palette ${visible ? 'palette--visible' : ''} ${hasResponse || mode === 'thinking' || mode === 'streaming' ? 'palette--expanded' : ''}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Context strip */}
         {context?.activeApp && (
