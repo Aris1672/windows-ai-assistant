@@ -9,7 +9,7 @@ import type { ContextBundle, Action, ContextClip } from '../types/electron'
 // FileRef mirrors the type from file-reader.ts
 interface FileRef { filePath: string; fileName: string; content: string; truncated: boolean }
 
-const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://windows-ai-assistant-web.vercel.app'
+const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
 
 type Mode = 'idle' | 'thinking' | 'streaming' | 'done' | 'error'
 
@@ -343,6 +343,20 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       const capturedQuery    = lastQueryRef.current
       const capturedResponse = rawResponseRef.current
 
+      // Commit the completed exchange to messages immediately so the pin button appears
+      if (capturedQuery && capturedResponse) {
+        const { displayText: prevDisplay } = parseActionFromResponse(capturedResponse)
+        const prevText = prevDisplay || capturedResponse
+        setMessages(prev => [
+          ...prev,
+          { role: 'user'      as const, text: capturedQuery },
+          { role: 'assistant' as const, text: prevText },
+        ])
+        // Clear refs so submitQuery doesn't double-commit
+        lastQueryRef.current = ''
+        rawResponseRef.current = ''
+      }
+
       const capturedContext = contextRef.current
 
       conversationCreationRef.current
@@ -455,6 +469,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       })() : []),
     ]
 
+    // Only commit previous exchange if not already committed by the done effect
     if (lastQueryRef.current && rawResponseRef.current) {
       const { displayText: prevDisplay } = parseActionFromResponse(rawResponseRef.current)
       const prevText = prevDisplay || rawResponseRef.current
