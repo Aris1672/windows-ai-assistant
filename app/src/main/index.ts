@@ -306,17 +306,23 @@ ipcMain.handle(
     }
   ) => {
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 15000)
+
       const res = await net.fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: body !== undefined ? JSON.stringify(body) : undefined
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
       })
+      clearTimeout(timeout)
 
       const data = await res.json()
       return { ok: res.ok, status: res.status, data }
     } catch (err: unknown) {
+      const isTimeout = err instanceof Error && err.name === 'AbortError'
       console.error('[api-request] error:', err)
-      return { ok: false, status: 0, data: null }
+      return { ok: false, status: isTimeout ? 408 : 0, data: null }
     }
   }
 )

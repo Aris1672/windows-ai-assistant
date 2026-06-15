@@ -23,6 +23,7 @@ export default function App(): JSX.Element | null {
 
   const handleLogout = (): void => {
     window.electronAPI.setToken(null)
+    window.electronAPI.setRefreshToken(null)
     setToken(null)
   }
 

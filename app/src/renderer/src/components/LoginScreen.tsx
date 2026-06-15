@@ -30,7 +30,13 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
         body: { email: email.trim(), password }
       })
 
-      if (!result.ok || result.data === null) {
+      if (result.status === 0 || result.data === null) {
+        setError(t('login.errorNetwork'))
+        emailRef.current?.focus()
+        return
+      }
+
+      if (!result.ok) {
         const errData = result.data as { error?: string } | null
         setError(errData?.error ?? t('login.errorCredentials'))
         emailRef.current?.focus()
