@@ -228,7 +228,7 @@ body {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 15vh;
+  padding-top: 4vh;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.12s ease;
@@ -242,7 +242,7 @@ body {
 .palette {
   width: 640px;
   max-width: calc(100vw - 32px);
-  max-height: calc(85vh - 1rem); /* never exceed viewport — leaves room for padding-top: 15vh */
+  max-height: 80vh; /* 80% of the Electron window viewport */
   display: flex;
   flex-direction: column;
   background: rgba(13, 13, 17, 0.97);
@@ -342,7 +342,6 @@ body {
 .response-area {
   flex: 1;
   min-height: 0;        /* critical — allows flex item to shrink below content size */
-  max-height: 620px;
   overflow-y: auto;     /* changed from overlay — more reliable cross-platform */
   padding: 0.875rem 1rem 0.75rem;
   scrollbar-width: thin;
