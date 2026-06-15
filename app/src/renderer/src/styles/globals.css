@@ -342,7 +342,7 @@ body {
 .response-area {
   flex: 1;
   min-height: 0;        /* critical — allows flex item to shrink below content size */
-  max-height: 320px;
+  max-height: 620px;
   overflow-y: auto;     /* changed from overlay — more reliable cross-platform */
   padding: 0.875rem 1rem 0.75rem;
   scrollbar-width: thin;
