@@ -1138,25 +1138,26 @@ if (e.key === 'Escape') {
                   >
                     {msg.text}
                   </p>
-                  {/* Pin button — always rendered for assistant messages, fades in via opacity */}
+                  {/* Pin button — always visible for assistant messages */}
                   {msg.role === 'assistant' && (
                     <button
                       title="Pin response"
-                      onClick={() => window.electronAPI.pinResponse(msg.text)}
+                      onClick={() => (window.electronAPI as any).pinResponse?.(msg.text)}
                       style={{
                         flexShrink: 0,
                         alignSelf: 'flex-start',
                         marginTop: '0.2rem',
-                        background: 'transparent',
-                        border: 'none',
+                        background: 'rgba(251,191,36,0.12)',
+                        border: '1px solid rgba(251,191,36,0.4)',
+                        borderRadius: '4px',
                         cursor: 'pointer',
-                        padding: '2px',
-                        color: 'rgba(251,191,36,0.25)',
+                        padding: '2px 5px',
+                        color: 'rgba(251,191,36,1)',
                         lineHeight: 1,
-                        transition: 'color 0.15s',
+                        transition: 'background 0.15s',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.color = 'rgba(251,191,36,1)')}
-                      onMouseLeave={e => (e.currentTarget.style.color = 'rgba(251,191,36,0.25)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(251,191,36,0.28)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(251,191,36,0.12)')}
                     >
                       {/* Thumbtack icon */}
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
