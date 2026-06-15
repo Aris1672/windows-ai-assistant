@@ -9,7 +9,7 @@ import type { ContextBundle, Action, ContextClip } from '../types/electron'
 // FileRef mirrors the type from file-reader.ts
 interface FileRef { filePath: string; fileName: string; content: string; truncated: boolean }
 
-const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
+const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://windows-ai-assistant-web.vercel.app'
 
 type Mode = 'idle' | 'thinking' | 'streaming' | 'done' | 'error'
 

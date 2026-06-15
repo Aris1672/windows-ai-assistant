@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import './LoginScreen.css'
 
-const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
+const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://windows-ai-assistant-web.vercel.app'
 
 interface LoginScreenProps {
   onLogin: (accessToken: string, refreshToken: string) => void
