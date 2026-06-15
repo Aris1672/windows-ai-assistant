@@ -190,7 +190,7 @@ export async function POST(request: Request) {
         const inputTokens   = finalMessage.usage.input_tokens
         const outputTokens  = finalMessage.usage.output_tokens
         const totalTokens   = inputTokens + outputTokens
-        const rateUsd       = model === '' ? RATE_SONNET : RATE_HAIKU
+        const rateUsd = model === SONNET ? RATE_SONNET : RATE_HAIKU
         const costUsd       = totalTokens * rateUsd
 
         console.log('Stop reason:', finalMessage.stop_reason)

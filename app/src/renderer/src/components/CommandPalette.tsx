@@ -234,6 +234,48 @@ function getContextHint(activeApp: string | null, t: (key: string) => string): s
   return t('palette.hint.generic')
 }
 
+// ─── Vision gate ──────────────────────────────────────────────────────────────
+
+/**
+ * Apps where a screenshot provides meaningful visual context.
+ * Code editors, terminals, and file explorers are excluded — for those,
+ * file-reader.ts or selectedText gives better structured context than a screenshot.
+ */
+const VISUAL_APPS = [
+  /chrome|edge|firefox|opera|brave|safari/i,   // browsers
+  /acrobat|sumatra|foxit|pdf/i,                // PDF viewers
+  /figma|sketch|photoshop|illustrator|canva/i, // design tools
+  /word|wordpad|libreoffice writer/i,           // document editors (no text selected)
+  /excel|libreoffice calc|numbers/i,            // spreadsheets (no text selected)
+  /powerpoint|libreoffice impress/i,            // presentations
+  /teams|zoom|slack|discord/i,                  // meeting / video UI
+  /outlook|thunderbird|mail/i,                  // email clients
+]
+
+/**
+ * Returns true only when:
+ *  1. No richer structured context is available (selectedText / fileRefs / contextTray)
+ *  2. The active app is one where a screenshot adds genuine visual value
+ *
+ * Vision is the last resort — never fire it when text or file context already exists.
+ */
+function shouldCaptureScreenshot(
+  activeApp:    string | null,
+  selectedText: string | null,
+  fileRefs:     FileRef[],
+  trayClips:    ContextClip[],
+): boolean {
+  // Structured context already covers the task — skip vision
+  if (selectedText?.trim())  return false
+  if (fileRefs.length > 0)   return false
+  if (trayClips.length > 0)  return false
+
+  // No app detected — nothing useful to screenshot
+  if (!activeApp) return false
+
+  return VISUAL_APPS.some(re => re.test(activeApp))
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CommandPalette({ token, onLogout }: CommandPaletteProps): JSX.Element {
@@ -534,6 +576,15 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       if (fileRefs.length > 0) setResolvedFiles(fileRefs)
     } catch { /* non-fatal */ }
 
+    // Only send a screenshot when there is no richer context available
+    // and the active app is one where visual context is meaningful.
+    const useVision = shouldCaptureScreenshot(
+      context?.activeApp    ?? null,
+      context?.selectedText ?? null,
+      fileRefs,
+      trayClips,
+    )
+
     window.electronAPI.streamContext({
       url: `${WEB_URL}/api/context`,
       token,
@@ -542,7 +593,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         activeApp:        context?.activeApp        ?? null,
         activeFolder:     deriveActiveFolder(context),
         selectedText:     context?.selectedText     ?? null,
-        screenshotBase64: context?.screenshotBase64 ?? null,
+        screenshotBase64: useVision ? (context?.screenshotBase64 ?? null) : null,
         contextTray:      trayClips.length > 0 ? trayClips : undefined,
         fileRefs:         fileRefs.length > 0 ? fileRefs : undefined,
         history: historySnapshot,
