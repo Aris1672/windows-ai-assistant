@@ -9,12 +9,11 @@ let paletteWindow: BrowserWindow | null = null
 
 export function createPaletteWindow(): BrowserWindow {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-
-  const paletteHeight = Math.round(height * 0.88) // tall enough for 80vh content + breathing room
+  const paletteHeight = Math.round(height * 0.88)
 
   paletteWindow = new BrowserWindow({
     width: 680,
-    height: paletteHeight,
+    height: paletteHeight || 900, // fallback in case screen API isn't ready
     x: Math.round((width - 680) / 2),
     y: Math.round(height * 0.06),  // ~6% from the top — gives room for 80vh palette
     frame: false,
