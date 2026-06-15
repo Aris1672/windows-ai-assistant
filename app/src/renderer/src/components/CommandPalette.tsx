@@ -1107,64 +1107,64 @@ if (e.key === 'Escape') {
                     display: 'flex',
                     flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
                     marginBottom: '0.5rem',
-                    gap: '0.5rem',
                     alignItems: 'flex-start',
-                    position: 'relative',
                   }}
-                  onMouseEnter={() => setHoveredMsgIdx(i)}
-                  onMouseLeave={() => setHoveredMsgIdx(null)}
                 >
-                  <p
-                    className="response-text"
-                    style={{
-                      maxWidth: '85%',
-                      padding: '0.35rem 0.6rem',
-                      borderRadius: msg.role === 'user' ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
-                      background: msg.role === 'user'
-                        ? 'rgba(0, 245, 160, 0.1)'
-                        : 'rgba(255,255,255,0.04)',
-                      border: msg.role === 'user'
-                        ? '1px solid rgba(0, 245, 160, 0.18)'
-                        : '1px solid rgba(255,255,255,0.07)',
-                      margin: 0,
-                      color: msg.role === 'user'
-                        ? 'rgba(0, 245, 160, 0.9)'
-                        : 'rgba(255,255,255,0.78)',
-                      fontSize: '0.82rem',
-                      lineHeight: 1.55,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    {msg.text}
-                  </p>
-                  {/* Pin button — always visible for assistant messages */}
-                  {msg.role === 'assistant' && (
-                    <button
-                      title="Pin response"
-                      onClick={() => (window.electronAPI as any).pinResponse?.(msg.text)}
+                  {/* Wrap bubble + pin button in a column so pin stays inside the flow */}
+                  <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '85%', gap: '4px' }}>
+                    <p
+                      className="response-text"
                       style={{
-                        flexShrink: 0,
-                        alignSelf: 'flex-start',
-                        marginTop: '0.2rem',
-                        background: 'rgba(251,191,36,0.12)',
-                        border: '1px solid rgba(251,191,36,0.4)',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        padding: '2px 5px',
-                        color: 'rgba(251,191,36,1)',
-                        lineHeight: 1,
-                        transition: 'background 0.15s',
+                        padding: '0.35rem 0.6rem',
+                        borderRadius: msg.role === 'user' ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
+                        background: msg.role === 'user'
+                          ? 'rgba(0, 245, 160, 0.1)'
+                          : 'rgba(255,255,255,0.04)',
+                        border: msg.role === 'user'
+                          ? '1px solid rgba(0, 245, 160, 0.18)'
+                          : '1px solid rgba(255,255,255,0.07)',
+                        margin: 0,
+                        color: msg.role === 'user'
+                          ? 'rgba(0, 245, 160, 0.9)'
+                          : 'rgba(255,255,255,0.78)',
+                        fontSize: '0.82rem',
+                        lineHeight: 1.55,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(251,191,36,0.28)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(251,191,36,0.12)')}
                     >
-                      {/* Thumbtack icon */}
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M16 3a1 1 0 0 1 .707 1.707L13 8.414V13l3 3v2h-4v4l-1 1-1-1v-4H6v-2l3-3V8.414L5.293 4.707A1 1 0 0 1 6 3h10z"/>
-                      </svg>
-                    </button>
-                  )}
+                      {msg.text}
+                    </p>
+                    {/* Pin button — below each assistant bubble */}
+                    {msg.role === 'assistant' && (
+                      <button
+                        title="Pin response"
+                        onClick={() => window.electronAPI.pinResponse(msg.text)}
+                        style={{
+                          alignSelf: 'flex-start',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: 'rgba(251,191,36,0.10)',
+                          border: '1px solid rgba(251,191,36,0.35)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          padding: '2px 7px',
+                          color: 'rgba(251,191,36,0.9)',
+                          fontSize: '11px',
+                          lineHeight: 1.4,
+                          transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(251,191,36,0.22)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(251,191,36,0.10)')}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M16 3a1 1 0 0 1 .707 1.707L13 8.414V13l3 3v2h-4v4l-1 1-1-1v-4H6v-2l3-3V8.414L5.293 4.707A1 1 0 0 1 6 3h10z"/>
+                        </svg>
+                        Pin
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
 
