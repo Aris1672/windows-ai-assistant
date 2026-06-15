@@ -125,11 +125,13 @@ function PinIcon(): JSX.Element {
 interface ParsedChunk {
   text: string
   serverError?: string
+  model?: string
 }
 
 function parseSSEChunk(raw: string): ParsedChunk {
   let text = ''
   let serverError: string | undefined
+  let model: string | undefined
 
   for (const line of raw.split('\n')) {
     if (!line.startsWith('data: ')) continue
@@ -142,13 +144,15 @@ function parseSSEChunk(raw: string): ParsedChunk {
         serverError = parsed.message ?? 'AI response failed'
       } else if (parsed?.type === 'delta') {
         text += parsed.text ?? ''
+      } else if (parsed?.type === 'model') {
+        model = parsed.model ?? undefined
       }
     } catch {
       // skip malformed SSE lines
     }
   }
 
-  return { text, serverError }
+  return { text, serverError, model }
 }
 
 // ─── System shell detector ────────────────────────────────────────────────────
@@ -264,6 +268,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // Auto-updater state
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
+  const [activeModel, setActiveModel]       = useState<string | null>(null)
 
   // ── Conversation thread ───────────────────────────────────────────────────
   interface ThreadMessage { role: 'user' | 'assistant'; text: string; isError?: boolean }
@@ -493,6 +498,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     setConfirmed(false)
     setResolvedFiles([])
     setAttachedFiles([])
+    setActiveModel(null)
 
     lastQueryRef.current = message
 
@@ -603,7 +609,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   useEffect(() => {
     const off = window.electronAPI.onStreamEvent((ev) => {
       if (ev.type === 'chunk') {
-        const { text, serverError } = parseSSEChunk(ev.data)
+        const { text, serverError, model } = parseSSEChunk(ev.data)
+        if (model) setActiveModel(model)
         if (serverError) {
           setRawResponse(serverError)
           setMode('error')
@@ -781,6 +788,21 @@ if (e.key === 'Escape') {
                 }}
               >
                 ◉ vision
+              </span>
+            )}
+
+            {activeModel && (
+              <span
+                title={activeModel === 'claude-sonnet-4-6' ? 'Claude Sonnet 4.6 — full power' : 'Claude Haiku 4.5 — fast & efficient'}
+                style={{
+                  marginLeft: '0.3rem',
+                  fontSize: '0.65rem',
+                  color: activeModel === 'claude-sonnet-4-6' ? '#10b981' : '#f59e0b',
+                  letterSpacing: '0.04em',
+                  flexShrink: 0,
+                }}
+              >
+                ◉ {activeModel === 'claude-sonnet-4-6' ? 'sonnet 4.6' : 'haiku 4.5'}
               </span>
             )}
 

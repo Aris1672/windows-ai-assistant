@@ -40,7 +40,7 @@ Let the user pin an AI response so it stays visible as a floating note while wor
 - Small "pin" icon on any AI response
 - Opens a minimal always-on-top window with the pinned text
 - User can copy from it at any time
-- **Why:** Users often need to reference AI output while typing in a different app.
+- **Why:** Users often need to reference AI output while typing in a different app. **DONE**
 
 ---
 

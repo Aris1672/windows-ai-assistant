@@ -26,7 +26,23 @@ import { assembleContext } from '@/lib/assembler'
 import { createUserClient } from '@/lib/supabase'
 import Anthropic from '@anthropic-ai/sdk'
 
-const TOKEN_RATE_USD = 0.0000041 // $4.08 per 1M tokens (Claude Sonnet)
+const RATE_SONNET = 0.0000041  // $4.08 per 1M tokens
+const RATE_HAIKU  = 0.00000025 // $0.25 per 1M tokens
+
+const SONNET = 'claude-sonnet-4-6'
+const HAIKU  = 'claude-haiku-4-5-20251001'
+
+/**
+ * Picks the cheapest model that can handle the task well.
+ * Sonnet for anything complex, long, or file-heavy. Haiku for everything else.
+ */
+function selectModel(message: string, hasFiles: boolean, hasScreenshot: boolean, estimatedInputChars: number): string {
+  if (hasFiles)                                                          return SONNET
+  if (hasScreenshot)                                                     return SONNET
+  if (estimatedInputChars > 8000)                                        return SONNET
+  if (/rewrite|analys|contract|legal|restructure|compare|translate/i.test(message)) return SONNET
+  return HAIKU
+}
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -129,6 +145,16 @@ export async function POST(request: Request) {
       // First event: matching skills for the palette action menu
       send({ type: 'skills', skills: assembled.matchingSkills })
 
+      // Select model based on task complexity, then tell the frontend immediately
+      const estimatedInputChars = assembled.systemPrompt.length + (body.message?.length ?? 0)
+      const model = selectModel(
+        body.message,
+        (body.fileRefs?.length ?? 0) > 0,
+        !!body.screenshotBase64,
+        estimatedInputChars
+      )
+      send({ type: 'model', model })
+
       try {
         const messages: Anthropic.MessageParam[] = [
           ...(body.history ?? []).map((h) => ({
@@ -139,7 +165,7 @@ export async function POST(request: Request) {
         ]
 
         const claudeStream = await anthropic.messages.stream({
-          model:      'claude-sonnet-4-6',
+          model,
           max_tokens: 64000,
           system:     assembled.systemPrompt,
           messages,
@@ -160,7 +186,8 @@ export async function POST(request: Request) {
         const inputTokens   = finalMessage.usage.input_tokens
         const outputTokens  = finalMessage.usage.output_tokens
         const totalTokens   = inputTokens + outputTokens
-        const costUsd       = totalTokens * TOKEN_RATE_USD
+        const rateUsd       = model === '' ? RATE_SONNET : RATE_HAIKU
+        const costUsd       = totalTokens * rateUsd
 
         console.log('Stop reason:', finalMessage.stop_reason)
         console.log('Input tokens:', inputTokens)
@@ -177,7 +204,7 @@ export async function POST(request: Request) {
             total_tokens:  totalTokens,
             cost_usd:      costUsd,
             action_type:   body.skillId ? 'skill' : 'query',
-            model:         'claude-sonnet-4-6',
+            model,
           })
 
           // 2. Update user totals in real-time
