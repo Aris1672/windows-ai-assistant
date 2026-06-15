@@ -9,11 +9,12 @@ let paletteWindow: BrowserWindow | null = null
 
 export function createPaletteWindow(): BrowserWindow {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  const paletteHeight = Math.round(height * 0.88)
+
+  const paletteHeight = Math.round(height * 0.90)
 
   paletteWindow = new BrowserWindow({
     width: 680,
-    height: paletteHeight || 900, // fallback in case screen API isn't ready
+    height: paletteHeight,
     x: Math.round((width - 680) / 2),
     y: Math.round(height * 0.06),  // ~6% from the top — gives room for 80vh palette
     frame: false,
@@ -70,7 +71,7 @@ export function showPalette(context?: ContextBundle): void {
   const display = screen.getDisplayNearestPoint(cursor)
   const { x, y, width, height } = display.workArea
 
-  const paletteHeight = Math.round(height * 0.88)
+  const paletteHeight = Math.round(height * 0.90)
   paletteWindow.setSize(680, paletteHeight)
   paletteWindow.setPosition(
     x + Math.round((width - 680) / 2),
