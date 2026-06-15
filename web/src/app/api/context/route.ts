@@ -36,11 +36,16 @@ const HAIKU  = 'claude-haiku-4-5-20251001'
  * Picks the cheapest model that can handle the task well.
  * Sonnet for anything complex, long, or file-heavy. Haiku for everything else.
  */
-function selectModel(message: string, hasFiles: boolean, hasScreenshot: boolean, estimatedInputChars: number): string {
-  if (hasFiles)                                                          return SONNET
-  if (hasScreenshot)                                                     return SONNET
-  if (estimatedInputChars > 8000)                                        return SONNET
-  if (/rewrite|analys|contract|legal|restructure|compare|translate/i.test(message)) return SONNET
+function selectModel(
+  message: string,
+  hasFiles: boolean,
+  hasScreenshot: boolean,
+  selectedTextLength: number,
+): string {
+  if (hasFiles)                  return SONNET  // file content needs strong comprehension
+  if (hasScreenshot)             return SONNET  // vision tasks need Sonnet
+  if (selectedTextLength > 4000) return SONNET  // long selected text (~1000 tokens)
+  if (/rewrite|analys|contract|legal|restructure|compare/i.test(message)) return SONNET
   return HAIKU
 }
 
@@ -146,12 +151,11 @@ export async function POST(request: Request) {
       send({ type: 'skills', skills: assembled.matchingSkills })
 
       // Select model based on task complexity, then tell the frontend immediately
-      const estimatedInputChars = assembled.systemPrompt.length + (body.message?.length ?? 0)
       const model = selectModel(
         body.message,
         (body.fileRefs?.length ?? 0) > 0,
         !!body.screenshotBase64,
-        estimatedInputChars
+        (body.selectedText ?? '').length,
       )
       send({ type: 'model', model })
 
