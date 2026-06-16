@@ -4,11 +4,11 @@
 
 > If starting a new chat, read this section first — it summarises exactly where the project is and what to do next.
 
-**What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on `Ctrl + Space`. It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
+**What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on a configurable hotkey (default `Ctrl + Space`). It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
 **Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation. Session persistence fixed — refresh token now stored in `store.ts`, silently refreshed on 401 in main process; users never see "Session expired" unless refresh itself fails. Context hints shipped — amber hint text shown in the palette when no text is selected, guiding users to select+copy (Ctrl+C) first or use file commands directly; 8 cases covered (editor, browser, email, spreadsheet, pdf, code, explorer, generic); fully bilingual EN/RU. File attachment shipped — native Windows file picker via Electron dialog.showOpenDialog; file content injected as fileRef reusing existing file-reader.ts pipeline; amber SVG paperclip icon in palette input row; filename chip confirms attachment.
 
-**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. Pin a Response, smart model routing (Haiku/Sonnet), and palette smooth expand are all shipped.
+**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. Pin a Response, smart model routing (Haiku/Sonnet), palette smooth expand, semantic model routing, and custom hotkey are all shipped.
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -51,13 +51,13 @@ root/                          ← npm workspaces root
         │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy, resolve-file-refs IPC, silent token refresh on 401
         │   ├── windows.ts         ← ✅ Palette window (frameless, always-on-top) + hidePaletteForAction()
         │   ├── tray.ts            ← ✅ System tray icon + menu
-        │   ├── hotkey.ts          ← ✅ Ctrl+Space global hotkey
+        │   ├── hotkey.ts          ← ✅ Configurable global hotkey — reads from store on startup, supports dynamic re-registration via reregisterHotkey()
         │   ├── context-detector.ts ← ✅ Active app, file path, selected text
         │   ├── file-finder.ts     ← ✅ Extracts file name candidates from query, searches filesystem
         │   └── file-reader.ts     ← ✅ Reads txt/md/csv/json/docx/pdf/xlsx and returns plain text
-        │   └── store.ts           ← ✅ Persistent local store (authToken, refreshToken, prefs, contextTray)
+        │   └── store.ts           ← ✅ Persistent local store (authToken, refreshToken, prefs, contextTray, hotkey)
         ├── preload/
-        │   └── index.ts           ← ✅ IPC bridge (electronAPI on window) + setRefreshToken
+        │   └── index.ts           ← ✅ IPC bridge (electronAPI on window) + setRefreshToken + getHotkey/setHotkey
         └── renderer/src/
             ├── App.tsx            ← ✅ Auth gate (login ↔ palette) + refresh token persistence on login
             ├── lib/
@@ -66,7 +66,7 @@ root/                          ← npm workspaces root
             │   ├── en.json            ← ✅ English strings + palette.hint (8 context hints)
             │   └── ru.json            ← ✅ Russian strings + palette.hint (8 context hints)
             ├── components/
-            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n + file search indicator + truncation-safe action parsing + context hints (no-selection state) + file attachment (native dialog picker, fileRef injection, amber SVG paperclip, filename chip)
+            │   ├── CommandPalette.tsx ← ✅ Overlay UI + SSE streaming + actions + skills + conversation tracking + context tray + action logging + multiline input + amber vision indicator + i18n + file search indicator + truncation-safe action parsing + context hints (no-selection state) + file attachment (native dialog picker, fileRef injection, amber SVG paperclip, filename chip) + custom hotkey recorder (footer button, capture phase keydown, auto-confirm, amber recording state, green saved flash)
             │   └── LoginScreen.tsx    ← ✅ Calls /api/auth/login, stores access_token + refresh_token + i18n
             └── types/electron.d.ts   ← ✅ window.electronAPI types
 ```
@@ -160,7 +160,7 @@ All API keys stored on Vercel — never exposed in the desktop app.
 |---|---|
 | Windows App | Electron + React + TypeScript |
 | Command Palette UI | React overlay, always-on-top, frameless window |
-| Global Hotkey | `Ctrl + Space` via Electron globalShortcut |
+| Global Hotkey | User-configurable via palette footer (default `Ctrl + Space`); stored in `store.json`; re-registered live via Electron globalShortcut |
 | Context Detection | Active window API + clipboard + file path + screenshot |
 | Backend / Proxy | Next.js on Vercel |
 | Instruction + Skill Assembler | Vercel function — merges context into one prompt |
@@ -305,7 +305,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Electron shell setup (React + TypeScript + electron-vite)
 - [x] Login screen (calls Vercel `/api/auth/login`, stores Bearer token in `store.json`)
 - [x] System tray icon — app runs silently in background
-- [x] Global hotkey `Ctrl + Space` — triggers overlay from anywhere in Windows
+- [x] Global hotkey `Ctrl + Space` — triggers overlay from anywhere in Windows; user-configurable via palette footer
 - [x] Command palette overlay UI — frameless, always-on-top, fast
 - [x] Active window detection
 - [x] Active file / folder path detection
@@ -397,6 +397,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 47. ✅ Pin a Response — always-on-top floating note window; pin icon on every AI response; minimal frameless window with copy button; user can reference AI output while working in another app ← **DONE**
 48. ✅ Smart model routing — Haiku 4.5 for simple/short queries; Sonnet 4.6 for vision, files, long text, complex tasks; model broadcast to frontend; rate calculation fixed (`model === SONNET`) ← **DONE**
 49. ✅ Palette max height — window dynamically sized to 90% of screen height; palette card animates smoothly from compact (idle) to 80vh (thinking/streaming/done); `max-height` CSS transition replaces hard snap ← **DONE**
+50. ✅ Semantic model router — `web/src/lib/router.ts`; Haiku used as intent classifier before every request; language-agnostic (works in Russian, English, any language); categories: app_control/compose/code/analysis → Sonnet, transform/lookup/other → Haiku; runs in parallel with `assembleContext` via `Promise.all` (zero added latency); JSON fence stripping for robust parse; falls back to Sonnet on error ← **DONE**
+51. ✅ Custom hotkey — user clicks hotkey display in palette footer to enter recording mode (amber); presses any modifier+key combo; auto-confirms after 700ms with green flash; re-registers live via `reregisterHotkey()` with rollback on failure; persisted in `store.json`; loaded on app start ← **DONE**
 
 ---
 
@@ -441,11 +443,13 @@ ANTHROPIC_API_KEY=
 - **Session refresh architecture**: refresh token is stored in `store.json` alongside access token. On 401, `tryRefreshToken()` in `main/index.ts` calls `/api/auth/refresh` → Supabase `/auth/v1/token?grant_type=refresh_token` → updates both tokens in store → retries stream. Renderer never knows the refresh happened. `auth-error` is only sent if the refresh itself fails.
 - **File attachment uses native dialog, not drag & drop** — drag & drop dismissed the palette on blur before the file could be dropped; `dialog.showOpenDialog` (Electron main process, IPC to renderer) opens picker without losing focus. File is read by `file-reader.ts` and injected as a `fileRef` — identical pipeline to automatic file search.
 - **Context hint logic**: `getContextHint()` in `CommandPalette.tsx` matches `activeApp` via regex to one of 8 hint keys. Hint renders only when `mode === 'idle' && !query && messages.length === 0 && !context?.selectedText`. Color: `rgba(251, 191, 36, 0.8)` (amber 80%). Key UX insight: the app requires Select → Copy (Ctrl+C) → Ctrl+Space, which is the reverse of what users expect — the hint corrects this at the exact moment they make the mistake.
+- **Semantic model router**: `web/src/lib/router.ts` — Haiku classifies intent before every request; prompt defines 7 categories mapped to sonnet/haiku; runs in parallel with `assembleContext` via `Promise.all` so it adds zero latency; strips markdown fences before JSON.parse to handle Haiku wrapping output in ```json``` blocks; logs `[router] raw` and `[router] "query" → category → model` to Vercel for debugging; falls back to Sonnet on any parse error.
+- **Custom hotkey**: stored as Electron accelerator string in `store.json` (e.g. `"CommandOrControl+Space"`). `hotkey.ts` reads from store on startup and keeps `currentTrigger` reference so `reregisterHotkey()` can unregister old, register new, and roll back if the combo is taken. Recorder in `CommandPalette.tsx` uses capture-phase `keydown` listener (`addEventListener(..., true)`) to intercept before palette's own handlers; `e.stopPropagation()` prevents Escape from closing the palette during recording; auto-confirms after 700ms.
 
 ---
 
-*Last updated: v0.6.9 — Pin a Response, smart model routing (Haiku/Sonnet), palette smooth expand.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅, Context hints ✅, File attachment ✅, Login performance ✅, Pin a Response ✅, Smart model routing (Haiku/Sonnet) ✅, Palette smooth expand ✅
+*Last updated: v0.7.1 — Semantic model router, custom hotkey.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅, Context hints ✅, File attachment ✅, Login performance ✅, Pin a Response ✅, Smart model routing (Haiku/Sonnet) ✅, Palette smooth expand ✅, Semantic model router ✅, Custom hotkey ✅
 Remaining open items: Trial expiry emails (Vercel Cron).*
 
 ## Pricing & Billing Decisions
