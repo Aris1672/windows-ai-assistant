@@ -106,6 +106,10 @@ export interface ElectronAPI {
   pinResponse: (text: string) => Promise<void>
   closePin:    () => Promise<void>
 
+  // ── Hotkey ────────────────────────────────────────────────────────────────
+  getHotkey: () => Promise<string>
+  setHotkey: (hotkey: string) => Promise<boolean>
+
   // Events pushed from the main process
   onPaletteShown:  (callback: () => void) => () => void
   onPaletteHidden: (callback: () => void) => () => void
@@ -160,6 +164,10 @@ const api: ElectronAPI = {
   // ── Pin Response ──────────────────────────────────────────────────────────
   pinResponse: (text) => ipcRenderer.invoke('pin-response', text),
   closePin:    ()     => ipcRenderer.invoke('close-pin'),
+
+  // ── Hotkey ────────────────────────────────────────────────────────────────
+  getHotkey: () => ipcRenderer.invoke('get-hotkey'),
+  setHotkey: (hotkey) => ipcRenderer.invoke('set-hotkey', hotkey),
 
   // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {

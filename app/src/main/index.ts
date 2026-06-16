@@ -5,7 +5,7 @@
 import { app, ipcMain, shell, net, dialog } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray, destroyTray } from './tray'
-import { registerHotkey, unregisterHotkey } from './hotkey'
+import { registerHotkey, unregisterHotkey, reregisterHotkey } from './hotkey'
 import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow, openPinWindow, closePinWindow } from './windows'
 import { getContext } from './context-detector'
 import type { ContextBundle } from './context-detector'
@@ -83,7 +83,7 @@ app.whenReady().then(async () => {
     }
   })
 
-  console.log('[App] Ready. Ctrl+Space to open the palette.')
+  console.log('[App] Ready. Hotkey active:', store.getHotkey())
 })
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
@@ -113,6 +113,16 @@ ipcMain.on('set-refresh-token', (_event, token: string | null) => {
 
 ipcMain.on('open-dashboard', () => {
   shell.openExternal(`${WEB_URL}/dashboard`)
+})
+
+// ─── Hotkey IPC ───────────────────────────────────────────────────────────────
+
+ipcMain.handle('get-hotkey', () => store.getHotkey())
+
+ipcMain.handle('set-hotkey', (_event, hotkey: string) => {
+  const ok = reregisterHotkey(hotkey)
+  if (ok) store.setHotkey(hotkey)
+  return ok
 })
 
 // ─── Context Tray IPC ─────────────────────────────────────────────────────────
@@ -379,7 +389,6 @@ ipcMain.on(
 
         if (res.status === 401) {
           if (!isRetry) {
-            // Silent refresh — try once before giving up
             const newToken = await tryRefreshToken()
             if (newToken) {
               await doStream(newToken, true)

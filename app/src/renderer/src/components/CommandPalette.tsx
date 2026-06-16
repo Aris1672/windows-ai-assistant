@@ -11,6 +11,54 @@ interface FileRef { filePath: string; fileName: string; content: string; truncat
 
 const WEB_URL = import.meta.env.VITE_WEB_URL ?? 'https://your-app.vercel.app'
 
+// ─── Hotkey utilities ─────────────────────────────────────────────────────────
+
+/** Convert a KeyboardEvent to an Electron accelerator string, e.g. "CommandOrControl+Space" */
+function keyEventToAccelerator(e: KeyboardEvent): string | null {
+  const modifierKeys = ['Control', 'Alt', 'Shift', 'Meta', 'Super']
+  if (modifierKeys.includes(e.key)) return null   // modifier-only press, wait for the real key
+
+  const parts: string[] = []
+  if (e.ctrlKey)  parts.push('CommandOrControl')
+  if (e.altKey)   parts.push('Alt')
+  if (e.shiftKey) parts.push('Shift')
+  if (e.metaKey)  parts.push('Super')
+
+  if (parts.length === 0) return null  // must have at least one modifier
+
+  const keyMap: Record<string, string> = {
+    ' ':          'Space',
+    'ArrowUp':    'Up',
+    'ArrowDown':  'Down',
+    'ArrowLeft':  'Left',
+    'ArrowRight': 'Right',
+    'Enter':      'Return',
+    'Escape':     'Escape',
+    'Tab':        'Tab',
+    'Backspace':  'Backspace',
+    'Delete':     'Delete',
+    'Home':       'Home',
+    'End':        'End',
+    'PageUp':     'PageUp',
+    'PageDown':   'PageDown',
+  }
+
+  const key = keyMap[e.key] ?? (e.key.length === 1 ? e.key.toUpperCase() : e.key)
+  parts.push(key)
+
+  return parts.join('+')
+}
+
+/** Convert an Electron accelerator to a human-readable display string */
+function acceleratorToDisplay(acc: string): string {
+  return acc.split('+').map(part => {
+    if (part === 'CommandOrControl') return 'Ctrl'
+    if (part === 'Super')            return 'Win'
+    if (part === 'Return')           return 'Enter'
+    return part
+  }).join(' + ')
+}
+
 type Mode = 'idle' | 'thinking' | 'streaming' | 'done' | 'error'
 
 interface CommandPaletteProps {
@@ -312,6 +360,12 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [updateDismissed, setUpdateDismissed] = useState(false)
   const [activeModel, setActiveModel]       = useState<string | null>(null)
 
+  // ── Hotkey state ──────────────────────────────────────────────────────────
+  const [hotkey, setHotkey]               = useState('CommandOrControl+Space')
+  const [recordingHotkey, setRecordingHotkey] = useState(false)
+  const [hotkeyPreview, setHotkeyPreview] = useState<string | null>(null)
+  const [hotkeySaved, setHotkeySaved]     = useState(false)
+
   // ── Conversation thread ───────────────────────────────────────────────────
   interface ThreadMessage { role: 'user' | 'assistant'; text: string; isError?: boolean }
   const [messages, setMessages] = useState<ThreadMessage[]>([])
@@ -359,6 +413,50 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       .then(clips => setTrayClips(clips))
       .catch(() => {})
   }, [])
+
+  // ── Load saved hotkey on mount ────────────────────────────────────────────
+  useEffect(() => {
+    window.electronAPI.getHotkey().then(setHotkey).catch(() => {})
+  }, [])
+
+  // ── Hotkey recorder ───────────────────────────────────────────────────────
+  // When recording mode is active, capture the next key combo in the capture
+  // phase (before other handlers) and auto-confirm after a short delay.
+  useEffect(() => {
+    if (!recordingHotkey) return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      if (e.key === 'Escape') {
+        setRecordingHotkey(false)
+        setHotkeyPreview(null)
+        return
+      }
+
+      const acc = keyEventToAccelerator(e)
+      if (!acc) return
+
+      setHotkeyPreview(acc)
+
+      // Auto-confirm after 700 ms — enough time for the user to see the preview
+      setTimeout(async () => {
+        const ok = await window.electronAPI.setHotkey(acc)
+        if (ok) {
+          setHotkey(acc)
+          setHotkeySaved(true)
+          setTimeout(() => setHotkeySaved(false), 1500)
+        }
+        setRecordingHotkey(false)
+        setHotkeyPreview(null)
+      }, 700)
+    }
+
+    // useCapture = true so we intercept before the palette's own keydown handler
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [recordingHotkey])
 
   // ── Keep rawResponseRef in sync ───────────────────────────────────────────
   useEffect(() => {
@@ -1377,6 +1475,33 @@ if (e.key === 'Escape') {
               onClick={() => i18n.changeLanguage(i18n.language === 'ru' ? 'en' : 'ru')}
             >
               {i18n.language === 'ru' ? 'EN' : 'RU'}
+            </button>
+            <button
+              className="footer-btn"
+              title="Click to change the global hotkey"
+              style={{
+                opacity:     recordingHotkey ? 1 : 0.55,
+                fontSize:    '0.65rem',
+                fontFamily:  'monospace',
+                color:       hotkeySaved
+                  ? 'rgba(0, 245, 160, 0.9)'
+                  : recordingHotkey
+                    ? 'rgba(251, 191, 36, 0.95)'
+                    : undefined,
+                border:      recordingHotkey ? '1px solid rgba(251,191,36,0.4)' : undefined,
+                minWidth:    '5rem',
+                transition:  'color 0.15s, border 0.15s',
+              }}
+              onClick={() => {
+                setHotkeyPreview(null)
+                setRecordingHotkey(true)
+              }}
+            >
+              {hotkeySaved
+                ? '✓ saved'
+                : recordingHotkey
+                  ? (hotkeyPreview ? acceleratorToDisplay(hotkeyPreview) : 'press keys…')
+                  : acceleratorToDisplay(hotkey)}
             </button>
             <button className="footer-btn" onClick={() => window.electronAPI.openDashboard()}>
               {t('palette.footer.dashboard')}

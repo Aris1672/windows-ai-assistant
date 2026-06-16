@@ -18,6 +18,7 @@ interface StoreData {
   refreshToken?:  string
   userEmail?:     string
   contextTray?:   ContextClip[]
+  hotkey?:        string   // Electron accelerator, e.g. "CommandOrControl+Space"
 }
 
 function getStorePath(): string {
@@ -53,8 +54,17 @@ export const store = {
     write(data)
   },
 
-  // ── Context Tray helpers ──────────────────────────────────────────────────
+  // ── Hotkey helpers ────────────────────────────────────────────────────────
 
+  getHotkey(): string {
+    return read().hotkey ?? 'CommandOrControl+Space'
+  },
+
+  setHotkey(hotkey: string): void {
+    write({ ...read(), hotkey })
+  },
+
+  // ── Context Tray helpers ──────────────────────────────────────────────────
   trayGetClips(): ContextClip[] {
     return read().contextTray ?? []
   },
