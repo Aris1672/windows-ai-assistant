@@ -44,10 +44,6 @@ Model assignment:
 Respond ONLY with: {"category": "...", "model": "sonnet" | "haiku"}`
 
 // ─── Anthropic client ─────────────────────────────────────────────────────────
-//
-// Reuse the same SDK instance as route.ts — but since this module is imported
-// there, we create our own instance here (both read from the same env var).
-//
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
@@ -85,10 +81,17 @@ export async function routeQuery(
       messages:   [{ role: 'user', content: message }],
     })
 
-    const raw    = res.content.find((b) => b.type === 'text')?.text ?? ''
-    const parsed = JSON.parse(raw) as { category: string; model: 'sonnet' | 'haiku' }
+    const raw = res.content.find((b) => b.type === 'text')?.text ?? ''
 
-    console.log(`[router] "${message.slice(0, 60)}…" → ${parsed.category} → ${parsed.model}`)
+    // Strip markdown fences — Haiku sometimes wraps output in ```json ... ```
+    // despite being told not to, which breaks JSON.parse
+    const clean = raw.replace(/```json\s*/gi, '').replace(/```/g, '').trim()
+
+    console.log(`[router] raw: "${clean}"`)
+
+    const parsed = JSON.parse(clean) as { category: string; model: 'sonnet' | 'haiku' }
+
+    console.log(`[router] "${message.slice(0, 60)}" → ${parsed.category} → ${parsed.model}`)
 
     return parsed.model === 'sonnet' ? SONNET : HAIKU
   } catch (err) {
