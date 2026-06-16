@@ -46,7 +46,7 @@ function selectModel(
   if (hasScreenshot)             return SONNET  // vision tasks need Sonnet
   if (selectedTextLength > 4000) return SONNET  // long selected text (~1000 tokens)
   if (/rewrite|analys|contract|legal|restructure|compare/i.test(message)) return SONNET
-  if (/compose|draft|send|email|letter|open|launch|create.*file|write.*to/i.test(message)) return SONNET  // app-interaction tasks
+  if (/compose|draft|send|email|letter|open|launch|creat|write.*to/i.test(message)) return SONNET  // app-interaction tasks
   return HAIKU
 }
 
