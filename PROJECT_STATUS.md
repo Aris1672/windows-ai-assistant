@@ -8,7 +8,7 @@
 
 **Current status:** Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation. Session persistence fixed — refresh token now stored in `store.ts`, silently refreshed on 401 in main process; users never see "Session expired" unless refresh itself fails. Context hints shipped — amber hint text shown in the palette when no text is selected, guiding users to select+copy (Ctrl+C) first or use file commands directly; 8 cases covered (editor, browser, email, spreadsheet, pdf, code, explorer, generic); fully bilingual EN/RU. File attachment shipped — native Windows file picker via Electron dialog.showOpenDialog; file content injected as fileRef reusing existing file-reader.ts pipeline; amber SVG paperclip icon in palette input row; filename chip confirms attachment.
 
-**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. Session persistence and file search as context are fully shipped.
+**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. Pin a Response, smart model routing (Haiku/Sonnet), and palette smooth expand are all shipped.
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -338,6 +338,7 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Admin billing dashboard (/admin/billing) — per-user token spend, trial status, days remaining, payment records
 - [x] Usage analytics in admin panel — actions/day chart, status breakdown, top apps, top action types
 - [x] Subscription activation — admin clicks "Activate" in /admin/billing; flips status to active, sets subscription_ends_at, resets tokens, auto-logs billing_records row
+- [x] Pin a Response — small pin icon on any AI response opens a minimal always-on-top floating window with the pinned text; user can copy from it at any time while working in another app ← **DONE**
 - [ ] Trial expiry email — "Your trial expires in 2 days" reminder (Vercel Cron + email template)
 - [ ] Manual billing records — admin logs payments via /admin/billing until Stripe is integrated ← auto-logged on activation now
 - [ ] Stripe integration (future — after beta validation)
@@ -393,6 +394,9 @@ When `Ctrl + Space` fires, the Electron app captures:
 44. ✅ Login route rewritten — `web/src/app/api/auth/login/route.ts` now uses direct `fetch` to Supabase REST (`/auth/v1/token?grant_type=password`) instead of Supabase JS client; eliminates cold-start overhead; `refresh_token` now correctly returned in response ← **DONE**
 45. ✅ Attachment icon — paperclip emoji in `CommandPalette.tsx` replaced with SVG icon using `stroke="currentColor"`; now renders in amber `rgba(251, 191, 36, 0.8)` matching Vision indicator; chip icon in attached file pills also updated ← **DONE**
 46. ✅ File attachment via native picker — `dialog.showOpenDialog` in Electron opens native Windows file picker without losing palette focus (drag & drop dismissed palette on blur); file read via existing `file-reader.ts` and injected as `fileRef` into context; filename chip shown in palette confirming attachment; amber SVG paperclip replaces emoji so icon colour is CSS-controllable ← **DONE**
+47. ✅ Pin a Response — always-on-top floating note window; pin icon on every AI response; minimal frameless window with copy button; user can reference AI output while working in another app ← **DONE**
+48. ✅ Smart model routing — Haiku 4.5 for simple/short queries; Sonnet 4.6 for vision, files, long text, complex tasks; model broadcast to frontend; rate calculation fixed (`model === SONNET`) ← **DONE**
+49. ✅ Palette max height — window dynamically sized to 90% of screen height; palette card animates smoothly from compact (idle) to 80vh (thinking/streaming/done); `max-height` CSS transition replaces hard snap ← **DONE**
 
 ---
 
@@ -440,8 +444,8 @@ ANTHROPIC_API_KEY=
 
 ---
 
-*Last updated: File attachment shipped (v0.6.6). Native Windows file picker via Electron dialog; reuses file-reader.ts pipeline; amber SVG paperclip icon; filename chip in palette.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅, Context hints ✅, File attachment ✅, Login performance ✅
+*Last updated: v0.6.9 — Pin a Response, smart model routing (Haiku/Sonnet), palette smooth expand.
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅, Context hints ✅, File attachment ✅, Login performance ✅, Pin a Response ✅, Smart model routing (Haiku/Sonnet) ✅, Palette smooth expand ✅
 Remaining open items: Trial expiry emails (Vercel Cron).*
 
 ## Pricing & Billing Decisions

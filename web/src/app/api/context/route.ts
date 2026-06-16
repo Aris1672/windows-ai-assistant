@@ -24,31 +24,11 @@
 import { requireAuth, jsonError } from '@/lib/auth'
 import { assembleContext } from '@/lib/assembler'
 import { createUserClient } from '@/lib/supabase'
+import { routeQuery, SONNET, HAIKU } from '@/lib/router'
 import Anthropic from '@anthropic-ai/sdk'
 
 const RATE_SONNET = 0.0000041  // $4.08 per 1M tokens
 const RATE_HAIKU  = 0.00000025 // $0.25 per 1M tokens
-
-const SONNET = 'claude-sonnet-4-6'
-const HAIKU  = 'claude-haiku-4-5-20251001'
-
-/**
- * Picks the cheapest model that can handle the task well.
- * Sonnet for anything complex, long, or file-heavy. Haiku for everything else.
- */
-function selectModel(
-  message: string,
-  hasFiles: boolean,
-  hasScreenshot: boolean,
-  selectedTextLength: number,
-): string {
-  if (hasFiles)                  return SONNET  // file content needs strong comprehension
-  if (hasScreenshot)             return SONNET  // vision tasks need Sonnet
-  if (selectedTextLength > 4000) return SONNET  // long selected text (~1000 tokens)
-  if (/rewrite|analys|contract|legal|restructure|compare/i.test(message)) return SONNET
-  if (/compose|draft|send|email|letter|open|launch|creat|write.*to/i.test(message)) return SONNET  // app-interaction tasks
-  return HAIKU
-}
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -97,21 +77,31 @@ export async function POST(request: Request) {
     return jsonError('message is required', 400)
   }
 
-  // ── Assemble context ──────────────────────────────────────────────────────
+  // ── Assemble context + route model in parallel ────────────────────────────
+  // Both calls are independent — run them concurrently so routing adds zero
+  // latency (Haiku classification takes ~200 ms; assembleContext takes longer).
+  const hasFiles      = (body.fileRefs?.length ?? 0) > 0
+  const hasScreenshot = !!body.screenshotBase64
+  const selectedLen   = (body.selectedText ?? '').length
+
   let assembled: Awaited<ReturnType<typeof assembleContext>>
+  let model: string
 
   try {
-    assembled = await assembleContext(
-      user.id,
-      {
-        activeApp:    body.activeApp    ?? null,
-        activeFolder: body.activeFolder ?? null,
-        selectedText: body.selectedText ?? null,
-        contextTray:  (body.contextTray ?? []).map(c => ({ ...c, filePath: c.filePath ?? null })),
-        fileRefs:     body.fileRefs ?? [],
-      },
-      accessToken
-    )
+    ;[assembled, model] = await Promise.all([
+      assembleContext(
+        user.id,
+        {
+          activeApp:    body.activeApp    ?? null,
+          activeFolder: body.activeFolder ?? null,
+          selectedText: body.selectedText ?? null,
+          contextTray:  (body.contextTray ?? []).map(c => ({ ...c, filePath: c.filePath ?? null })),
+          fileRefs:     body.fileRefs ?? [],
+        },
+        accessToken
+      ),
+      routeQuery(body.message, hasFiles, hasScreenshot, selectedLen),
+    ])
   } catch (err) {
     console.error('assembleContext error:', err)
     return jsonError('Failed to assemble context', 500)
@@ -151,13 +141,7 @@ export async function POST(request: Request) {
       // First event: matching skills for the palette action menu
       send({ type: 'skills', skills: assembled.matchingSkills })
 
-      // Select model based on task complexity, then tell the frontend immediately
-      const model = selectModel(
-        body.message,
-        (body.fileRefs?.length ?? 0) > 0,
-        !!body.screenshotBase64,
-        (body.selectedText ?? '').length,
-      )
+      // Tell the frontend which model was selected (resolved before stream started)
       send({ type: 'model', model })
 
       try {
