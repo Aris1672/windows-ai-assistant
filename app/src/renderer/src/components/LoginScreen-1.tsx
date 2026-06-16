@@ -44,14 +44,7 @@ export default function LoginScreen({ onLogin }: LoginScreenProps): JSX.Element 
       }
 
       const successData = result.data as { access_token: string; refresh_token: string }
-
-      if (!successData.refresh_token) {
-        setError(t('login.errorNetwork'))
-        emailRef.current?.focus()
-        return
-      }
-
-      onLogin(successData.access_token, successData.refresh_token)
+      onLogin(successData.access_token, successData.refresh_token ?? '')
     } catch {
       setError(t('login.errorNetwork'))
     } finally {

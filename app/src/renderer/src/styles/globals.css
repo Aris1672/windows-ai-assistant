@@ -242,7 +242,7 @@ body {
 .palette {
   width: 640px;
   max-width: calc(100vw - 32px);
-  max-height: 80vh; /* 80% of the Electron window viewport */
+  max-height: 20vh; /* idle: just enough for input + context strip */
   display: flex;
   flex-direction: column;
   background: rgba(13, 13, 17, 0.97);
@@ -257,13 +257,13 @@ body {
   -webkit-backdrop-filter: blur(32px);
   overflow: hidden;
   transform: translateY(-6px) scale(0.99);
-  transition: transform 0.14s ease, opacity 0.12s ease;
+  transition: max-height 0.35s ease, transform 0.14s ease, opacity 0.12s ease;
 }
 .palette--visible {
   transform: translateY(0) scale(1);
 }
 .palette--expanded {
-  height: 80vh;
+  max-height: 80vh; /* grows with content, no hard snap */
 }
 
 /* ── Context strip ─────────────────────────────────────────────────────────── */
