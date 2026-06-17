@@ -4,6 +4,7 @@
 
 import { app, ipcMain, shell, net, dialog } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
+import log from 'electron-log'
 import { createTray, destroyTray } from './tray'
 import { registerHotkey, unregisterHotkey, reregisterHotkey } from './hotkey'
 import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow, openPinWindow, closePinWindow } from './windows'
@@ -18,6 +19,32 @@ import { findFileRefs } from './file-finder'
 import { readFileContent } from './file-reader'
 
 const WEB_URL = process.env['VITE_WEB_URL'] ?? 'https://windows-ai-assistant-web.vercel.app'
+
+// ─── Logging ──────────────────────────────────────────────────────────────────
+// Configured here (not just inside updater.ts) so network errors from login/
+// streaming are captured from the very first IPC call, not only after the
+// updater has had a chance to initialize. Writes to the same file:
+// %APPDATA%\<app name>\logs\main.log
+log.transports.file.level = 'debug'
+log.transports.file.resolvePathFn = () =>
+  require('path').join(app.getPath('userData'), 'logs', 'main.log')
+log.info('[index] logging initialized — WEB_URL =', WEB_URL)
+
+// Helper: pull out the useful bits of a fetch/network error so the log
+// shows the actual Chromium net:: code (e.g. ERR_CONNECTION_RESET) instead
+// of just "Failed to fetch" / "[object Object]".
+function describeNetError(err: unknown): Record<string, unknown> {
+  if (err instanceof Error) {
+    return {
+      name: err.name,
+      message: err.message,
+      // net.fetch errors often carry a `cause` with the real net:: code
+      cause: (err as { cause?: unknown }).cause ?? null,
+      stack: err.stack,
+    }
+  }
+  return { raw: String(err) }
+}
 
 // ─── Single Instance Lock ─────────────────────────────────────────────────────
 
@@ -331,7 +358,7 @@ ipcMain.handle(
       return { ok: res.ok, status: res.status, data }
     } catch (err: unknown) {
       const isTimeout = err instanceof Error && err.name === 'AbortError'
-      console.error('[api-request] error:', err)
+      log.error('[api-request] error calling', url, describeNetError(err))
       return { ok: false, status: isTimeout ? 408 : 0, data: null }
     }
   }
@@ -356,10 +383,10 @@ async function tryRefreshToken(): Promise<string | null> {
     const data = await res.json() as { access_token: string; refresh_token: string }
     store.set('authToken', data.access_token)
     store.set('refreshToken', data.refresh_token)
-    console.log('[token-refresh] Token refreshed successfully')
+    log.info('[token-refresh] Token refreshed successfully')
     return data.access_token
   } catch (err) {
-    console.error('[token-refresh] Failed:', err)
+    log.error('[token-refresh] Failed:', describeNetError(err))
     return null
   }
 }
@@ -422,7 +449,7 @@ ipcMain.on(
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') return
-        console.error('[stream-context] error:', err)
+        log.error('[stream-context] error calling', url, describeNetError(err))
         event.sender.send('stream-event', { type: 'error' })
       }
     }
