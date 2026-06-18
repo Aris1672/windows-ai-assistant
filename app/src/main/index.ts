@@ -18,7 +18,7 @@ import { initAutoUpdater } from './updater'
 import { findFileRefs } from './file-finder'
 import { readFileContent } from './file-reader'
 
-const WEB_URL = process.env['VITE_WEB_URL'] ?? 'https://windows-ai-assistant-web.vercel.app'
+const WEB_URL = (process.env['VITE_WEB_URL'] ?? 'https://windows-ai-assistant-web.vercel.app').replace(/\/$/, '')
 
 // ─── Logging ──────────────────────────────────────────────────────────────────
 // Configured here (not just inside updater.ts) so network errors from login/
@@ -44,6 +44,59 @@ function describeNetError(err: unknown): Record<string, unknown> {
     }
   }
   return { raw: String(err) }
+}
+
+// Helper: detect transient network errors worth retrying (startup race,
+// Windows network stack not ready, VPN still connecting, etc.)
+function isRetryableNetworkError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const msg = err.message ?? ''
+  return (
+    msg.includes('ERR_CONNECTION_TIMED_OUT') ||
+    msg.includes('ERR_NAME_NOT_RESOLVED') ||
+    msg.includes('ERR_INTERNET_DISCONNECTED') ||
+    msg.includes('ERR_CONNECTION_REFUSED') ||
+    msg.includes('ERR_NETWORK_CHANGED') ||
+    msg.includes('net::') ||
+    err.name === 'AbortError'
+  )
+}
+
+// Wrapper around net.fetch that retries on transient network errors.
+// Uses a fresh AbortController + timeout for each attempt so a timed-out
+// request doesn't poison subsequent retries.
+async function netFetchWithRetry(
+  url: string,
+  options: Omit<Parameters<typeof net.fetch>[1], 'signal'> & { timeoutMs?: number },
+  maxRetries = 2,
+  baseDelayMs = 3000
+): Promise<Response> {
+  const { timeoutMs = 15000, ...fetchOptions } = options
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
+      const res = await net.fetch(url, { ...fetchOptions, signal: controller.signal })
+      clearTimeout(timer)
+      return res
+    } catch (err: unknown) {
+      clearTimeout(timer)
+
+      if (!isRetryableNetworkError(err) || attempt === maxRetries) {
+        throw err
+      }
+
+      const delay = baseDelayMs * Math.pow(2, attempt) // 3 s → 6 s
+      log.warn(
+        `[api-request] network error on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${delay}ms —`,
+        (err as Error).message
+      )
+      await new Promise((res) => setTimeout(res, delay))
+    }
+  }
+  throw new Error('[netFetchWithRetry] unreachable')
 }
 
 // ─── Single Instance Lock ─────────────────────────────────────────────────────
@@ -343,22 +396,23 @@ ipcMain.handle(
     }
   ) => {
     try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 15000)
-
-      const res = await net.fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
-      })
-      clearTimeout(timeout)
+      const res = await netFetchWithRetry(
+        url,
+        {
+          method,
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+          timeoutMs: 15000,
+        },
+        2,    // up to 2 retries (3 total attempts)
+        3000  // base delay: 3 s → 6 s
+      )
 
       const data = await res.json()
       return { ok: res.ok, status: res.status, data }
     } catch (err: unknown) {
       const isTimeout = err instanceof Error && err.name === 'AbortError'
-      log.error('[api-request] error calling', url, describeNetError(err))
+      log.error('[api-request] all attempts failed for', url, describeNetError(err))
       return { ok: false, status: isTimeout ? 408 : 0, data: null }
     }
   }
