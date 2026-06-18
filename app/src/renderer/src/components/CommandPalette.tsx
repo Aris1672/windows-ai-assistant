@@ -162,8 +162,9 @@ function SpinnerIcon(): JSX.Element {
 
 function PinIcon(): JSX.Element {
   return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/>
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="17" x2="12" y2="22"/>
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>
     </svg>
   )
 }
@@ -1335,29 +1336,11 @@ if (e.key === 'Escape') {
                     {/* Pin button — below each assistant bubble */}
                     {msg.role === 'assistant' && (
                       <button
+                        className="pin-btn"
                         title="Pin response"
                         onClick={() => window.electronAPI.pinResponse(msg.text)}
-                        style={{
-                          alignSelf: 'flex-start',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          background: 'rgba(251,191,36,0.10)',
-                          border: '1px solid rgba(251,191,36,0.35)',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          padding: '2px 7px',
-                          color: 'rgba(251,191,36,0.9)',
-                          fontSize: '11px',
-                          lineHeight: 1.4,
-                          transition: 'background 0.15s',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(251,191,36,0.22)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(251,191,36,0.10)')}
                       >
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M16 3a1 1 0 0 1 .707 1.707L13 8.414V13l3 3v2h-4v4l-1 1-1-1v-4H6v-2l3-3V8.414L5.293 4.707A1 1 0 0 1 6 3h10z"/>
-                        </svg>
+                        <PinIcon />
                         Pin
                       </button>
                     )}
