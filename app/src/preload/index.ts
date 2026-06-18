@@ -117,6 +117,7 @@ export interface ElectronAPI {
 
   // ── Auto-updater ─────────────────────────────────────────────────────────
   onUpdaterEvent: (callback: (ev: Record<string, string>) => void) => () => void
+  getUpdaterState: () => Promise<Record<string, unknown>>
   updaterInstall: () => void
 }
 
@@ -194,6 +195,7 @@ const api: ElectronAPI = {
     ipcRenderer.on('updater-event', fn)
     return () => ipcRenderer.off('updater-event', fn)
   },
+  getUpdaterState: () => ipcRenderer.invoke('updater-get-state'),
   updaterInstall: () => ipcRenderer.send('updater-install'),
 }
 

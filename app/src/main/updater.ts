@@ -24,6 +24,16 @@ export function initAutoUpdater(win: BrowserWindow): void {
 
   autoUpdater.logger = log
 
+  // ── Last known state ──────────────────────────────────────────────────────
+  // The renderer can be hidden, mid-reload, or otherwise not listening at the
+  // exact moment an autoUpdater event fires — a one-shot push event is easy
+  // to miss. Keeping the last payload here lets the renderer pull current
+  // state on demand (e.g. every time the palette is shown) instead of relying
+  // solely on having caught the live event.
+  let lastState: Record<string, unknown> = { type: 'idle' }
+
+  ipcMain.handle('updater-get-state', () => lastState)
+
   // Tell the updater exactly where to look for releases
   autoUpdater.setFeedURL({
     provider: 'github',
@@ -88,6 +98,7 @@ export function initAutoUpdater(win: BrowserWindow): void {
   setInterval(checkForUpdates, CHECK_INTERVAL_MS)
 
   function send(payload: Record<string, unknown>): void {
+    lastState = payload
     if (!win.isDestroyed()) {
       win.webContents.send('updater-event', payload)
     }

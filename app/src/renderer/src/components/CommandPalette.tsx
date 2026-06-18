@@ -740,6 +740,17 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       setActionError(null)
       setConfirmed(false)
       setTimeout(() => inputRef.current?.focus(), 60)
+
+      // Re-sync update banner state every time the palette opens. The live
+      // 'downloaded' push event can be missed if the renderer wasn't actively
+      // processing it at that exact moment — pulling current state here means
+      // a missed event self-heals the next time the user opens the palette,
+      // instead of waiting for the next 4-hour check cycle.
+      window.electronAPI.getUpdaterState().then((ev) => {
+        if (ev?.type === 'downloaded') {
+          setUpdateVersion((ev.version as string) ?? 'new version')
+        }
+      })
     })
 
     const offHidden = window.electronAPI.onPaletteHidden(() => {

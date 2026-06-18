@@ -90,7 +90,8 @@
       "provider": "github",
       "owner": "Aris1672",
       "repo": "windows-ai-assistant",
-      "private": true
+      "private": true,
+      "releaseType": "release"
     }
   }
 }
