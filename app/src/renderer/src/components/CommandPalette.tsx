@@ -985,6 +985,11 @@ if (e.key === 'Escape') {
           </div>
         )}
 
+        {/* ── Scrollable middle zone ─────────────────────────────────────── */}
+        {/* Wraps everything between the header and footer so the footer is  */}
+        {/* never pushed out of view when the tray panel + skills overflow.  */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column' }}>
+
         {/* ── Context Tray panel ─────────────────────────────────────────── */}
         {trayOpen && trayClips.length > 0 && (
           <div style={{
@@ -1296,7 +1301,7 @@ if (e.key === 'Escape') {
         {(messages.length > 0 || hasResponse || mode === 'thinking') && (
           <>
             <div className="divider" />
-            <div className="response-area" ref={responseRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            <div className="response-area" ref={responseRef}>
 
               {messages.map((msg, i) => (
                 <div
@@ -1456,6 +1461,9 @@ if (e.key === 'Escape') {
             </div>
           </div>
         )}
+
+        {/* ── End scrollable middle zone ──────────────────────────────────── */}
+        </div>
 
         {/* Footer */}
         <div className="palette-footer">
