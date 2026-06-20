@@ -99,7 +99,7 @@ export async function POST(request: Request) {
       routeQuery(
         body.message,
         hasFiles,
-        !!body.screenshotBase64,
+        !!body.screenshotBase64 && !clipboardText,
         clipboardText?.length ?? 0,
       ),
     ])
