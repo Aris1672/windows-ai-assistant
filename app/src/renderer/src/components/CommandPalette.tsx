@@ -286,43 +286,29 @@ function getContextHint(activeApp: string | null, t: (key: string) => string): s
 // ─── Vision gate ──────────────────────────────────────────────────────────────
 
 /**
- * Apps where a screenshot provides meaningful visual context.
- * Code editors, terminals, and file explorers are excluded — for those,
- * file-reader.ts or selectedText gives better structured context than a screenshot.
- */
-const VISUAL_APPS = [
-  /chrome|edge|firefox|opera|brave|safari/i,   // browsers
-  /acrobat|sumatra|foxit|pdf/i,                // PDF viewers
-  /figma|sketch|photoshop|illustrator|canva/i, // design tools
-  /word|wordpad|libreoffice writer/i,           // document editors (no text selected)
-  /excel|libreoffice calc|numbers/i,            // spreadsheets (no text selected)
-  /powerpoint|libreoffice impress/i,            // presentations
-  /teams|zoom|slack|discord/i,                  // meeting / video UI
-  /outlook|thunderbird|mail/i,                  // email clients
-]
-
-/**
- * Returns true only when:
- *  1. No richer structured context is available (selectedText / fileRefs / contextTray)
- *  2. The active app is one where a screenshot adds genuine visual value
+ * Decides whether to include the screenshot in the API payload.
  *
- * Vision is the last resort — never fire it when text or file context already exists.
+ * The decision is based purely on context richness — not on which app is open.
+ * Structured context (selected text, file refs, tray clips) is always more
+ * precise and cheaper than a screenshot, so vision is skipped when any of
+ * those are present. When none exist, the screenshot is the only context
+ * we have — always send it and let Sonnet figure out what the user is looking at.
+ *
+ * This means vision works for any app automatically: OpenOffice, browsers,
+ * games, terminals — no hardcoded names needed, no maintenance required.
  */
-function shouldCaptureScreenshot(
-  activeApp:    string | null,
-  selectedText: string | null,
-  fileRefs:     FileRef[],
-  trayClips:    ContextClip[],
+function shouldUseVision(
+  screenshotBase64: string | null,
+  selectedText:     string | null,
+  fileRefs:         FileRef[],
+  trayClips:        ContextClip[],
 ): boolean {
-  // Structured context already covers the task — skip vision
-  if (selectedText?.trim())  return false
-  if (fileRefs.length > 0)   return false
-  if (trayClips.length > 0)  return false
+  if (!screenshotBase64)    return false  // nothing captured — skip
+  if (selectedText?.trim()) return false  // selected text is more precise
+  if (fileRefs.length > 0)  return false  // file content is more precise
+  if (trayClips.length > 0) return false  // tray clips are more precise
 
-  // No app detected — nothing useful to screenshot
-  if (!activeApp) return false
-
-  return VISUAL_APPS.some(re => re.test(activeApp))
+  return true  // no structured context → send screenshot, let Sonnet see the screen
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -675,11 +661,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       if (fileRefs.length > 0) setResolvedFiles(fileRefs)
     } catch { /* non-fatal */ }
 
-    // Only send a screenshot when there is no richer context available
-    // and the active app is one where visual context is meaningful.
-    const useVision = shouldCaptureScreenshot(
-      context?.activeApp    ?? null,
-      context?.selectedText ?? null,
+    // Send the screenshot whenever no richer structured context is available.
+    // Works for any app — no hardcoded names, no maintenance required.
+    const useVision = shouldUseVision(
+      context?.screenshotBase64 ?? null,
+      context?.selectedText     ?? null,
       fileRefs,
       trayClips,
     )
