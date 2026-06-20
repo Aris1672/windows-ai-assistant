@@ -86,12 +86,24 @@ export function initAutoUpdater(win: BrowserWindow): void {
 
   // ── Initial check — delayed so the app is fully settled first ────────────
 
-  const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000 // 4 hours
+  const CHECK_INTERVAL_MS = 30 * 60 * 1000  // 30 min fallback (was 4 hours)
+  const CHECK_COOLDOWN_MS = 10 * 60 * 1000  // don't re-check more than once per 10 min
+
+  let lastCheckedAt = 0
 
   function checkForUpdates(): void {
+    lastCheckedAt = Date.now()
     autoUpdater.checkForUpdates().catch((err: Error) => {
       console.warn('[updater] check failed (non-fatal):', err.message)
     })
+  }
+
+  // Called by showPalette() on every palette open — fires only when cooldown
+  // has elapsed so we never hammer the GitHub releases API.
+  checkForUpdatesIfDue = () => {
+    if (Date.now() - lastCheckedAt > CHECK_COOLDOWN_MS) {
+      checkForUpdates()
+    }
   }
 
   setTimeout(checkForUpdates, 5_000)
@@ -104,3 +116,6 @@ export function initAutoUpdater(win: BrowserWindow): void {
     }
   }
 }
+
+// Populated by initAutoUpdater — safe to call before init (no-op until then)
+export let checkForUpdatesIfDue: () => void = () => {}

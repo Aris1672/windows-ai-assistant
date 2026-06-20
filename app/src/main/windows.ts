@@ -2,6 +2,7 @@ import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import type { ContextBundle } from './context-detector'
+import { checkForUpdatesIfDue } from './updater'
 
 let paletteWindow: BrowserWindow | null = null
 
@@ -85,6 +86,7 @@ export function showPalette(context?: ContextBundle): void {
   paletteWindow.show()
   paletteWindow.focus()
   paletteWindow.webContents.send('palette-shown')
+  checkForUpdatesIfDue()
 }
 
 export function hidePalette(): void {
