@@ -286,43 +286,27 @@ function getContextHint(activeApp: string | null, t: (key: string) => string): s
 // ─── Vision gate ──────────────────────────────────────────────────────────────
 
 /**
- * Apps where a screenshot provides meaningful visual context.
- * Code editors, terminals, and file explorers are excluded — for those,
- * file-reader.ts or selectedText gives better structured context than a screenshot.
- */
-const VISUAL_APPS = [
-  /chrome|edge|firefox|opera|brave|safari/i,   // browsers
-  /acrobat|sumatra|foxit|pdf/i,                // PDF viewers
-  /figma|sketch|photoshop|illustrator|canva/i, // design tools
-  /word|wordpad|libreoffice writer/i,           // document editors (no text selected)
-  /excel|libreoffice calc|numbers/i,            // spreadsheets (no text selected)
-  /powerpoint|libreoffice impress/i,            // presentations
-  /teams|zoom|slack|discord/i,                  // meeting / video UI
-  /outlook|thunderbird|mail/i,                  // email clients
-]
-
-/**
- * Returns true only when:
- *  1. No richer structured context is available (selectedText / fileRefs / contextTray)
- *  2. The active app is one where a screenshot adds genuine visual value
+ * Decides whether to send the screenshot to the API.
  *
- * Vision is the last resort — never fire it when text or file context already exists.
+ * Clipboard text is intentionally NOT checked here — that decision is made
+ * server-side via a semantic relevance check (is the clipboard actually related
+ * to what the user just asked?). The client always sends both clipboardText and
+ * screenshotBase64; the server resolves which one to use.
+ *
+ * Client only skips vision when structured context that is always relevant
+ * exists: file refs or tray clips. Those are explicit, intentional additions
+ * by the user — unlike clipboard which may be stale.
  */
-function shouldCaptureScreenshot(
-  activeApp:    string | null,
-  selectedText: string | null,
-  fileRefs:     FileRef[],
-  trayClips:    ContextClip[],
+function shouldUseVision(
+  screenshotBase64: string | null,
+  fileRefs:         FileRef[],
+  trayClips:        ContextClip[],
 ): boolean {
-  // Structured context already covers the task — skip vision
-  if (selectedText?.trim())  return false
-  if (fileRefs.length > 0)   return false
-  if (trayClips.length > 0)  return false
+  if (!screenshotBase64)    return false  // nothing captured — skip
+  if (fileRefs.length > 0)  return false  // file content is more precise
+  if (trayClips.length > 0) return false  // tray clips are more precise
 
-  // No app detected — nothing useful to screenshot
-  if (!activeApp) return false
-
-  return VISUAL_APPS.some(re => re.test(activeApp))
+  return true  // let the server decide between clipboard and vision
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -675,11 +659,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       if (fileRefs.length > 0) setResolvedFiles(fileRefs)
     } catch { /* non-fatal */ }
 
-    // Only send a screenshot when there is no richer context available
-    // and the active app is one where visual context is meaningful.
-    const useVision = shouldCaptureScreenshot(
-      context?.activeApp    ?? null,
-      context?.selectedText ?? null,
+    // Vision: send screenshot unless file refs or tray clips already provide
+    // structured context. Clipboard is sent separately as clipboardText —
+    // the server decides semantically whether it is relevant to this query.
+    const useVision = shouldUseVision(
+      context?.screenshotBase64 ?? null,
       fileRefs,
       trayClips,
     )
@@ -691,7 +675,7 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
         message,
         activeApp:        context?.activeApp        ?? null,
         activeFolder:     deriveActiveFolder(context),
-        selectedText:     context?.selectedText     ?? null,
+        clipboardText:    context?.selectedText     ?? null,   // raw clipboard — server resolves relevance
         screenshotBase64: useVision ? (context?.screenshotBase64 ?? null) : null,
         contextTray:      trayClips.length > 0 ? trayClips : undefined,
         fileRefs:         fileRefs.length > 0 ? fileRefs : undefined,

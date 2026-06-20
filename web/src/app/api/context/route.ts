@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     skillId?:          string | null
     history?:          { role: 'user' | 'assistant'; content: string }[]
     contextTray?:      { text: string; sourceApp: string; filePath?: string | null; addedAt: string }[]
+    clipboardText?:    string | null
     fileRefs?:         { filePath: string; fileName: string; content: string; truncated: boolean }[]
   }
 
@@ -77,31 +78,59 @@ export async function POST(request: Request) {
     return jsonError('message is required', 400)
   }
 
-  // ── Assemble context + route model in parallel ────────────────────────────
-  // Both calls are independent — run them concurrently so routing adds zero
-  // latency (Haiku classification takes ~200 ms; assembleContext takes longer).
+  // ── Step 1: fast parallel checks ─────────────────────────────────────────
+  // Run clipboard relevance check and model routing in parallel — both are
+  // lightweight Haiku calls (~200 ms). Neither depends on the other.
+  //
+  // Clipboard relevance: is the clipboard text actually related to this query?
+  //   yes → use as selectedText, discard screenshot
+  //   no  → ignore clipboard, keep screenshot (vision fires)
   const hasFiles      = (body.fileRefs?.length ?? 0) > 0
-  const hasScreenshot = !!body.screenshotBase64
-  const selectedLen   = (body.selectedText ?? '').length
+  const clipboardText = body.clipboardText?.trim() ?? null
 
-  let assembled: Awaited<ReturnType<typeof assembleContext>>
+  let clipboardRelevant: boolean
   let model: string
 
   try {
-    ;[assembled, model] = await Promise.all([
-      assembleContext(
-        user.id,
-        {
-          activeApp:    body.activeApp    ?? null,
-          activeFolder: body.activeFolder ?? null,
-          selectedText: body.selectedText ?? null,
-          contextTray:  (body.contextTray ?? []).map(c => ({ ...c, filePath: c.filePath ?? null })),
-          fileRefs:     body.fileRefs ?? [],
-        },
-        accessToken
+    ;[clipboardRelevant, model] = await Promise.all([
+      clipboardText
+        ? isClipboardRelevant(clipboardText, body.message)
+        : Promise.resolve(false),
+      routeQuery(
+        body.message,
+        hasFiles,
+        !!body.screenshotBase64,
+        clipboardText?.length ?? 0,
       ),
-      routeQuery(body.message, hasFiles, hasScreenshot, selectedLen),
     ])
+  } catch (err) {
+    console.error('Routing/relevance error:', err)
+    return jsonError('Failed to route request', 500)
+  }
+
+  // ── Step 2: resolve effective context ─────────────────────────────────────
+  // Clipboard wins only when semantically relevant to the query.
+  // Otherwise the screenshot takes over (vision path).
+  const effectiveSelectedText = clipboardRelevant ? clipboardText : null
+  const effectiveScreenshot   = clipboardRelevant ? null : (body.screenshotBase64 ?? null)
+
+  console.log(`[context] clipboard=${clipboardRelevant ? 'relevant' : 'ignored'} vision=${!!effectiveScreenshot}`)
+
+  // ── Step 3: assemble context with resolved values ──────────────────────────
+  let assembled: Awaited<ReturnType<typeof assembleContext>>
+
+  try {
+    assembled = await assembleContext(
+      user.id,
+      {
+        activeApp:    body.activeApp    ?? null,
+        activeFolder: body.activeFolder ?? null,
+        selectedText: effectiveSelectedText,
+        contextTray:  (body.contextTray ?? []).map(c => ({ ...c, filePath: c.filePath ?? null })),
+        fileRefs:     body.fileRefs ?? [],
+      },
+      accessToken
+    )
   } catch (err) {
     console.error('assembleContext error:', err)
     return jsonError('Failed to assemble context', 500)
@@ -113,7 +142,7 @@ export async function POST(request: Request) {
   if (body.skillId) {
     const skill = assembled.matchingSkills.find((s) => s.id === body.skillId)
     if (skill) {
-      userMessage = skill.prompt.replace('{{selected_text}}', body.selectedText ?? '')
+      userMessage = skill.prompt.replace('{{selected_text}}', effectiveSelectedText ?? '')
     }
   }
 
@@ -126,7 +155,7 @@ export async function POST(request: Request) {
   // as plain text, which is correct (the image is always "right now").
   const currentContent: string | ContentBlock[] = buildContent(
     userMessage,
-    body.screenshotBase64 ?? null
+    effectiveScreenshot
   )
 
   // ── Stream response ───────────────────────────────────────────────────────
@@ -228,6 +257,41 @@ export async function POST(request: Request) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Asks Haiku whether the clipboard text is semantically relevant to the query.
+ *
+ * Runs in parallel with routeQuery — same latency budget (~200 ms).
+ * Falls back to false on any error so vision fires as a safe default.
+ */
+async function isClipboardRelevant(
+  clipboardText: string,
+  message: string,
+): Promise<boolean> {
+  try {
+    const res = await anthropic.messages.create({
+      model:      HAIKU,
+      max_tokens: 10,
+      system:     'You are a relevance classifier. Reply ONLY with "yes" or "no". No other text.',
+      messages:   [{
+        role:    'user',
+        content: `User query: "${message.slice(0, 200)}"
+
+Clipboard content: "${clipboardText.slice(0, 400)}"
+
+Is the clipboard content directly relevant to the user's query?`,
+      }],
+    })
+
+    const answer = res.content.find(b => b.type === 'text')?.text?.trim().toLowerCase() ?? 'no'
+    const relevant = answer.startsWith('yes')
+    console.log(`[clipboard] "${message.slice(0, 40)}" → ${relevant ? 'relevant' : 'stale'}`)
+    return relevant
+  } catch (err) {
+    console.warn('[clipboard] relevance check failed, defaulting to vision:', err)
+    return false  // safe default — vision fires
+  }
+}
 
 /**
  * Builds the content for the current user turn.
