@@ -263,7 +263,7 @@ body {
   transform: translateY(0) scale(1);
 }
 .palette--expanded {
-  max-height: 80vh; /* grows with content, no hard snap */
+  max-height: 88vh; /* grows with content — tray + skills + response all fit */
 }
 
 /* ── Context strip ─────────────────────────────────────────────────────────── */
