@@ -56,7 +56,7 @@ Run the 3 most-used skills directly from the system tray menu, without opening t
 Let users change `Ctrl+Space` to a different key combination in Settings.
 - Some apps (e.g. VS Code, input methods) conflict with `Ctrl+Space`
 - Stored in `store.ts`, applied in `hotkey.ts`
-- **Why:** Removes the #1 friction point for users in conflicting environments.
+- **Why:** Removes the #1 friction point for users in conflicting environments. **NEEDS ATTENTION**
 
 ### 8. Voice Input
 Speak the query instead of typing — one microphone button in the palette.

@@ -47,7 +47,8 @@
     "instructions": "Инструкции",
     "skills": "Навыки",
     "history": "История",
-    "adminPanel": "Панель администратора"
+    "adminPanel": "Панель администратора",
+    "scheduled": "По расписанию"
   },
   "dashboard": {
     "overview": {

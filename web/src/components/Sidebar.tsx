@@ -8,6 +8,7 @@ import {
   Zap,
   BookOpen,
   History,
+  Clock,       // <-- NEW
   LogOut,
   ChevronRight,
   Shield,
@@ -20,10 +21,11 @@ export default function Sidebar({ userEmail, isAdmin = false }: { userEmail: str
   const router   = useRouter()
 
   const NAV = [
-    { href: '/dashboard',              label: t('sidebar.overview'),      icon: LayoutDashboard },
-    { href: '/dashboard/instructions', label: t('sidebar.instructions'),  icon: BookOpen },
-    { href: '/dashboard/skills',       label: t('sidebar.skills'),        icon: Zap },
-    { href: '/dashboard/history',      label: t('sidebar.history'),       icon: History },
+    { href: '/dashboard',             label: t('sidebar.overview'),      icon: LayoutDashboard },
+    { href: '/dashboard/instructions', label: t('sidebar.instructions'), icon: BookOpen },
+    { href: '/dashboard/skills',       label: t('sidebar.skills'),       icon: Zap },
+    { href: '/dashboard/scheduled',    label: t('sidebar.scheduled'),    icon: Clock },  // <-- NEW
+    { href: '/dashboard/history',      label: t('sidebar.history'),      icon: History },
   ]
 
   async function signOut() {
@@ -78,7 +80,6 @@ export default function Sidebar({ userEmail, isAdmin = false }: { userEmail: str
       <div style={{ padding: '0.75rem 0.5rem 1.25rem' }}>
         <hr className="divider" style={{ margin: '0 0.25rem 0.75rem' }} />
 
-        {/* Admin panel link — only shown to admins */}
         {isAdmin && (
           <Link
             href="/admin"
@@ -91,18 +92,17 @@ export default function Sidebar({ userEmail, isAdmin = false }: { userEmail: str
         )}
 
         <div style={{
-          padding: '0 0.5rem',
-          marginBottom: '0.5rem',
-          fontSize: '0.75rem',
-          color: 'var(--text-muted)',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          padding:       '0 0.5rem',
+          marginBottom:  '0.5rem',
+          fontSize:      '0.75rem',
+          color:         'var(--text-muted)',
+          overflow:      'hidden',
+          textOverflow:  'ellipsis',
+          whiteSpace:    'nowrap',
         }}>
           {userEmail}
         </div>
 
-        {/* Language toggle */}
         <button
           onClick={toggleLanguage}
           className="nav-item"

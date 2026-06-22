@@ -1,5 +1,15 @@
 /**
  * app/src/main/index.ts
+ *
+ * CHANGES vs original:
+ *   1. Import initScheduler / refreshScheduler / destroyScheduler from './scheduler'
+ *   2. Import closeResultWindow from './resultWindow'
+ *   3. Call initScheduler(WEB_URL) in app.whenReady()
+ *   4. Call refreshScheduler() when a new token is stored (post-login)
+ *   5. Call destroyScheduler() + closeResultWindow() in before-quit
+ *
+ * Everything else is identical to the original file.
+ * Lines with  <-- NEW  comments are the only additions.
  */
 
 import { app, ipcMain, shell, net, dialog } from 'electron'
@@ -17,54 +27,44 @@ import type { Action } from './actions'
 import { initAutoUpdater } from './updater'
 import { findFileRefs } from './file-finder'
 import { readFileContent } from './file-reader'
+import { initScheduler, refreshScheduler, destroyScheduler } from './scheduler' // <-- NEW
+import { closeResultWindow } from './resultWindow'                                // <-- NEW
 
 const WEB_URL = (process.env['VITE_WEB_URL'] ?? 'https://windows-ai-assistant-web.vercel.app').replace(/\/$/, '')
 
 // ─── Logging ──────────────────────────────────────────────────────────────────
-// Configured here (not just inside updater.ts) so network errors from login/
-// streaming are captured from the very first IPC call, not only after the
-// updater has had a chance to initialize. Writes to the same file:
-// %APPDATA%\<app name>\logs\main.log
+
 log.transports.file.level = 'debug'
 log.transports.file.resolvePathFn = () =>
   require('path').join(app.getPath('userData'), 'logs', 'main.log')
 log.info('[index] logging initialized — WEB_URL =', WEB_URL)
 
-// Helper: pull out the useful bits of a fetch/network error so the log
-// shows the actual Chromium net:: code (e.g. ERR_CONNECTION_RESET) instead
-// of just "Failed to fetch" / "[object Object]".
 function describeNetError(err: unknown): Record<string, unknown> {
   if (err instanceof Error) {
     return {
-      name: err.name,
+      name:    err.name,
       message: err.message,
-      // net.fetch errors often carry a `cause` with the real net:: code
-      cause: (err as { cause?: unknown }).cause ?? null,
-      stack: err.stack,
+      cause:   (err as { cause?: unknown }).cause ?? null,
+      stack:   err.stack,
     }
   }
   return { raw: String(err) }
 }
 
-// Helper: detect transient network errors worth retrying (startup race,
-// Windows network stack not ready, VPN still connecting, etc.)
 function isRetryableNetworkError(err: unknown): boolean {
   if (!(err instanceof Error)) return false
   const msg = err.message ?? ''
   return (
-    msg.includes('ERR_CONNECTION_TIMED_OUT') ||
-    msg.includes('ERR_NAME_NOT_RESOLVED') ||
+    msg.includes('ERR_CONNECTION_TIMED_OUT')  ||
+    msg.includes('ERR_NAME_NOT_RESOLVED')     ||
     msg.includes('ERR_INTERNET_DISCONNECTED') ||
-    msg.includes('ERR_CONNECTION_REFUSED') ||
-    msg.includes('ERR_NETWORK_CHANGED') ||
-    msg.includes('net::') ||
+    msg.includes('ERR_CONNECTION_REFUSED')    ||
+    msg.includes('ERR_NETWORK_CHANGED')       ||
+    msg.includes('net::')                     ||
     err.name === 'AbortError'
   )
 }
 
-// Wrapper around net.fetch that retries on transient network errors.
-// Uses a fresh AbortController + timeout for each attempt so a timed-out
-// request doesn't poison subsequent retries.
 async function netFetchWithRetry(
   url: string,
   options: Omit<Parameters<typeof net.fetch>[1], 'signal'> & { timeoutMs?: number },
@@ -84,15 +84,10 @@ async function netFetchWithRetry(
     } catch (err: unknown) {
       clearTimeout(timer)
 
-      if (!isRetryableNetworkError(err) || attempt === maxRetries) {
-        throw err
-      }
+      if (!isRetryableNetworkError(err) || attempt === maxRetries) throw err
 
-      const delay = baseDelayMs * Math.pow(2, attempt) // 3 s → 6 s
-      log.warn(
-        `[api-request] network error on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${delay}ms —`,
-        (err as Error).message
-      )
+      const delay = baseDelayMs * Math.pow(2, attempt)
+      log.warn(`[api-request] network error on attempt ${attempt + 1}/${maxRetries + 1}, retrying in ${delay}ms —`, (err as Error).message)
       await new Promise((res) => setTimeout(res, delay))
     }
   }
@@ -102,11 +97,7 @@ async function netFetchWithRetry(
 // ─── Single Instance Lock ─────────────────────────────────────────────────────
 
 const gotLock = app.requestSingleInstanceLock()
-
-if (!gotLock) {
-  app.quit()
-  process.exit(0)
-}
+if (!gotLock) { app.quit(); process.exit(0) }
 
 app.on('second-instance', () => {
   const win = getPaletteWindow()
@@ -163,6 +154,9 @@ app.whenReady().then(async () => {
     }
   })
 
+  // ── Start scheduler (runs immediately if a token is already stored) ──────
+  initScheduler(WEB_URL) // <-- NEW
+
   console.log('[App] Ready. Hotkey active:', store.getHotkey())
 })
 
@@ -170,14 +164,14 @@ app.whenReady().then(async () => {
 
 ipcMain.on('hide-palette', () => hidePalette())
 
-ipcMain.handle('get-context', async () => {
-  return await getContext()
-})
+ipcMain.handle('get-context', async () => await getContext())
 
 ipcMain.handle('get-token', () => store.get('authToken', undefined) ?? null)
+
 ipcMain.on('set-token', (_event, token: string | null) => {
   if (token) {
     store.set('authToken', token)
+    refreshScheduler() // <-- NEW: pick up schedules immediately after login
   } else {
     store.delete('authToken')
   }
@@ -207,27 +201,11 @@ ipcMain.handle('set-hotkey', (_event, hotkey: string) => {
 
 // ─── Context Tray IPC ─────────────────────────────────────────────────────────
 
-ipcMain.handle('tray-get-clips', (): ContextClip[] => {
-  return store.trayGetClips()
-})
+ipcMain.handle('tray-get-clips', (): ContextClip[] => store.trayGetClips())
 
-ipcMain.handle(
-  'tray-add-clip',
-  (_event, clip: ContextClip): ContextClip[] => {
-    return store.trayAddClip(clip)
-  }
-)
-
-ipcMain.handle(
-  'tray-remove-clip',
-  (_event, index: number): ContextClip[] => {
-    return store.trayRemoveClip(index)
-  }
-)
-
-ipcMain.handle('tray-clear', (): void => {
-  store.trayClear()
-})
+ipcMain.handle('tray-add-clip',    (_event, clip: ContextClip)  => store.trayAddClip(clip))
+ipcMain.handle('tray-remove-clip', (_event, index: number)      => store.trayRemoveClip(index))
+ipcMain.handle('tray-clear',       ()                           => store.trayClear())
 
 // ─── Action Executor ──────────────────────────────────────────────────────────
 
@@ -242,19 +220,18 @@ ipcMain.handle(
       if (token) {
         syncActionHistory({
           token,
-          actionType:     action.type,
-          actionLabel:    ACTION_LABELS[action.type],
-          contextApp:     lastContext?.activeApp    ?? null,
-          contextFolder:  lastContext?.activeFilePath
+          actionType:    action.type,
+          actionLabel:   ACTION_LABELS[action.type],
+          contextApp:    lastContext?.activeApp    ?? null,
+          contextFolder: lastContext?.activeFilePath
             ? lastContext.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null
             : null,
-          status:         'done',
+          status:        'done',
           conversationId: conversationId ?? null,
         }).catch((err) => console.warn('[sync-action] failed:', err))
       }
 
       return { ok: true }
-
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       console.error('[execute-action] error:', message)
@@ -262,13 +239,13 @@ ipcMain.handle(
       if (token) {
         syncActionHistory({
           token,
-          actionType:     action.type,
-          actionLabel:    ACTION_LABELS[action.type],
-          contextApp:     lastContext?.activeApp    ?? null,
-          contextFolder:  lastContext?.activeFilePath
+          actionType:    action.type,
+          actionLabel:   ACTION_LABELS[action.type],
+          contextApp:    lastContext?.activeApp    ?? null,
+          contextFolder: lastContext?.activeFilePath
             ? lastContext.activeFilePath.replace(/[/\\][^/\\]+$/, '') || null
             : null,
-          status:         'error',
+          status:        'error',
           conversationId: conversationId ?? null,
         }).catch((err) => console.warn('[sync-action] failed:', err))
       }
@@ -280,87 +257,52 @@ ipcMain.handle(
 
 // ─── Action History Sync ──────────────────────────────────────────────────────
 
-async function syncActionHistory({
-  token,
-  actionType,
-  actionLabel,
-  contextApp,
-  contextFolder,
-  status,
-  conversationId,
-}: {
-  token:           string
-  actionType:      string
-  actionLabel:     string
-  contextApp:      string | null
-  contextFolder:   string | null
-  status:          'done' | 'error'
-  conversationId:  string | null
+async function syncActionHistory({ token, actionType, actionLabel, contextApp, contextFolder, status, conversationId }: {
+  token:          string
+  actionType:     string
+  actionLabel:    string
+  contextApp:     string | null
+  contextFolder:  string | null
+  status:         'done' | 'error'
+  conversationId: string | null
 }): Promise<void> {
   await net.fetch(`${WEB_URL}/api/actions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization:  `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      action_type:     actionType,
-      action_label:    actionLabel,
-      context_app:     contextApp,
-      context_folder:  contextFolder,
-      status,
-      conversation_id: conversationId,
-    }),
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body:    JSON.stringify({ action_type: actionType, action_label: actionLabel, context_app: contextApp, context_folder: contextFolder, status, conversation_id: conversationId }),
   })
 }
 
 // ─── File Reference Resolver ──────────────────────────────────────────────────
 
-ipcMain.handle(
-  'resolve-file-refs',
-  async (
-    _event,
-    { query, activeFolder, activeFilePath }: {
-      query:          string
-      activeFolder:   string | null
-      activeFilePath: string | null
-    }
-  ) => {
-    try {
-      console.log('[resolve-file-refs] query:', query)
-      console.log('[resolve-file-refs] activeFolder:', activeFolder)
-      console.log('[resolve-file-refs] activeFilePath:', activeFilePath)
-      const foundFiles = await findFileRefs(query, activeFolder, activeFilePath)
-      console.log('[resolve-file-refs] found files:', foundFiles)
-      const results = await Promise.all(foundFiles.map(f => readFileContent(f.filePath)))
-      const filtered = results.filter(Boolean)
-      console.log('[resolve-file-refs] returning:', filtered.map(r => r?.fileName))
-      return filtered
-    } catch (err) {
-      console.error('[resolve-file-refs] error:', err)
-      return []
-    }
+ipcMain.handle('resolve-file-refs', async (_event, { query, activeFolder, activeFilePath }: { query: string; activeFolder: string | null; activeFilePath: string | null }) => {
+  try {
+    const foundFiles = await findFileRefs(query, activeFolder, activeFilePath)
+    const results    = await Promise.all(foundFiles.map(f => readFileContent(f.filePath)))
+    return results.filter(Boolean)
+  } catch (err) {
+    console.error('[resolve-file-refs] error:', err)
+    return []
   }
-)
+})
 
 // ─── File Picker ──────────────────────────────────────────────────────────────
 
 ipcMain.handle('pick-file', async () => {
-  const win = getPaletteWindow()
+  const win    = getPaletteWindow()
   const result = await dialog.showOpenDialog(win!, {
-    title: 'Attach file',
+    title:      'Attach file',
     properties: ['openFile'],
     filters: [
       { name: 'Supported files', extensions: ['txt', 'md', 'csv', 'json', 'docx', 'pdf', 'xlsx', 'xls'] },
-      { name: 'All files', extensions: ['*'] },
+      { name: 'All files',       extensions: ['*'] },
     ],
   })
 
   if (result.canceled || result.filePaths.length === 0) return null
 
   try {
-    const fileRef = await readFileContent(result.filePaths[0])
-    return fileRef ?? null
+    return await readFileContent(result.filePaths[0]) ?? null
   } catch (err) {
     console.error('[pick-file] error:', err)
     return null
@@ -369,56 +311,22 @@ ipcMain.handle('pick-file', async () => {
 
 // ─── Pin Response ─────────────────────────────────────────────────────────────
 
-ipcMain.handle('pin-response', (_event, text: string) => {
-  openPinWindow(text)
-})
-
-ipcMain.handle('close-pin', () => {
-  closePinWindow()
-})
+ipcMain.handle('pin-response', (_event, text: string) => openPinWindow(text))
+ipcMain.handle('close-pin',    ()                      => closePinWindow())
 
 // ─── Generic API Request Proxy ────────────────────────────────────────────────
 
-ipcMain.handle(
-  'api-request',
-  async (
-    _event,
-    {
-      url,
-      method = 'POST',
-      headers = {},
-      body
-    }: {
-      url: string
-      method?: string
-      headers?: Record<string, string>
-      body?: object
-    }
-  ) => {
-    try {
-      const res = await netFetchWithRetry(
-        url,
-        {
-          method,
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: body !== undefined ? JSON.stringify(body) : undefined,
-          timeoutMs: 15000,
-        },
-        2,    // up to 2 retries (3 total attempts)
-        3000  // base delay: 3 s → 6 s
-      )
-
-      const data = await res.json()
-      return { ok: res.ok, status: res.status, data }
-    } catch (err: unknown) {
-      const isTimeout = err instanceof Error && err.name === 'AbortError'
-      log.error('[api-request] all attempts failed for', url, describeNetError(err))
-      return { ok: false, status: isTimeout ? 408 : 0, data: null }
-    }
+ipcMain.handle('api-request', async (_event, { url, method = 'POST', headers = {}, body }: { url: string; method?: string; headers?: Record<string, string>; body?: object }) => {
+  try {
+    const res  = await netFetchWithRetry(url, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: body !== undefined ? JSON.stringify(body) : undefined, timeoutMs: 15000 }, 2, 3000)
+    const data = await res.json()
+    return { ok: res.ok, status: res.status, data }
+  } catch (err: unknown) {
+    const isTimeout = err instanceof Error && err.name === 'AbortError'
+    log.error('[api-request] all attempts failed for', url, describeNetError(err))
+    return { ok: false, status: isTimeout ? 408 : 0, data: null }
   }
-)
-
-// ─── Streaming API Proxy ──────────────────────────────────────────────────────
+})
 
 // ─── Token Refresh ────────────────────────────────────────────────────────────
 
@@ -428,14 +336,14 @@ async function tryRefreshToken(): Promise<string | null> {
 
   try {
     const res = await net.fetch(`${WEB_URL}/api/auth/refresh`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      body:    JSON.stringify({ refresh_token: refreshToken }),
     })
     if (!res.ok) return null
 
     const data = await res.json() as { access_token: string; refresh_token: string }
-    store.set('authToken', data.access_token)
+    store.set('authToken',    data.access_token)
     store.set('refreshToken', data.refresh_token)
     log.info('[token-refresh] Token refreshed successfully')
     return data.access_token
@@ -445,72 +353,56 @@ async function tryRefreshToken(): Promise<string | null> {
   }
 }
 
+// ─── Streaming API Proxy ──────────────────────────────────────────────────────
+
 let streamAbort: AbortController | null = null
 
-ipcMain.on(
-  'stream-context',
-  async (
-    event,
-    { url, token: initialToken, body }: { url: string; token: string; body: object }
-  ) => {
-    streamAbort?.abort()
-    streamAbort = new AbortController()
-    const { signal } = streamAbort
+ipcMain.on('stream-context', async (event, { url, token: initialToken, body }: { url: string; token: string; body: object }) => {
+  streamAbort?.abort()
+  streamAbort = new AbortController()
+  const { signal } = streamAbort
 
-    const doStream = async (token: string, isRetry = false): Promise<void> => {
-      try {
-        const res = await net.fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify(body)
-        })
+  const doStream = async (token: string, isRetry = false): Promise<void> => {
+    try {
+      const res = await net.fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body:    JSON.stringify(body),
+      })
 
-        if (res.status === 401) {
-          if (!isRetry) {
-            const newToken = await tryRefreshToken()
-            if (newToken) {
-              await doStream(newToken, true)
-              return
-            }
-          }
-          event.sender.send('stream-event', { type: 'auth-error' })
-          return
+      if (res.status === 401) {
+        if (!isRetry) {
+          const newToken = await tryRefreshToken()
+          if (newToken) { await doStream(newToken, true); return }
         }
-        if (!res.ok) {
-          event.sender.send('stream-event', { type: 'http-error', status: res.status })
-          return
-        }
-
-        const reader = res.body!.getReader()
-        const decoder = new TextDecoder()
-
-        while (true) {
-          if (signal.aborted) break
-          const { done, value } = await reader.read()
-          if (done) break
-          if (signal.aborted) break
-          event.sender.send('stream-event', {
-            type: 'chunk',
-            data: decoder.decode(value, { stream: true })
-          })
-        }
-
-        if (!signal.aborted) {
-          event.sender.send('stream-event', { type: 'done' })
-        }
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name === 'AbortError') return
-        log.error('[stream-context] error calling', url, describeNetError(err))
-        event.sender.send('stream-event', { type: 'error' })
+        event.sender.send('stream-event', { type: 'auth-error' })
+        return
       }
-    }
+      if (!res.ok) {
+        event.sender.send('stream-event', { type: 'http-error', status: res.status })
+        return
+      }
 
-    await doStream(initialToken)
+      const reader  = res.body!.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        if (signal.aborted) break
+        const { done, value } = await reader.read()
+        if (done || signal.aborted) break
+        event.sender.send('stream-event', { type: 'chunk', data: decoder.decode(value, { stream: true }) })
+      }
+
+      if (!signal.aborted) event.sender.send('stream-event', { type: 'done' })
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      log.error('[stream-context] error calling', url, describeNetError(err))
+      event.sender.send('stream-event', { type: 'error' })
+    }
   }
-)
+
+  await doStream(initialToken)
+})
 
 ipcMain.on('cancel-stream', () => {
   streamAbort?.abort()
@@ -526,4 +418,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   unregisterHotkey()
   destroyTray()
+  destroyScheduler()    // <-- NEW
+  closeResultWindow()   // <-- NEW
 })

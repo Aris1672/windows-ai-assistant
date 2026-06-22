@@ -7,20 +7,39 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       rollupOptions: {
-        // active-win is native/ESM — keep it external so Electron loads it at runtime
         external: ['active-win']
       }
     }
   },
+
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        // Two preload scripts: one for the palette, one for the result window
+        input: {
+          index:  resolve('src/preload/index.ts'),
+          result: resolve('src/preload/result.ts'),
+        }
+      }
+    }
   },
+
   renderer: {
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [react()]
+    plugins: [react()],
+    build: {
+      rollupOptions: {
+        // Two renderer entry points: palette + result window
+        input: {
+          index:  resolve('src/renderer/index.html'),
+          result: resolve('src/renderer/result.html'),
+        }
+      }
+    }
   }
 })

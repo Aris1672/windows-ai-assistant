@@ -14,12 +14,14 @@
   },
   "dependencies": {
     "@electron-toolkit/utils": "^3.0.0",
+    "@types/node-cron": "^3.0.11",
     "active-win": "^8.1.0",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.3.9",
     "i18next": "^26.3.1",
     "i18next-browser-languagedetector": "^8.2.1",
     "mammoth": "^1.12.0",
+    "node-cron": "^4.5.0",
     "pdf-parse": "^1.1.1",
     "react-i18next": "^17.0.8",
     "xlsx": "^0.18.5"
