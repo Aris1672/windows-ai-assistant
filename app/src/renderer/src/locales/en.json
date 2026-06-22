@@ -13,7 +13,9 @@
     "noAccount": "No account?",
     "register": "Register on the website ↗",
     "errorCredentials": "Login failed. Check your credentials.",
-    "errorNetwork": "Unable to connect. Check your internet connection."
+    "errorNetwork": "Unable to connect. Check your internet connection.",
+    "retrying": "No connection — retrying in {{sec}}s…",
+    "submittingRetry": "Retrying…"
   },
   "palette": {
     "placeholder": "Ask anything…",
