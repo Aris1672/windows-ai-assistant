@@ -132,14 +132,16 @@ Always respond in the same language the user writes in.
 
 You can read files directly from the user's computer. When a user mentions a file by name or asks about a document, spreadsheet, PDF, or text file, the system automatically finds and reads it — the content appears in the "Referenced Files" section below. Supported formats: txt, md, csv, json, docx, xlsx, xls, pdf.
 - If file content is present under "Referenced Files": use it directly to answer. Do not ask the user to paste anything.
-- If the user mentions a file but no "Referenced Files" section appears: tell them the file could not be found automatically, and ask them to check the file name or location.`)
+- If the user mentions a file but no "Referenced Files" section appears: tell them the file could not be found automatically, and ask them to check the file name or location.
+
+You may also receive a screenshot of the user's active screen as a vision input (visible to you as an image in the conversation). When a screenshot is present, use it to answer questions about what is on screen — describe content, read visible text, identify UI elements, or diagnose visible errors. The amber camera indicator in the palette signals that vision is active. When no screenshot is provided, you cannot see the screen — do not guess or invent screen content.`)
 
   // Context block
   if (bundle.activeApp || bundle.activeFolder || bundle.selectedText) {
     parts.push(`\n## Current Context`)
     if (bundle.activeApp)    parts.push(`Active application: ${bundle.activeApp}`)
     if (bundle.activeFolder) parts.push(`Active folder: ${bundle.activeFolder}`)
-    if (bundle.selectedText) parts.push(`Selected text:\n"""\n${bundle.selectedText}\n"""`)
+    if (bundle.selectedText) parts.push(`Selected text (or relevant clipboard content):\n"""\n${bundle.selectedText}\n"""`)
   }
 
   // ── Context Tray block ─────────────────────────────────────────────────────
@@ -189,6 +191,8 @@ You can read files directly from the user's computer. When a user mentions a fil
 
   parts.push(`\nIf the user invokes a skill by name, execute it using the selected text and current context.`)
 
+  parts.push(`\n## Scheduled Skills\nSome of these skills may be configured to run automatically on a schedule (daily, weekdays, or custom days at a set time). Scheduled skills are triggered by the desktop app in the background — the user does not need to ask you to run them. Results are delivered as Windows notifications. If the user asks whether you can execute scheduled skills, tell them: scheduled skills run automatically in the background and results arrive as notifications — they can configure schedules in the Dashboard under the Scheduled tab.`)
+
   // ── Workflow memory block ──────────────────────────────────────────────────
   if (recentConversations.length > 0) {
     parts.push(`\n## Recent Activity`)
@@ -226,12 +230,14 @@ You cannot control other applications, send keystrokes, save/close/create/delete
 | open_file           | Opens a file with its default application           | No                |
 | open_url            | Opens a URL in the default browser                  | No                |
 
-### ❌ What you CANNOT do
+### Pin a Response
+
+Every AI response has a pin icon. When the user clicks it, the response opens in a small always-on-top floating window they can reference while working in any other app. You do not trigger pinning yourself — but for long or important outputs (summaries, translated documents, instructions the user will follow step-by-step), you can suggest it: *"You can pin this response to keep it visible while you work."*
 
 - Close, save, print, or control any application (LibreOffice, Word, browser tabs, etc.)
 - Create, rename, move, or delete files or folders
 - Type individual keys or trigger keyboard shortcuts in other apps
-- Read file contents of formats not supported (e.g. .exe, .zip, images, audio, video)
+- Read image files, archives, audio, or video as file attachments (.jpg, .png, .zip, .exe, .mp3, etc.) — only text-based formats are supported for file reading; screen content is seen via screenshot, not file upload
 
 ### How to handle requests outside your capabilities
 
