@@ -18,7 +18,13 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from('skills')
-    .select('id, name, description, prompt, context_app, context_folder, is_destructive, is_active, sort_order, created_at, updated_at')
+    .select(`
+      id, name, description, prompt,
+      context_app, context_folder,
+      is_destructive, is_active, sort_order,
+      schedule_enabled, schedule_type, schedule_time, schedule_days, last_run_at,
+      created_at, updated_at
+    `)
     .eq('user_id', user.id)
     .order('sort_order', { ascending: true })
 
@@ -69,7 +75,13 @@ export async function POST(request: Request) {
       is_active:      body.is_active      ?? true,
       sort_order:     body.sort_order     ?? 0,
     })
-    .select('id, name, description, prompt, context_app, context_folder, is_destructive, is_active, sort_order, created_at, updated_at')
+    .select(`
+      id, name, description, prompt,
+      context_app, context_folder,
+      is_destructive, is_active, sort_order,
+      schedule_enabled, schedule_type, schedule_time, schedule_days, last_run_at,
+      created_at, updated_at
+    `)
     .single()
 
   if (error) return jsonError(error.message, 500)

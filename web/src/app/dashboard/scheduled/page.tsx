@@ -4,7 +4,8 @@
  * web/src/app/dashboard/scheduled/page.tsx
  *
  * Scheduled Skills dashboard page.
- * Lists all skills; each can be toggled on/off with a schedule config panel.
+ * Fetches skills via /api/skills (Vercel → Supabase) — no direct Supabase access.
+ * Lists all skills; each can be toggled on/off with an inline schedule config panel.
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -38,71 +39,68 @@ const TYPE_LABELS: Record<ScheduleType, string> = {
 
 function formatLastRun(iso: string | null): string {
   if (!iso) return 'Never'
-  const d = new Date(iso)
-  const now = new Date()
-  const diffMs = now.getTime() - d.getTime()
-  const diffH  = Math.floor(diffMs / 3_600_000)
-  if (diffH < 1)   return 'Just now'
-  if (diffH < 24)  return `${diffH}h ago`
+  const d    = new Date(iso)
+  const diffH = Math.floor((Date.now() - d.getTime()) / 3_600_000)
+  if (diffH < 1)  return 'Just now'
+  if (diffH < 24) return `${diffH}h ago`
   const diffD = Math.floor(diffH / 24)
-  if (diffD < 7)   return `${diffD}d ago`
+  if (diffD < 7)  return `${diffD}d ago`
   return d.toLocaleDateString()
 }
 
 function nextRunLabel(skill: Skill): string {
   if (!skill.schedule_enabled || !skill.schedule_time) return '—'
   const [h, m] = skill.schedule_time.split(':').map(Number)
-  const now    = new Date()
   const next   = new Date()
   next.setHours(h, m, 0, 0)
-  if (next <= now) next.setDate(next.getDate() + 1)
+  if (next <= new Date()) next.setDate(next.getDate() + 1)
 
-  const label = next.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const timeLabel = next.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
   if (skill.schedule_type === 'weekdays') {
     const dow = next.getDay()
     if (dow === 0) next.setDate(next.getDate() + 1)
     if (dow === 6) next.setDate(next.getDate() + 2)
-    return `${next.toLocaleDateString([], { weekday: 'short' })} at ${label}`
+    return `${next.toLocaleDateString([], { weekday: 'short' })} at ${timeLabel}`
   }
   if (skill.schedule_type === 'custom' && skill.schedule_days?.length) {
-    // find next matching day
     for (let i = 0; i < 7; i++) {
-      const candidate = new Date(next)
-      candidate.setDate(next.getDate() + i)
-      if (skill.schedule_days.includes(candidate.getDay())) {
-        return `${candidate.toLocaleDateString([], { weekday: 'short' })} at ${label}`
+      const c = new Date(next)
+      c.setDate(next.getDate() + i)
+      if (skill.schedule_days.includes(c.getDay())) {
+        return `${c.toLocaleDateString([], { weekday: 'short' })} at ${timeLabel}`
       }
     }
   }
-  return `Tomorrow at ${label}`
+  return `Tomorrow at ${timeLabel}`
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ScheduledPage() {
-  const [skills,  setSkills]  = useState<Skill[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving,  setSaving]  = useState<string | null>(null) // skill id being saved
-  const [error,   setError]   = useState<string | null>(null)
-
-  // Expanded skill id (shows config panel)
+  const [skills,   setSkills]   = useState<Skill[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [saving,   setSaving]   = useState<string | null>(null)
+  const [error,    setError]    = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
 
-  // Draft schedule state for the expanded panel
+  // Draft state for the open config panel
   const [draftType, setDraftType] = useState<ScheduleType>('daily')
   const [draftTime, setDraftTime] = useState('08:00')
   const [draftDays, setDraftDays] = useState<number[]>([1, 2, 3, 4, 5])
 
-  // ── Load skills ─────────────────────────────────────────────────────────────
+  // ── Fetch all skills through the Vercel API route ─────────────────────────
   const fetchSkills = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const res  = await fetch('/api/skills')
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Failed to load skills')
-      setSkills(json.data ?? [])
+      if (!res.ok) throw new Error(json?.error ?? 'Failed to load skills')
+
+      // jsonOk() returns the array directly (not wrapped in { data: [...] })
+      const list: Skill[] = Array.isArray(json) ? json : (json.data ?? [])
+      setSkills(list)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
@@ -112,7 +110,7 @@ export default function ScheduledPage() {
 
   useEffect(() => { fetchSkills() }, [fetchSkills])
 
-  // ── Open config panel ────────────────────────────────────────────────────────
+  // ── Open config panel with skill's current schedule (or defaults) ─────────
   function openPanel(skill: Skill) {
     setExpanded(skill.id)
     setDraftType(skill.schedule_type ?? 'daily')
@@ -120,10 +118,10 @@ export default function ScheduledPage() {
     setDraftDays(skill.schedule_days ?? [1, 2, 3, 4, 5])
   }
 
-  // ── Toggle schedule on/off ───────────────────────────────────────────────────
+  // ── Toggle on/off ─────────────────────────────────────────────────────────
   async function toggleSchedule(skill: Skill) {
     if (!skill.schedule_enabled) {
-      // Turning on: open config panel first
+      // Turning on: show config panel first, don't PATCH yet
       openPanel(skill)
       return
     }
@@ -132,7 +130,7 @@ export default function ScheduledPage() {
     setExpanded(null)
   }
 
-  // ── Save schedule config ─────────────────────────────────────────────────────
+  // ── Save schedule from panel ──────────────────────────────────────────────
   async function saveSchedule(skillId: string) {
     if (draftType === 'custom' && draftDays.length === 0) {
       setError('Select at least one day for a custom schedule.')
@@ -147,7 +145,7 @@ export default function ScheduledPage() {
     setExpanded(null)
   }
 
-  // ── PATCH helper ─────────────────────────────────────────────────────────────
+  // ── PATCH via Vercel API ──────────────────────────────────────────────────
   async function patchSkill(id: string, patch: Record<string, unknown>) {
     setSaving(id)
     setError(null)
@@ -158,8 +156,11 @@ export default function ScheduledPage() {
         body:    JSON.stringify(patch),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Save failed')
-      setSkills(prev => prev.map(s => s.id === id ? { ...s, ...json.data } : s))
+      if (!res.ok) throw new Error(json?.error ?? 'Save failed')
+
+      // Merge updated skill back — handle both direct and wrapped responses
+      const updated: Skill = json.data ?? json
+      setSkills(prev => prev.map(s => s.id === id ? { ...s, ...updated } : s))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
@@ -167,14 +168,13 @@ export default function ScheduledPage() {
     }
   }
 
-  // ── Toggle custom day ────────────────────────────────────────────────────────
   function toggleDay(day: number) {
     setDraftDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort()
     )
   }
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   const scheduled = skills.filter(s => s.schedule_enabled)
   const others    = skills.filter(s => !s.schedule_enabled)
@@ -182,7 +182,6 @@ export default function ScheduledPage() {
   return (
     <div style={{ padding: '2rem', maxWidth: '720px' }}>
 
-      {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '0.35rem' }}>
           Scheduled Skills
@@ -193,15 +192,14 @@ export default function ScheduledPage() {
         </p>
       </div>
 
-      {/* Error banner */}
       {error && (
         <div style={{
-          padding: '0.65rem 1rem',
-          background: 'rgba(239,68,68,0.1)',
-          border:     '1px solid rgba(239,68,68,0.3)',
+          padding:      '0.65rem 1rem',
+          background:   'rgba(239,68,68,0.1)',
+          border:       '1px solid rgba(239,68,68,0.3)',
           borderRadius: '8px',
-          color:      'var(--error, #f87171)',
-          fontSize:   '0.8rem',
+          color:        'var(--error, #f87171)',
+          fontSize:     '0.8rem',
           marginBottom: '1.25rem',
         }}>
           {error}
@@ -210,6 +208,7 @@ export default function ScheduledPage() {
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading…</div>
+
       ) : skills.length === 0 ? (
         <div style={{
           padding:      '3rem',
@@ -222,14 +221,12 @@ export default function ScheduledPage() {
           You haven't created any skills yet.{' '}
           <a href="/dashboard/skills" style={{ color: 'var(--accent)' }}>Create one first</a>.
         </div>
+
       ) : (
         <>
-          {/* Active schedules */}
           {scheduled.length > 0 && (
             <section style={{ marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                Active — {scheduled.length}
-              </h2>
+              <SectionLabel>Active — {scheduled.length}</SectionLabel>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {scheduled.map(skill => (
                   <SkillRow
@@ -253,12 +250,9 @@ export default function ScheduledPage() {
             </section>
           )}
 
-          {/* Unscheduled skills */}
           {others.length > 0 && (
             <section>
-              <h2 style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                Not scheduled — {others.length}
-              </h2>
+              <SectionLabel>Not scheduled — {others.length}</SectionLabel>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {others.map(skill => (
                   <SkillRow
@@ -283,6 +277,23 @@ export default function ScheduledPage() {
           )}
         </>
       )}
+    </div>
+  )
+}
+
+// ─── Section Label ────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize:      '0.7rem',
+      fontWeight:    600,
+      letterSpacing: '0.07em',
+      textTransform: 'uppercase',
+      color:         'var(--text-muted)',
+      marginBottom:  '0.75rem',
+    }}>
+      {children}
     </div>
   )
 }
@@ -312,72 +323,67 @@ function SkillRow({
 }: SkillRowProps) {
   return (
     <div style={{
-      background:   'var(--bg-2, #1e1e1e)',
-      border:       `1px solid ${skill.schedule_enabled ? 'var(--accent, #7c6af7)44' : 'var(--border, #2e2e2e)'}`,
+      background:   'var(--bg-2, #1a1a1a)',
+      border:       `1px solid ${skill.schedule_enabled ? 'color-mix(in srgb, var(--accent) 40%, transparent)' : 'var(--border, #2a2a2a)'}`,
       borderRadius: '10px',
       overflow:     'hidden',
       transition:   'border-color 0.2s',
     }}>
-      {/* Row header */}
-      <div style={{
-        display:     'flex',
-        alignItems:  'center',
-        gap:         '12px',
-        padding:     '12px 14px',
-        cursor:      'pointer',
-      }}
+
+      {/* ── Row header ───────────────────────────────────────────────────── */}
+      <div
         onClick={onExpand}
+        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', cursor: 'pointer' }}
       >
-        {/* Toggle */}
+        {/* Toggle switch */}
         <div
           onClick={(e) => { e.stopPropagation(); onToggle() }}
           style={{
-            width:      '36px',
-            height:     '20px',
+            width:        '36px',
+            height:       '20px',
             borderRadius: '10px',
-            background: skill.schedule_enabled ? 'var(--accent, #7c6af7)' : 'var(--border, #333)',
-            position:   'relative',
-            cursor:     'pointer',
-            transition: 'background 0.2s',
-            flexShrink: 0,
+            background:   skill.schedule_enabled ? 'var(--accent, #00c9a0)' : 'var(--border, #333)',
+            position:     'relative',
+            cursor:       'pointer',
+            flexShrink:   0,
+            transition:   'background 0.2s',
           }}
         >
           <div style={{
-            position:   'absolute',
-            top:        '3px',
-            left:       skill.schedule_enabled ? '19px' : '3px',
-            width:      '14px',
-            height:     '14px',
+            position:     'absolute',
+            top:          '3px',
+            left:         skill.schedule_enabled ? '19px' : '3px',
+            width:        '14px',
+            height:       '14px',
             borderRadius: '50%',
-            background: 'white',
-            transition: 'left 0.2s',
+            background:   'white',
+            transition:   'left 0.2s',
           }} />
         </div>
 
-        {/* Name + meta */}
+        {/* Name + subtitle */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: '2px' }}>
             {skill.name}
           </div>
-          {skill.schedule_enabled && skill.schedule_type && skill.schedule_time ? (
-            <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
-              {TYPE_LABELS[skill.schedule_type]} at {skill.schedule_time}
-              {skill.schedule_type === 'custom' && skill.schedule_days?.length
-                ? ` (${skill.schedule_days.map(d => DAY_LABELS[d]).join(', ')})`
-                : ''}
-              {' · '}Next: {nextRunLabel(skill)}
-            </div>
-          ) : (
-            <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
-              {skill.description ?? 'No schedule set'}
-            </div>
-          )}
+          <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {skill.schedule_enabled && skill.schedule_type && skill.schedule_time
+              ? <>
+                  {TYPE_LABELS[skill.schedule_type]} at {skill.schedule_time}
+                  {skill.schedule_type === 'custom' && skill.schedule_days?.length
+                    ? ` (${skill.schedule_days.map(d => DAY_LABELS[d]).join(', ')})`
+                    : ''}
+                  {' · '}Next: {nextRunLabel(skill)}
+                </>
+              : skill.description ?? 'No schedule set — click to configure'
+            }
+          </div>
         </div>
 
         {/* Last run */}
         {skill.schedule_enabled && (
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ marginBottom: '1px' }}>Last run</div>
+            <div>Last run</div>
             <div style={{ color: 'var(--text)' }}>{formatLastRun(skill.last_run_at)}</div>
           </div>
         )}
@@ -386,64 +392,40 @@ function SkillRow({
         <div style={{
           color:      'var(--text-muted)',
           fontSize:   '10px',
-          transform:  expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+          transform:  expanded ? 'rotate(180deg)' : 'rotate(0)',
           transition: 'transform 0.2s',
           flexShrink: 0,
-        }}>
-          ▾
-        </div>
+        }}>▾</div>
       </div>
 
-      {/* Config panel */}
+      {/* ── Config panel ─────────────────────────────────────────────────── */}
       {expanded && (
-        <div style={{
-          borderTop: '1px solid var(--border, #2e2e2e)',
-          padding:   '16px 14px',
-          background: 'var(--bg, #141414)',
-        }}>
+        <div style={{ borderTop: '1px solid var(--border, #2a2a2a)', padding: '16px 14px', background: 'var(--bg, #141414)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-            {/* Schedule type */}
+            {/* Repeat type */}
             <div>
-              <label style={labelStyle}>Repeat</label>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <Label>Repeat</Label>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 {(['daily', 'weekdays', 'custom'] as ScheduleType[]).map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setDraftType(t)}
-                    style={{
-                      ...chipStyle,
-                      background: draftType === t ? 'var(--accent, #7c6af7)' : 'var(--bg-2, #1e1e1e)',
-                      color:      draftType === t ? 'white' : 'var(--text)',
-                      borderColor: draftType === t ? 'transparent' : 'var(--border)',
-                    }}
-                  >
+                  <Chip key={t} active={draftType === t} onClick={() => setDraftType(t)}>
                     {TYPE_LABELS[t]}
-                  </button>
+                  </Chip>
                 ))}
               </div>
             </div>
 
-            {/* Custom days */}
+            {/* Day picker — only for custom */}
             {draftType === 'custom' && (
               <div>
-                <label style={labelStyle}>Days</label>
+                <Label>Days</Label>
                 <div style={{ display: 'flex', gap: '6px' }}>
                   {DAY_LABELS.map((label, i) => (
-                    <button
-                      key={i}
-                      onClick={() => toggleDay(i)}
-                      style={{
-                        ...chipStyle,
-                        width:      '38px',
-                        padding:    '5px 0',
-                        background: draftDays.includes(i) ? 'var(--accent, #7c6af7)' : 'var(--bg-2, #1e1e1e)',
-                        color:      draftDays.includes(i) ? 'white' : 'var(--text)',
-                        borderColor: draftDays.includes(i) ? 'transparent' : 'var(--border)',
-                      }}
+                    <Chip key={i} active={draftDays.includes(i)} onClick={() => toggleDay(i)}
+                      style={{ width: '38px', padding: '5px 0', textAlign: 'center' }}
                     >
                       {label}
-                    </button>
+                    </Chip>
                   ))}
                 </div>
               </div>
@@ -451,24 +433,24 @@ function SkillRow({
 
             {/* Time */}
             <div>
-              <label style={labelStyle}>Time</label>
-              <input
-                type="time"
-                value={draftTime}
-                onChange={(e) => setDraftTime(e.target.value)}
-                style={{
-                  background:   'var(--bg-2, #1e1e1e)',
-                  border:       '1px solid var(--border, #2e2e2e)',
-                  borderRadius: '7px',
-                  padding:      '6px 10px',
-                  color:        'var(--text)',
-                  fontSize:     '0.875rem',
-                  outline:      'none',
-                }}
-              />
-              <span style={{ marginLeft: '8px', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Your local time
-              </span>
+              <Label>Time</Label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input
+                  type="time"
+                  value={draftTime}
+                  onChange={(e) => setDraftTime(e.target.value)}
+                  style={{
+                    background:   'var(--bg-2, #1a1a1a)',
+                    border:       '1px solid var(--border, #2a2a2a)',
+                    borderRadius: '7px',
+                    padding:      '6px 10px',
+                    color:        'var(--text)',
+                    fontSize:     '0.875rem',
+                    outline:      'none',
+                  }}
+                />
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Your local time</span>
+              </div>
             </div>
 
             {/* Actions */}
@@ -480,9 +462,9 @@ function SkillRow({
                   padding:      '7px 18px',
                   borderRadius: '7px',
                   border:       'none',
-                  background:   'var(--accent, #7c6af7)',
-                  color:        'white',
-                  fontWeight:   600,
+                  background:   'var(--accent, #00c9a0)',
+                  color:        'var(--bg, #141414)',
+                  fontWeight:   700,
                   fontSize:     '0.8rem',
                   cursor:       saving ? 'not-allowed' : 'pointer',
                   opacity:      saving ? 0.6 : 1,
@@ -495,7 +477,7 @@ function SkillRow({
                 style={{
                   padding:      '7px 14px',
                   borderRadius: '7px',
-                  border:       '1px solid var(--border, #2e2e2e)',
+                  border:       '1px solid var(--border, #2a2a2a)',
                   background:   'transparent',
                   color:        'var(--text-muted)',
                   fontSize:     '0.8rem',
@@ -505,6 +487,7 @@ function SkillRow({
                 Cancel
               </button>
             </div>
+
           </div>
         </div>
       )}
@@ -512,23 +495,45 @@ function SkillRow({
   )
 }
 
-// ─── Style constants ──────────────────────────────────────────────────────────
+// ─── Small UI helpers ─────────────────────────────────────────────────────────
 
-const labelStyle: React.CSSProperties = {
-  display:      'block',
-  fontSize:     '0.75rem',
-  fontWeight:   600,
-  color:        'var(--text-muted)',
-  marginBottom: '6px',
-  letterSpacing: '0.03em',
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize:      '0.75rem',
+      fontWeight:    600,
+      color:         'var(--text-muted)',
+      marginBottom:  '6px',
+      letterSpacing: '0.03em',
+    }}>
+      {children}
+    </div>
+  )
 }
 
-const chipStyle: React.CSSProperties = {
-  padding:      '5px 12px',
-  borderRadius: '6px',
-  border:       '1px solid',
-  fontSize:     '0.8rem',
-  cursor:       'pointer',
-  transition:   'background 0.15s, color 0.15s',
-  fontWeight:   500,
+function Chip({ children, active, onClick, style }: {
+  children: React.ReactNode
+  active:   boolean
+  onClick:  () => void
+  style?:   React.CSSProperties
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding:      '5px 12px',
+        borderRadius: '6px',
+        border:       `1px solid ${active ? 'transparent' : 'var(--border, #2a2a2a)'}`,
+        background:   active ? 'var(--accent, #00c9a0)' : 'var(--bg-2, #1a1a1a)',
+        color:        active ? 'var(--bg, #141414)' : 'var(--text)',
+        fontWeight:   active ? 700 : 400,
+        fontSize:     '0.8rem',
+        cursor:       'pointer',
+        transition:   'all 0.15s',
+        ...style,
+      }}
+    >
+      {children}
+    </button>
+  )
 }
