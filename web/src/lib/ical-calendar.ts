@@ -236,8 +236,20 @@ export function formatEventsForPrompt(
   const tomorrowStr = getTomorrowDateString(tz)
   const dateLabel   = formatDateLabel(tomorrowStr, tz)
 
+  // Current time in the user's timezone — lets Claude say "tomorrow" correctly
+  const nowLabel = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday:  'long',
+    month:    'long',
+    day:      'numeric',
+    hour:     '2-digit',
+    minute:   '2-digit',
+  }).format(new Date())
+
+  const header = `## Calendar\nCurrent time: ${nowLabel} (${tz})\nShowing events for tomorrow: ${dateLabel}`
+
   if (events.length === 0) {
-    return `## Calendar — ${dateLabel}\nNo events scheduled.`
+    return `${header}\nNo events scheduled.`
   }
 
   const lines = events.map(e => {
@@ -253,5 +265,5 @@ export function formatEventsForPrompt(
     ].filter(Boolean).join('\n')
   })
 
-  return `## Calendar — ${dateLabel} (${tz})\n${lines.join('\n')}`
+  return `${header}\n${lines.join('\n')}`
 }
