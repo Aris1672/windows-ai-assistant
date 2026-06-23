@@ -8,7 +8,8 @@ import {
   Zap,
   BookOpen,
   History,
-  Clock,       // <-- NEW
+  Clock,
+  Puzzle,
   LogOut,
   ChevronRight,
   Shield,
@@ -24,7 +25,8 @@ export default function Sidebar({ userEmail, isAdmin = false }: { userEmail: str
     { href: '/dashboard',             label: t('sidebar.overview'),      icon: LayoutDashboard },
     { href: '/dashboard/instructions', label: t('sidebar.instructions'), icon: BookOpen },
     { href: '/dashboard/skills',       label: t('sidebar.skills'),       icon: Zap },
-    { href: '/dashboard/scheduled',    label: t('sidebar.scheduled'),    icon: Clock },  // <-- NEW
+    { href: '/dashboard/scheduled',    label: t('sidebar.scheduled'),    icon: Clock },
+    { href: '/dashboard/integrations', label: t('sidebar.integrations'), icon: Puzzle },
     { href: '/dashboard/history',      label: t('sidebar.history'),      icon: History },
   ]
 

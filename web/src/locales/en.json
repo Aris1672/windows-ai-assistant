@@ -48,7 +48,8 @@
     "skills": "Skills",
     "history": "History",
     "adminPanel": "Admin panel",
-    "scheduled": "Scheduled"
+    "scheduled": "Scheduled",
+    "integrations": "Integrations"
   },
   "dashboard": {
     "overview": {

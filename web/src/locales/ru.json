@@ -48,7 +48,8 @@
     "skills": "Навыки",
     "history": "История",
     "adminPanel": "Панель администратора",
-    "scheduled": "По расписанию"
+    "scheduled": "По расписанию",
+    "integrations": "Интеграции"
   },
   "dashboard": {
     "overview": {

@@ -25,6 +25,7 @@ import { requireAuth, jsonError } from '@/lib/auth'
 import { assembleContext } from '@/lib/assembler'
 import { createUserClient } from '@/lib/supabase'
 import { routeQuery, SONNET, HAIKU } from '@/lib/router'
+import { fetchTomorrowsEvents, formatEventsForPrompt } from '@/lib/ical-calendar'
 import Anthropic from '@anthropic-ai/sdk'
 
 const RATE_SONNET = 0.0000041  // $4.08 per 1M tokens
@@ -90,9 +91,10 @@ export async function POST(request: Request) {
 
   let clipboardRelevant: boolean
   let model: string
+  let calendarQuery: boolean
 
   try {
-    ;[clipboardRelevant, model] = await Promise.all([
+    ;[clipboardRelevant, model, calendarQuery] = await Promise.all([
       clipboardText
         ? isClipboardRelevant(clipboardText, body.message)
         : Promise.resolve(false),
@@ -102,6 +104,7 @@ export async function POST(request: Request) {
         !!body.screenshotBase64 && !clipboardText,
         clipboardText?.length ?? 0,
       ),
+      isCalendarQuery(body.message),
     ])
   } catch (err) {
     console.error('Routing/relevance error:', err)
@@ -114,7 +117,12 @@ export async function POST(request: Request) {
   const effectiveSelectedText = clipboardRelevant ? clipboardText : null
   const effectiveScreenshot   = clipboardRelevant ? null : (body.screenshotBase64 ?? null)
 
-  console.log(`[context] clipboard=${clipboardRelevant ? 'relevant' : 'ignored'} vision=${!!effectiveScreenshot}`)
+  // If this looks like a calendar query, fetch events now (parallel with context assembly below)
+  const calendarEventsPromise = calendarQuery
+    ? fetchTomorrowsEvents(user.id)
+    : Promise.resolve(null)
+
+  console.log(`[context] clipboard=${clipboardRelevant ? 'relevant' : 'ignored'} vision=${!!effectiveScreenshot} calendar=${calendarQuery}`)
 
   // ── Step 3: assemble context with resolved values ──────────────────────────
   let assembled: Awaited<ReturnType<typeof assembleContext>>
@@ -134,6 +142,13 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error('assembleContext error:', err)
     return jsonError('Failed to assemble context', 500)
+  }
+
+  // ── Inject calendar events into system prompt (if fetched) ────────────────
+  const calendarEvents = await calendarEventsPromise
+  if (calendarEvents !== null) {
+    assembled.systemPrompt += '\n\n' + formatEventsForPrompt(calendarEvents)
+    console.log(`[context] injected ${calendarEvents.length} calendar event(s)`)
   }
 
   // ── Resolve user message ──────────────────────────────────────────────────
@@ -290,6 +305,32 @@ Is the clipboard content directly relevant to the user's query?`,
   } catch (err) {
     console.warn('[clipboard] relevance check failed, defaulting to vision:', err)
     return false  // safe default — vision fires
+  }
+}
+
+/**
+ * Asks Haiku whether the query is calendar-related.
+ * Runs in parallel with the other checks — same ~200ms budget.
+ * Falls back to false on any error so we don't accidentally fetch calendar data.
+ */
+async function isCalendarQuery(message: string): Promise<boolean> {
+  try {
+    const res = await anthropic.messages.create({
+      model:      HAIKU,
+      max_tokens: 10,
+      system:     'You are a classifier. Reply ONLY with "yes" or "no". No other text.',
+      messages:   [{
+        role:    'user',
+        content: `Is this query asking about the user's calendar, schedule, meetings, appointments, or what they have planned for a specific day or time?\n\nQuery: "${message.slice(0, 300)}"`,
+      }],
+    })
+    const answer = res.content.find(b => b.type === 'text')?.text?.trim().toLowerCase() ?? 'no'
+    const result = answer.startsWith('yes')
+    console.log(`[calendar] "${message.slice(0, 40)}" → ${result ? 'calendar query' : 'not calendar'}`)
+    return result
+  } catch (err) {
+    console.warn('[calendar] classifier failed, skipping calendar fetch:', err)
+    return false
   }
 }
 
