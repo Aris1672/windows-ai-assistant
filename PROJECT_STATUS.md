@@ -6,9 +6,9 @@
 
 **What this project is:** A Windows desktop app (Electron) that sits in the system tray and pops up a contextual AI command palette on a configurable hotkey (default `Ctrl + Space`). It detects what app/file is active, assembles personalised instructions + skills from Supabase, and calls Claude via a Vercel proxy.
 
-**Current status:** v0.9.0. Phases 1–5 complete + Context Tray shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation. Session persistence fixed — refresh token now stored in `store.ts`, silently refreshed on 401 in main process; users never see "Session expired" unless refresh itself fails. Context hints shipped — amber hint text shown in the palette when no text is selected, guiding users to select+copy (Ctrl+C) first or use file commands directly; 8 cases covered (editor, browser, email, spreadsheet, pdf, code, explorer, generic); fully bilingual EN/RU. File attachment shipped — native Windows file picker via Electron dialog.showOpenDialog; file content injected as fileRef reusing existing file-reader.ts pipeline; amber SVG paperclip icon in palette input row; filename chip confirms attachment.
+**Current status:** v0.10.0. Phases 1–5 complete + Context Tray shipped + Scheduled Skills shipped + Calendar Integration shipped. Full web app live on Vercel. Electron app working end-to-end. Analytics & billing layer fully live: real-time token tracking, admin billing dashboard with per-user spend/trial status/cost, and manual subscription activation wired to `activateSubscription()` — admin can activate any user from `/admin/billing` with one click, which flips status to `active`, sets `subscription_ends_at = now + 30d`, resets monthly tokens, and auto-logs a `billing_records` entry. Currently in 2-week beta test with friends. Action logging fully working — all AI queries and write-actions are now recorded in the actions table, feeding History and Analytics dashboards with real data. Multiline input shipped — Enter submits, Shift+Enter inserts newline; textarea auto-expands up to 6 rows. Vision indicator turns amber when active. Dashboard button links to correct Vercel URL. Supabase schema file updated to reflect live DB. User dashboard actions counter fixed — now reads pagination.total instead of page length. Document-level action routing fixed — agent now correctly uses `copy_to_clipboard` for file/document tasks and `insert_text` only for short selected-text transformations; `max_tokens` raised to 64000 to support full document generation; `parseActionFromResponse` hardened against stream truncation. Session persistence fixed — refresh token now stored in `store.ts`, silently refreshed on 401 in main process; users never see "Session expired" unless refresh itself fails. Context hints shipped — amber hint text shown in the palette when no text is selected, guiding users to select+copy (Ctrl+C) first or use file commands directly; 8 cases covered (editor, browser, email, spreadsheet, pdf, code, explorer, generic); fully bilingual EN/RU. File attachment shipped — native Windows file picker via Electron dialog.showOpenDialog; file content injected as fileRef reusing existing file-reader.ts pipeline; amber SVG paperclip icon in palette input row; filename chip confirms attachment.
 
-**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. Vision semantic routing, semantic clipboard relevance, auto-updater on palette open, and skills strip auto-expand are all shipped.
+**Next immediate step:** Trial expiry email reminders (Vercel Cron) — the only remaining open item. Scheduled Skills, Calendar Integration (iCal), semantic routing, semantic clipboard relevance, auto-updater on palette open, and skills strip auto-expand are all shipped.
 
 Workflow memory complete: every palette session is saved as a conversation with messages; the assembler injects recent activity into the system prompt for context-aware responses. Action history synced to Supabase after every action execution, linked to its conversation and context.
 
@@ -29,7 +29,7 @@ root/                          ← npm workspaces root
 │       │   │   ├── auth/signout/  ← ✅ POST — server-side sign out (done)
 │   │   │   ├── auth/refresh/  ← ✅ POST — exchanges refresh_token for new access_token + refresh_token via Supabase
 │       │   │   └── context/       ← ✅ Done — streaming SSE, auth, skill injection, real-time token tracking, context tray passthrough, max_tokens 64000
-│       │   ├── dashboard/     ← ✅ All pages fully wired to real data
+│       │   ├── dashboard/     ← ✅ All pages fully wired to real data (+ /scheduled + /integrations)
 │       │   ├── login/         ← ✅ Done (real Supabase auth)
 │       │   ├── register/      ← ✅ Done (real Supabase auth)
 │       │   └── admin/         ← ✅ Done (overview, users, analytics, billing + activation, settings)
@@ -42,13 +42,14 @@ root/                          ← npm workspaces root
 │       └── lib/
 │           ├── supabase.ts        ← ✅ Done (server + user + admin clients)
 │           ├── auth.ts            ← ✅ Done (requireAuth: Bearer token + cookie fallback, jsonError, jsonOk)
-│           ├── assembler.ts       ← ✅ Done (instructions + skills + workflow memory + context tray injection + document-level action routing)
+│           ├── assembler.ts       ← ✅ Done (instructions + skills + workflow memory + context tray injection + document-level action routing + scheduled skills awareness + pin a response + vision capability)
 │           ├── i18n.ts            ← ✅ i18next config (EN/RU, localStorage detection)
-│           └── trial-subscription.ts ← ✅ Done (getUserSubscriptionStatus, markTrialExpiredIfNeeded, activateSubscription)
+│           ├── trial-subscription.ts ← ✅ Done (getUserSubscriptionStatus, markTrialExpiredIfNeeded, activateSubscription)
+│           └── ical-calendar.ts      ← ✅ Done (iCal fetch + parser + timezone-aware formatting; X-WR-TIMEZONE; injects current time so Claude says "tomorrow" correctly)
 └── app/                       ← Electron app (Windows desktop) — core working ✅
     └── src/
         ├── main/
-        │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy, resolve-file-refs IPC, silent token refresh on 401
+        │   ├── index.ts           ← ✅ Main process, IPC handlers, stream proxy, resolve-file-refs IPC, silent token refresh on 401, scheduler init + refresh on login, result window cleanup on quit
         │   ├── windows.ts         ← ✅ Palette window (frameless, always-on-top) + hidePaletteForAction() + checkForUpdatesIfDue() on show
         │   ├── tray.ts            ← ✅ System tray icon + menu
         │   ├── hotkey.ts          ← ✅ Configurable global hotkey — reads from store on startup, supports dynamic re-registration via reregisterHotkey()
@@ -56,9 +57,12 @@ root/                          ← npm workspaces root
         │   ├── file-finder.ts     ← ✅ Extracts file name candidates from query, searches filesystem
         │   └── file-reader.ts     ← ✅ Reads txt/md/csv/json/docx/pdf/xlsx and returns plain text
         │   ├── updater.ts         ← ✅ Auto-updater: checks on startup + every 30 min + on every palette open (10 min cooldown)
-        │   └── store.ts           ← ✅ Persistent local store (authToken, refreshToken, prefs, contextTray, hotkey)
+        │   ├── store.ts           ← ✅ Persistent local store (authToken, refreshToken, prefs, contextTray, hotkey)
+│   ├── scheduler.ts       ← ✅ node-cron engine; fetches scheduled skills from API; fires skills at configured times; shows Windows toast notifications; polls every 5 min; Supabase Realtime sync
+│   └── resultWindow.ts    ← ✅ Standalone always-on-top result window (560×480, bottom-right); opens when user clicks "View full" on notification; reuses window if already open
         ├── preload/
-        │   └── index.ts           ← ✅ IPC bridge (electronAPI on window) + setRefreshToken + getHotkey/setHotkey
+        │   ├── index.ts           ← ✅ IPC bridge (electronAPI on window) + setRefreshToken + getHotkey/setHotkey
+│   └── result.ts          ← ✅ Minimal preload for result window (onPayload, close, openExternal)
         └── renderer/src/
             ├── App.tsx            ← ✅ Auth gate (login ↔ palette) + refresh token persistence on login
             ├── lib/
@@ -340,6 +344,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 - [x] Usage analytics in admin panel — actions/day chart, status breakdown, top apps, top action types
 - [x] Subscription activation — admin clicks "Activate" in /admin/billing; flips status to active, sets subscription_ends_at, resets tokens, auto-logs billing_records row
 - [x] Pin a Response — small pin icon on any AI response opens a minimal always-on-top floating window with the pinned text; user can copy from it at any time while working in another app ← **DONE**
+- [x] Scheduled Skills — user sets skill + schedule (daily/weekdays/custom time) in Dashboard → Scheduled; Electron fires skill via node-cron at configured time; result delivered as Windows toast notification with "View full" action; result opens in standalone always-on-top window; schedule stored in Supabase (5 new columns on skills table); Electron polls API every 5 min; Context Tray clips auto-included ← **DONE**
+- [x] Calendar Integration (iCal) — user pastes private iCal URL in Dashboard → Integrations; stored in new integrations table; on calendar-related queries Vercel fetches .ics, parses events, injects into Claude system prompt; timezone-aware (reads X-WR-TIMEZONE); current time injected so Claude correctly says "tomorrow"; works with Google Calendar, Outlook, Apple Calendar, Yandex — no OAuth required ← **DONE**
 - [ ] Trial expiry email — "Your trial expires in 2 days" reminder (Vercel Cron + email template)
 - [ ] Manual billing records — admin logs payments via /admin/billing until Stripe is integrated ← auto-logged on activation now
 - [ ] Stripe integration (future — after beta validation)
@@ -404,6 +410,8 @@ When `Ctrl + Space` fires, the Electron app captures:
 53. ✅ Semantic clipboard relevance — clipboard no longer blocks vision blindly; client sends `clipboardText` and `screenshotBase64` as separate fields; `route.ts` runs `isClipboardRelevant()` (Haiku call, ~200ms) in parallel with `routeQuery`; if clipboard is relevant to the query → used as selectedText, screenshot dropped; if stale/unrelated → clipboard ignored, vision fires; no time-based heuristics ← **DONE**
 54. ✅ Auto-updater on palette open — interval reduced from 4 hours to 30 min; `checkForUpdatesIfDue()` exported from `updater.ts` and called in `showPalette()` in `windows.ts`; 10 min cooldown prevents hammering GitHub API; users see update banner within seconds of first palette open after a release ← **DONE**
 55. ✅ Skills strip auto-expand — palette now adds `palette--expanded` class when `showSkillStrip` is true; `maxHeight: 80px` and overflow scroll removed from skill strip; all active skills shown without scrolling; palette card grows to exact content height via CSS max-height transition ← **DONE**
+56. ✅ Scheduled Skills — node-cron in Electron main process; 5 new columns on skills table (schedule_enabled, schedule_type, schedule_time, schedule_days, last_run_at); new API routes: /skills/scheduled (GET), /skills/run (POST); Dashboard → Scheduled page; result window (standalone frameless BrowserWindow); toast notification with "View full" action; polls Supabase every 5 min; Context Tray clips auto-included at fire time ← **DONE**
+57. ✅ Calendar Integration (iCal) — new integrations table in Supabase; Dashboard → Integrations page; user pastes private iCal URL; Vercel fetches + parses .ics on calendar queries; isCalendarQuery() Haiku classifier runs in parallel with routeQuery and isClipboardRelevant; timezone-aware via X-WR-TIMEZONE header; current time injected into system prompt; works with any iCal source (Google/Outlook/Apple/Yandex); no OAuth needed ← **DONE**
 
 ---
 
@@ -449,14 +457,16 @@ ANTHROPIC_API_KEY=
 - **File attachment uses native dialog, not drag & drop** — drag & drop dismissed the palette on blur before the file could be dropped; `dialog.showOpenDialog` (Electron main process, IPC to renderer) opens picker without losing focus. File is read by `file-reader.ts` and injected as a `fileRef` — identical pipeline to automatic file search.
 - **Context hint logic**: `getContextHint()` in `CommandPalette.tsx` matches `activeApp` via regex to one of 8 hint keys. Hint renders only when `mode === 'idle' && !query && messages.length === 0 && !context?.selectedText`. Color: `rgba(251, 191, 36, 0.8)` (amber 80%). Key UX insight: the app requires Select → Copy (Ctrl+C) → Ctrl+Space, which is the reverse of what users expect — the hint corrects this at the exact moment they make the mistake.
 - **Semantic vision gate**: `shouldUseVision()` in `CommandPalette.tsx` replaced the `VISUAL_APPS` hardcoded regex list. The decision is purely about context richness: if fileRefs or trayClips are present, they are more precise than a screenshot. Otherwise the screenshot is always sent. App name is never checked — works for any app including future ones with zero maintenance.
+- **Scheduled Skills architecture**: schedule config stored in Supabase (5 columns on skills table); Electron polls `/api/skills/scheduled` every 5 min + immediately on login; `node-cron` registered in `scheduler.ts` with user's local timezone via `Intl.DateTimeFormat().resolvedOptions().timeZone`; skill execution calls `/api/skills/run` (non-streaming, Vercel → Anthropic); result shown as Windows toast with "View full" → standalone `resultWindow.ts` (BrowserWindow, always-on-top, bottom-right, 560×480); Context Tray clips auto-included at fire time; `actions` + `token_usage` tables updated on every run; `last_run_at` updated on skill row.
+- **Calendar Integration (iCal)**: no OAuth — user pastes private iCal URL from Google Calendar settings ("Закрытый адрес в формате iCal"); stored in `integrations` table (`access_token` column holds the URL); `isCalendarQuery()` Haiku classifier added as third parallel check in `/api/context` alongside `routeQuery` + `isClipboardRelevant`; on match, Vercel fetches `.ics`, parses `VEVENT` blocks, filters to tomorrow in user's timezone (from `X-WR-TIMEZONE` header), formats with current time so Claude correctly says "tomorrow"; zero dependency iCal parser (no npm packages); works for any iCal source.
 - **Semantic clipboard relevance**: client sends `clipboardText` (raw clipboard) and `screenshotBase64` as two independent fields. `route.ts` runs `isClipboardRelevant(clipboardText, message)` via Haiku in parallel with `routeQuery` (~200ms, zero added latency). Result determines `effectiveSelectedText` and `effectiveScreenshot` before `assembleContext` runs. No time-based heuristics — purely semantic. Safe default: on any error, clipboard is ignored and vision fires.
 - **Semantic model router**: `web/src/lib/router.ts` — Haiku classifies intent before every request; prompt defines 7 categories mapped to sonnet/haiku; runs in parallel with `assembleContext` via `Promise.all` so it adds zero latency; strips markdown fences before JSON.parse to handle Haiku wrapping output in ```json``` blocks; logs `[router] raw` and `[router] "query" → category → model` to Vercel for debugging; falls back to Sonnet on any parse error.
 - **Custom hotkey**: stored as Electron accelerator string in `store.json` (e.g. `"CommandOrControl+Space"`). `hotkey.ts` reads from store on startup and keeps `currentTrigger` reference so `reregisterHotkey()` can unregister old, register new, and roll back if the combo is taken. Recorder in `CommandPalette.tsx` uses capture-phase `keydown` listener (`addEventListener(..., true)`) to intercept before palette's own handlers; `e.stopPropagation()` prevents Escape from closing the palette during recording; auto-confirms after 700ms.
 
 ---
 
-*Last updated: v0.9.0 — Semantic vision gate, semantic clipboard relevance, auto-updater on palette open, skills strip auto-expand.
-Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅, Context hints ✅, File attachment ✅, Login performance ✅, Pin a Response ✅, Smart model routing (Haiku/Sonnet) ✅, Palette smooth expand ✅, Semantic model router ✅, Custom hotkey ✅, Semantic vision gate ✅, Semantic clipboard relevance ✅, Auto-updater on palette open ✅, Skills strip auto-expand ✅
+*Last updated: v0.10.0 — Scheduled Skills, Calendar Integration (iCal), assembler updated (vision + pin + scheduled skills awareness).
+Workflow memory ✅, Action history ✅, Screenshots ✅, Skill templates ✅, Token tracking ✅, Trial/subscription schema ✅, Admin billing dashboard ✅, Usage analytics ✅, Subscription activation ✅, Windows installer ✅, Auto-updater ✅, Semantic skill filtering ✅, Dashboard download modal ✅, Multilingual UI ✅, Context Tray ✅, Action logging ✅, Multiline input ✅, Vision indicator ✅, Schema sync ✅, Actions counter ✅, File search as context ✅, Document action routing ✅, Session persistence ✅, Context hints ✅, File attachment ✅, Login performance ✅, Pin a Response ✅, Smart model routing (Haiku/Sonnet) ✅, Palette smooth expand ✅, Semantic model router ✅, Custom hotkey ✅, Semantic vision gate ✅, Semantic clipboard relevance ✅, Auto-updater on palette open ✅, Skills strip auto-expand ✅, Scheduled Skills ✅, Calendar Integration (iCal) ✅
 Remaining open items: Trial expiry emails (Vercel Cron).*
 
 ## Pricing & Billing Decisions
@@ -499,3 +509,26 @@ Called after every Claude call to update user's monthly totals in real-time.
 
 ### Admin account
 `assistant@assistant24.tech` — `is_admin = true`, `role = 'admin'`
+
+### New table: `integrations`
+Stores third-party service connections (one row per user per service).
+```
+id               UUID        PK
+user_id          UUID        FK → users.id CASCADE DELETE
+service          TEXT        'ical' | extensible to 'gmail' etc.
+access_token     TEXT        iCal URL (or OAuth token for future services)
+refresh_token    TEXT        empty for iCal; used for OAuth services
+token_expires_at TIMESTAMPTZ '9999-12-31' for iCal (never expires)
+scope            TEXT        'read'
+UNIQUE(user_id, service)
+RLS: users can only see/manage their own rows
+```
+
+### New columns on `skills` table (Scheduled Skills)
+```
+schedule_enabled  BOOLEAN      DEFAULT false
+schedule_type     TEXT         'daily' | 'weekdays' | 'custom'
+schedule_time     TEXT         'HH:MM' in user's local time
+schedule_days     INT[]        [0..6] Sun=0; only for 'custom'
+last_run_at       TIMESTAMPTZ
+```
