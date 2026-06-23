@@ -145,10 +145,10 @@ export async function POST(request: Request) {
   }
 
   // ── Inject calendar events into system prompt (if fetched) ────────────────
-  const calendarEvents = await calendarEventsPromise
-  if (calendarEvents !== null) {
-    assembled.systemPrompt += '\n\n' + formatEventsForPrompt(calendarEvents)
-    console.log(`[context] injected ${calendarEvents.length} calendar event(s)`)
+  const calendarResult = await calendarEventsPromise
+  if (calendarResult !== null) {
+    assembled.systemPrompt += '\n\n' + formatEventsForPrompt(calendarResult)
+    console.log(`[context] injected ${calendarResult.events.length} calendar event(s) (tz=${calendarResult.timezone})`)
   }
 
   // ── Resolve user message ──────────────────────────────────────────────────
