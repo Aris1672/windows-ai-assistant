@@ -343,7 +343,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // Voice input state
   const [isRecording, setIsRecording]           = useState(false)
   const [interimTranscript, setInterimTranscript] = useState('')
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null)
 
   // Auto-updater state
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
@@ -559,24 +560,32 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   // ── Voice input ───────────────────────────────────────────────────────────
   const toggleVoice = useCallback(() => {
+    console.log('[voice] clicked, isRecording=', isRecording)
+
     if (isRecording) {
       recognitionRef.current?.stop()
       return
     }
 
     const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
-    if (!SR) return  // Electron Chromium always has this, but guard anyway
+    console.log('[voice] SR=', SR)
+    if (!SR) {
+      console.log('[voice] SpeechRecognition not available')
+      return
+    }
 
     const recognition = new SR()
+    console.log('[voice] recognition created=', recognition)
     recognitionRef.current = recognition
 
     recognition.lang = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
     recognition.continuous = false
     recognition.interimResults = true
 
-    recognition.onstart = () => setIsRecording(true)
+    recognition.onstart = () => { console.log('[voice] onstart'); setIsRecording(true) }
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      console.log('[voice] onresult', event)
       const transcript = Array.from(event.results)
         .map(r => r[0].transcript)
         .join('')
@@ -589,17 +598,17 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       }
     }
 
-    recognition.onend = () => {
+    recognition.onend = () => { console.log('[voice] onend'); setIsRecording(false); setInterimTranscript('') }
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.log('[voice] onerror', event.error, event.message)
       setIsRecording(false)
       setInterimTranscript('')
     }
 
-    recognition.onerror = () => {
-      setIsRecording(false)
-      setInterimTranscript('')
-    }
-
+    console.log('[voice] calling start()')
     recognition.start()
+    console.log('[voice] start() called')
   }, [isRecording, i18n.language])
 
   // ── Add current selection to tray ─────────────────────────────────────────
