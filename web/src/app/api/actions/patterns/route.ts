@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, jsonError, jsonOk } from '@/lib/auth'
 import { createUserClient } from '@/lib/supabase'
 import Anthropic from '@anthropic-ai/sdk'
@@ -7,8 +7,9 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function GET(req: NextRequest) {
   const authResult = await requireAuth(req)
-  if (!authResult.ok) return jsonError(authResult.error, authResult.status)
-  const { userId, accessToken } = authResult
+  if (authResult instanceof NextResponse) return authResult
+  const { user, accessToken } = authResult
+  const userId = user.id
 
   const supabase = createUserClient(accessToken)
 
