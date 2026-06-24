@@ -109,5 +109,12 @@
       "destructiveLabel": "Requires confirmation before executing",
       "destructiveBadge": "Confirmation required"
     }
+  },
+  "palette": {
+    "pattern": {
+      "title": "I noticed you often do: {{name}}",
+      "create": "Create skill →",
+      "dismiss": "Dismiss"
+    }
   }
 }

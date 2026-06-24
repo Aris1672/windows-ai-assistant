@@ -59,6 +59,15 @@ function acceleratorToDisplay(acc: string): string {
   }).join(' + ')
 }
 
+/** Simple deterministic hash of a string — used as dismiss key in store */
+function simpleHash(str: string): string {
+  let h = 0
+  for (let i = 0; i < str.length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
+  }
+  return Math.abs(h).toString(36)
+}
+
 type Mode = 'idle' | 'thinking' | 'streaming' | 'done' | 'error'
 
 interface CommandPaletteProps {
@@ -350,6 +359,18 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
   const [activeModel, setActiveModel]       = useState<string | null>(null)
+
+  // ── Workflow pattern suggestion state ────────────────────────────────────
+  const [patternSuggestion, setPatternSuggestion] = useState<{
+    name: string
+    description: string
+    suggested_prompt: string
+    apps_involved: string[]
+    confidence: number
+  } | null>(null)
+  const [patternDismissed, setPatternDismissed] = useState(false)
+  // 1-hour in-memory cache so we don't call the API on every palette open
+  const patternCacheRef = useRef<{ ts: number; pattern: typeof patternSuggestion } | null>(null)
 
   // ── Hotkey state ──────────────────────────────────────────────────────────
   const [hotkey, setHotkey]               = useState('CommandOrControl+Space')
@@ -766,6 +787,24 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     setPendingSkill(null)
   }, [pendingSkill, submitQuery])
 
+  // ── Workflow pattern banner handlers ──────────────────────────────────────
+  const dismissPattern = useCallback((): void => {
+    if (!patternSuggestion) return
+    const hash = simpleHash(patternSuggestion.name)
+    window.electronAPI.dismissPattern(hash).catch(() => {})
+    setPatternDismissed(true)
+  }, [patternSuggestion])
+
+  const openSkillFromPattern = useCallback((): void => {
+    if (!patternSuggestion) return
+    const params = new URLSearchParams({
+      name:   patternSuggestion.name,
+      prompt: patternSuggestion.suggested_prompt,
+    })
+    window.electronAPI.openExternal(`${WEB_URL}/dashboard/skills/new?${params.toString()}`)
+    setPatternDismissed(true)
+  }, [patternSuggestion])
+
   // ── Palette shown/hidden lifecycle ────────────────────────────────────────
   useEffect(() => {
     const offShown = window.electronAPI.onPaletteShown(() => {
@@ -795,6 +834,36 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
           setUpdateVersion((ev.version as string) ?? 'new version')
         }
       })
+
+      // ── Workflow pattern check (1-hour cache) ──────────────────────────
+      setPatternDismissed(false)
+      const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+      const cached = patternCacheRef.current
+      if (cached && Date.now() - cached.ts < CACHE_TTL) {
+        // Use cached result — don't call API
+        setPatternSuggestion(cached.pattern)
+      } else {
+        // Fire in background — palette opens instantly regardless
+        window.electronAPI.apiRequest({
+          url:     `${WEB_URL}/api/actions/patterns`,
+          method:  'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(res => {
+          if (res.ok && res.data) {
+            const pattern = (res.data as { pattern: typeof patternSuggestion }).pattern ?? null
+            patternCacheRef.current = { ts: Date.now(), pattern }
+            if (pattern) {
+              // Check if user already dismissed this pattern recently
+              const hash = simpleHash(pattern.name)
+              window.electronAPI.isPatternDismissed(hash).then(isDismissed => {
+                if (!isDismissed) setPatternSuggestion(pattern)
+              }).catch(() => {
+                setPatternSuggestion(pattern)
+              })
+            }
+          }
+        }).catch(() => {}) // non-fatal — never break the palette
+      }
     })
 
     const offHidden = window.electronAPI.onPaletteHidden(() => {
@@ -1500,6 +1569,87 @@ if (e.key === 'Escape') {
               {actionStatus === 'done' && <p className="action-done">{t('palette.actions.done')}</p>}
             </div>
           </>
+        )}
+
+        {/* ── Workflow pattern suggestion banner ──────────────────────── */}
+        {patternSuggestion && !patternDismissed && mode === 'idle' && messages.length === 0 && (
+          <div style={{
+            margin: '0.5rem 0.75rem 0',
+            padding: '0.55rem 0.75rem',
+            borderRadius: '7px',
+            border: '1px solid rgba(251, 191, 36, 0.25)',
+            background: 'rgba(251, 191, 36, 0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            flexShrink: 0,
+          }}>
+            {/* Bulb icon */}
+            <span style={{ fontSize: '0.9rem', flexShrink: 0 }}>💡</span>
+
+            {/* Text */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                margin: 0,
+                fontSize: '0.72rem',
+                color: 'rgba(251, 191, 36, 0.95)',
+                fontWeight: 600,
+                lineHeight: 1.3,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}>
+                {t('palette.pattern.title', { name: patternSuggestion.name })}
+              </p>
+              <p style={{
+                margin: '0.15rem 0 0',
+                fontSize: '0.67rem',
+                color: 'rgba(255,255,255,0.45)',
+                lineHeight: 1.35,
+                overflow: 'hidden',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+              }}>
+                {patternSuggestion.description}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.35rem', flexShrink: 0 }}>
+              <button
+                onClick={openSkillFromPattern}
+                style={{
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(251, 191, 36, 0.4)',
+                  background: 'rgba(251, 191, 36, 0.12)',
+                  color: 'rgba(251, 191, 36, 0.95)',
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {t('palette.pattern.create')}
+              </button>
+              <button
+                onClick={dismissPattern}
+                style={{
+                  padding: '0.2rem 0.45rem',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'transparent',
+                  color: 'rgba(255,255,255,0.3)',
+                  fontSize: '0.68rem',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {t('palette.pattern.dismiss')}
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Update banner */}

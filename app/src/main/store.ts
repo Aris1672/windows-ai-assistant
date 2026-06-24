@@ -13,12 +13,22 @@ export interface ContextClip {
 
 // ─── Store schema ─────────────────────────────────────────────────────────────
 
+// ─── Dismissed workflow patterns ──────────────────────────────────────────────
+
+interface DismissedPattern {
+  hash:        string   // deterministic hash of pattern name
+  dismissedAt: string   // ISO timestamp — re-shows after 7 days
+}
+
+// ─── Store schema ─────────────────────────────────────────────────────────────
+
 interface StoreData {
-  authToken?:     string
-  refreshToken?:  string
-  userEmail?:     string
-  contextTray?:   ContextClip[]
-  hotkey?:        string   // Electron accelerator, e.g. "CommandOrControl+Space"
+  authToken?:         string
+  refreshToken?:      string
+  userEmail?:         string
+  contextTray?:       ContextClip[]
+  hotkey?:            string   // Electron accelerator, e.g. "CommandOrControl+Space"
+  dismissedPatterns?: DismissedPattern[]
 }
 
 function getStorePath(): string {
@@ -88,5 +98,44 @@ export const store = {
   trayClear(): void {
     const data = read()
     write({ ...data, contextTray: [] })
+  },
+
+  // ── Workflow pattern dismiss helpers ──────────────────────────────────────
+
+  /**
+   * Returns true if this pattern hash was dismissed less than 7 days ago.
+   * Automatically prunes expired entries on each call.
+   */
+  isPatternDismissed(hash: string): boolean {
+    const data = read()
+    const now  = Date.now()
+    const TTL  = 7 * 24 * 60 * 60 * 1000  // 7 days in ms
+
+    // Prune expired dismissals while we're here
+    const active = (data.dismissedPatterns ?? []).filter(
+      p => now - new Date(p.dismissedAt).getTime() < TTL
+    )
+
+    const isDismissed = active.some(p => p.hash === hash)
+
+    // Write pruned list back if anything changed
+    if (active.length !== (data.dismissedPatterns ?? []).length) {
+      write({ ...data, dismissedPatterns: active })
+    }
+
+    return isDismissed
+  },
+
+  dismissPattern(hash: string): void {
+    const data    = read()
+    const now     = Date.now()
+    const TTL     = 7 * 24 * 60 * 60 * 1000
+    const active  = (data.dismissedPatterns ?? []).filter(
+      p => now - new Date(p.dismissedAt).getTime() < TTL
+    )
+    // Upsert — replace existing hash if present, add if not
+    const updated = active.filter(p => p.hash !== hash)
+    updated.push({ hash, dismissedAt: new Date().toISOString() })
+    write({ ...data, dismissedPatterns: updated })
   },
 }

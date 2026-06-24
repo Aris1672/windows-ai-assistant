@@ -189,6 +189,10 @@ ipcMain.on('open-dashboard', () => {
   shell.openExternal(`${WEB_URL}/dashboard`)
 })
 
+ipcMain.on('open-external', (_event, url: string) => {
+  shell.openExternal(url)
+})
+
 // ─── Hotkey IPC ───────────────────────────────────────────────────────────────
 
 ipcMain.handle('get-hotkey', () => store.getHotkey())
@@ -206,6 +210,16 @@ ipcMain.handle('tray-get-clips', (): ContextClip[] => store.trayGetClips())
 ipcMain.handle('tray-add-clip',    (_event, clip: ContextClip)  => store.trayAddClip(clip))
 ipcMain.handle('tray-remove-clip', (_event, index: number)      => store.trayRemoveClip(index))
 ipcMain.handle('tray-clear',       ()                           => store.trayClear())
+
+// ─── Workflow Pattern Dismiss IPC ─────────────────────────────────────────────
+
+ipcMain.handle('is-pattern-dismissed', (_event, hash: string): boolean =>
+  store.isPatternDismissed(hash)
+)
+
+ipcMain.handle('dismiss-pattern', (_event, hash: string): void =>
+  store.dismissPattern(hash)
+)
 
 // ─── Action Executor ──────────────────────────────────────────────────────────
 

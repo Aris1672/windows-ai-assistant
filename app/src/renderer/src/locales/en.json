@@ -60,6 +60,11 @@
       "code": "Select and copy (Ctrl+C) the code you want to explain, fix, or rewrite, then press Ctrl+Space — or mention a file, e.g. \"Review logic in utils.ts\"",
       "explorer": "You can work with files directly — try \"Summarise report.pdf\" or \"Compare Q1.xlsx with Q2.xlsx\" without opening them",
       "generic": "Select and copy (Ctrl+C) any text, then press Ctrl+Space to work with it — or mention a file in your request, e.g. \"Summarise notes.docx\""
+    },
+    "pattern": {
+      "title": "I noticed you often do: {{name}}",
+      "create": "Create skill →",
+      "dismiss": "Dismiss"
     }
   }
 }

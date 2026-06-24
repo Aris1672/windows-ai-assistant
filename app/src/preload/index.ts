@@ -69,6 +69,7 @@ export interface ElectronAPI {
 
   // Navigation
   openDashboard: () => void
+  openExternal: (url: string) => void
 
   // ── Generic API proxy (JSON request/response) ────────────────────────────
   apiRequest: (params: {
@@ -110,6 +111,10 @@ export interface ElectronAPI {
   getHotkey: () => Promise<string>
   setHotkey: (hotkey: string) => Promise<boolean>
 
+  // ── Workflow Pattern Dismiss ───────────────────────────────────────────────
+  isPatternDismissed: (hash: string) => Promise<boolean>
+  dismissPattern:     (hash: string) => Promise<void>
+
   // Events pushed from the main process
   onPaletteShown:  (callback: () => void) => () => void
   onPaletteHidden: (callback: () => void) => () => void
@@ -133,6 +138,7 @@ const api: ElectronAPI = {
   setRefreshToken: (token) => ipcRenderer.send('set-refresh-token', token),
 
   openDashboard: () => ipcRenderer.send('open-dashboard'),
+  openExternal:  (url) => ipcRenderer.send('open-external', url),
 
   // ── Generic API proxy ─────────────────────────────────────────────────────
   apiRequest: (params) => ipcRenderer.invoke('api-request', params),
@@ -169,6 +175,10 @@ const api: ElectronAPI = {
   // ── Hotkey ────────────────────────────────────────────────────────────────
   getHotkey: () => ipcRenderer.invoke('get-hotkey'),
   setHotkey: (hotkey) => ipcRenderer.invoke('set-hotkey', hotkey),
+
+  // ── Workflow Pattern Dismiss ───────────────────────────────────────────────
+  isPatternDismissed: (hash) => ipcRenderer.invoke('is-pattern-dismissed', hash),
+  dismissPattern:     (hash) => ipcRenderer.invoke('dismiss-pattern', hash),
 
   // ── Main-process events ───────────────────────────────────────────────────
   onPaletteShown: (cb) => {
