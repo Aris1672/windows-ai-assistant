@@ -19,6 +19,8 @@
   },
   "palette": {
     "placeholder": "Ask anything…",
+    "voiceInput": "Voice input",
+    "voiceListening": "Listening…",
     "stop": "Stop",
     "footer": {
       "escCancel": "Esc to cancel",

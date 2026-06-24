@@ -456,6 +456,42 @@ body {
   color: rgba(251, 191, 36, 0.95);
 }
 
+/* ── Voice input button ────────────────────────────────────────────────────── */
+.voice-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  color: rgba(255, 255, 255, 0.3);
+  transition: color 0.15s, opacity 0.15s;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+.voice-btn:hover { color: rgba(255, 255, 255, 0.65); }
+.voice-btn--recording {
+  color: rgba(251, 191, 36, 0.9);
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+.voice-btn--recording:hover { color: rgba(251, 191, 36, 1); }
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
+/* ── Voice interim transcript ──────────────────────────────────────────────── */
+.palette-voice-interim {
+  margin: 0 0.75rem 0.35rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: rgba(251, 191, 36, 0.65);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  border-left: 2px solid rgba(251, 191, 36, 0.35);
+}
+
 /* ── Action row ────────────────────────────────────────────────────────────── */
 .action-row {
   padding: 0.5rem 1rem 0.25rem;

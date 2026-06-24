@@ -19,6 +19,8 @@
   },
   "palette": {
     "placeholder": "Спросите что угодно…",
+    "voiceInput": "Голосовой ввод",
+    "voiceListening": "Слушаю…",
     "stop": "Стоп",
     "footer": {
       "escCancel": "Esc — отмена",

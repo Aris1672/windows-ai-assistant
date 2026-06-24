@@ -69,7 +69,7 @@ Run a skill automatically on a schedule, e.g. every morning: "Summarise my overn
 - User sets a skill + schedule (daily, weekdays, custom time) in Dashboard
 - Main process fires the skill at the scheduled time via `node-cron`
 - Result delivered as a Windows notification with a "view" action
-- **Why:** Turns the tool from reactive to proactive — a fundamentally different value tier.
+- **Why:** Turns the tool from reactive to proactive — a fundamentally different value tier. **DONE**
 
 ---
 

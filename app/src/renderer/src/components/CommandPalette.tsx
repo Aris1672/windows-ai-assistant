@@ -340,6 +340,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [attachedFiles, setAttachedFiles] = useState<FileRef[]>([])
   const [hoveredMsgIdx, setHoveredMsgIdx] = useState<number | null>(null)
 
+  // Voice input state
+  const [isRecording, setIsRecording]           = useState(false)
+  const [interimTranscript, setInterimTranscript] = useState('')
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
+
   // Auto-updater state
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
   const [updateDismissed, setUpdateDismissed] = useState(false)
@@ -552,6 +557,51 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     })
   }, [])
 
+  // ── Voice input ───────────────────────────────────────────────────────────
+  const toggleVoice = useCallback(() => {
+    if (isRecording) {
+      recognitionRef.current?.stop()
+      return
+    }
+
+    const SR = window.SpeechRecognition ?? window.webkitSpeechRecognition
+    if (!SR) return  // Electron Chromium always has this, but guard anyway
+
+    const recognition = new SR()
+    recognitionRef.current = recognition
+
+    recognition.lang = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    recognition.continuous = false
+    recognition.interimResults = true
+
+    recognition.onstart = () => setIsRecording(true)
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = Array.from(event.results)
+        .map(r => r[0].transcript)
+        .join('')
+      setInterimTranscript(transcript)
+
+      if (event.results[event.results.length - 1].isFinal) {
+        setQuery(prev => (prev ? prev + ' ' : '') + transcript.trim())
+        setInterimTranscript('')
+        inputRef.current?.focus()
+      }
+    }
+
+    recognition.onend = () => {
+      setIsRecording(false)
+      setInterimTranscript('')
+    }
+
+    recognition.onerror = () => {
+      setIsRecording(false)
+      setInterimTranscript('')
+    }
+
+    recognition.start()
+  }, [isRecording, i18n.language])
+
   // ── Add current selection to tray ─────────────────────────────────────────
   const addToTray = useCallback(async () => {
     const text = context?.selectedText?.trim()
@@ -741,6 +791,10 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
     const offHidden = window.electronAPI.onPaletteHidden(() => {
       setVisible(false)
       window.electronAPI.cancelStream()
+      // Stop any active voice recording
+      recognitionRef.current?.stop()
+      setIsRecording(false)
+      setInterimTranscript('')
     })
 
     const offContext = window.electronAPI.onContextData((ctx) => {
@@ -1212,6 +1266,27 @@ if (e.key === 'Escape') {
               <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
             </svg>
           </button>
+          {!busy && (
+            <button
+              onClick={toggleVoice}
+              title={isRecording ? t('palette.voiceListening') : t('palette.voiceInput')}
+              className={`voice-btn${isRecording ? ' voice-btn--recording' : ''}`}
+            >
+              {isRecording ? (
+                // Stop square — indicates active recording
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor" stroke="none"/>
+                </svg>
+              ) : (
+                // Microphone
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5.5" y="1" width="5" height="8" rx="2.5"/>
+                  <path d="M2.5 8a5.5 5.5 0 0 0 11 0"/>
+                  <line x1="8" y1="13.5" x2="8" y2="15.5"/>
+                </svg>
+              )}
+            </button>
+          )}
           {busy && (
             <button
               className="cancel-btn"
@@ -1221,6 +1296,11 @@ if (e.key === 'Escape') {
             </button>
           )}
         </div>
+
+        {/* Voice interim transcript — live preview while speaking */}
+        {interimTranscript && (
+          <p className="palette-voice-interim">{interimTranscript}</p>
+        )}
 
         {/* Attached file chips */}
         {attachedFiles.length > 0 && (
