@@ -60,8 +60,10 @@ Let users change `Ctrl+Space` to a different key combination in Settings.
 
 ### 8. Voice Input
 Speak the query instead of typing — one microphone button in the palette.
-- Use Web Speech API (available in Electron renderer) or Whisper API
-- Transcribed text fills the input field; user can edit before submitting
+- ~~Web Speech API~~ — implemented and shipped in UI, but fails with `network` error because Chromium routes audio directly to Google's servers, bypassing the Vercel proxy. Not viable for Russia.
+- **Plan:** Whisper via Vercel — `MediaRecorder` captures audio in renderer, POSTs blob to `/api/transcribe` on Vercel, Vercel calls OpenAI Whisper, returns transcript. Fully proxied, works from Russia.
+- **Blocked on:** OpenAI API key. Once obtained, add `/api/transcribe` route and swap `toggleVoice` logic.
+- Mic button UI is already in the palette (visible, wired up), just needs the backend swap.
 - **Why:** Big for users who dictate; also useful when hands are occupied.
 
 ### 9. Scheduled Skills
@@ -103,7 +105,7 @@ Tiny token/quota indicator at the bottom of the palette showing monthly usage.
 | 7 | Tray right-click quick actions | Medium | 🟡 Medium |
 | 8 | Referral system | Medium | 🟡 Medium |
 | 9 | Pin a response | Medium | 🟡 Medium |
-| 10 | Voice input | High | 🟡 Medium |
+| 10 | Voice input (Whisper) | High | 🟡 Medium — blocked on OpenAI key |
 | 11 | Scheduled skills | High | 🟢 High (long term) |
 
 ---
