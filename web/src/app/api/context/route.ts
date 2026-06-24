@@ -44,6 +44,14 @@ type ImageBlock = {
 }
 type ContentBlock = TextBlock | ImageBlock
 
+/**
+ * Result of the context source classifier.
+ *   clipboard — use clipboard text as selected text, discard screenshot
+ *   vision    — use screenshot, discard clipboard
+ *   neither   — standalone query, use neither
+ */
+type ContextSource = 'clipboard' | 'vision' | 'neither'
+
 export async function POST(request: Request) {
   // ── Auth ─────────────────────────────────────────────────────────────────
   let user: Awaited<ReturnType<typeof requireAuth>>['user']
@@ -80,28 +88,34 @@ export async function POST(request: Request) {
   }
 
   // ── Step 1: fast parallel checks ─────────────────────────────────────────
-  // Run clipboard relevance check and model routing in parallel — both are
+  // Run context source classification and model routing in parallel — both are
   // lightweight Haiku calls (~200 ms). Neither depends on the other.
   //
-  // Clipboard relevance: is the clipboard text actually related to this query?
-  //   yes → use as selectedText, discard screenshot
-  //   no  → ignore clipboard, keep screenshot (vision fires)
+  // Context source: given the query, the clipboard, and the fact that a
+  // screenshot of the user's current screen is always available, Haiku decides:
+  //   clipboard → use clipboard text as selectedText, discard screenshot
+  //   vision    → use screenshot, discard clipboard
+  //   neither   → standalone query, use neither
+  //
+  // If clipboard is empty the classifier is skipped entirely — vision fires
+  // when a screenshot exists, neither otherwise.
   const hasFiles      = (body.fileRefs?.length ?? 0) > 0
   const clipboardText = body.clipboardText?.trim() ?? null
+  const hasScreenshot = !!body.screenshotBase64
 
-  let clipboardRelevant: boolean
+  let contextSource: ContextSource
   let model: string
   let calendarQuery: boolean
 
   try {
-    ;[clipboardRelevant, model, calendarQuery] = await Promise.all([
+    ;[contextSource, model, calendarQuery] = await Promise.all([
       clipboardText
-        ? isClipboardRelevant(clipboardText, body.message)
-        : Promise.resolve(false),
+        ? resolveContextSource(clipboardText, body.message, hasScreenshot)
+        : Promise.resolve(hasScreenshot ? 'vision' : 'neither' as ContextSource),
       routeQuery(
         body.message,
         hasFiles,
-        !!body.screenshotBase64 && !clipboardText,
+        hasScreenshot,           // tell the router a screenshot exists, unconditionally
         clipboardText?.length ?? 0,
       ),
       isCalendarQuery(body.message),
@@ -112,17 +126,15 @@ export async function POST(request: Request) {
   }
 
   // ── Step 2: resolve effective context ─────────────────────────────────────
-  // Clipboard wins only when semantically relevant to the query.
-  // Otherwise the screenshot takes over (vision path).
-  const effectiveSelectedText = clipboardRelevant ? clipboardText : null
-  const effectiveScreenshot   = clipboardRelevant ? null : (body.screenshotBase64 ?? null)
+  const effectiveSelectedText = contextSource === 'clipboard' ? clipboardText : null
+  const effectiveScreenshot   = contextSource === 'vision'    ? (body.screenshotBase64 ?? null) : null
 
   // If this looks like a calendar query, fetch events now (parallel with context assembly below)
   const calendarEventsPromise = calendarQuery
     ? fetchTomorrowsEvents(user.id)
     : Promise.resolve(null)
 
-  console.log(`[context] clipboard=${clipboardRelevant ? 'relevant' : 'ignored'} vision=${!!effectiveScreenshot} calendar=${calendarQuery}`)
+  console.log(`[context] source=${contextSource} vision=${!!effectiveScreenshot} calendar=${calendarQuery}`)
 
   // ── Step 3: assemble context with resolved values ──────────────────────────
   let assembled: Awaited<ReturnType<typeof assembleContext>>
@@ -274,37 +286,58 @@ export async function POST(request: Request) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Asks Haiku whether the clipboard text is semantically relevant to the query.
+ * Asks Haiku to semantically decide what context source the query refers to.
  *
- * Runs in parallel with routeQuery — same latency budget (~200 ms).
- * Falls back to false on any error so vision fires as a safe default.
+ * Returns:
+ *   'clipboard' — the user wants to work with the clipboard text
+ *   'vision'    — the user is referring to something on screen / visual
+ *   'neither'   — standalone query, ignore both
+ *
+ * Only called when clipboard is non-empty. Runs in parallel with routeQuery
+ * — same ~200ms latency budget. Falls back to 'vision' on any error so the
+ * screenshot fires as the safe default.
  */
-async function isClipboardRelevant(
+async function resolveContextSource(
   clipboardText: string,
   message: string,
-): Promise<boolean> {
+  hasScreenshot: boolean,
+): Promise<ContextSource> {
   try {
     const res = await anthropic.messages.create({
       model:      HAIKU,
       max_tokens: 10,
-      system:     'You are a relevance classifier. Reply ONLY with "yes" or "no". No other text.',
-      messages:   [{
+      system: `You are a context source classifier for a Windows AI assistant.
+On every query the assistant has two possible sources of context:
+1. Clipboard text — text the user previously copied.
+2. Screen — a live screenshot of whatever is currently on the user's monitor.
+
+Decide which source the user's query is about, or neither.
+Reply ONLY with one word: "clipboard", "vision", or "neither". No other text.`,
+      messages: [{
         role:    'user',
         content: `User query: "${message.slice(0, 200)}"
 
 Clipboard content: "${clipboardText.slice(0, 400)}"
 
-Is the clipboard content directly relevant to the user's query?`,
+Screen screenshot available: ${hasScreenshot ? 'yes' : 'no'}
+
+Which source does the user's query refer to?`,
       }],
     })
 
-    const answer = res.content.find(b => b.type === 'text')?.text?.trim().toLowerCase() ?? 'no'
-    const relevant = answer.startsWith('yes')
-    console.log(`[clipboard] "${message.slice(0, 40)}" → ${relevant ? 'relevant' : 'stale'}`)
-    return relevant
+    const answer = (res.content.find(b => b.type === 'text')?.text ?? '')
+      .trim().toLowerCase()
+
+    let source: ContextSource
+    if (answer.startsWith('clipboard')) source = 'clipboard'
+    else if (answer.startsWith('vision'))    source = 'vision'
+    else                                     source = 'neither'
+
+    console.log(`[context-source] "${message.slice(0, 40)}" → ${source}`)
+    return source
   } catch (err) {
-    console.warn('[clipboard] relevance check failed, defaulting to vision:', err)
-    return false  // safe default — vision fires
+    console.warn('[context-source] classifier failed, defaulting to vision:', err)
+    return 'vision'  // safe default — screenshot fires
   }
 }
 
