@@ -133,7 +133,7 @@ const CONTENT = {
 
     footerSub:  'Windows only · © 2025 - 2026 Assistant24. All rights reserved.',
 
-    // App constraints & names matching reality
+    // App constraints
     appContextName: 'OPENOFFICE 4.1.16',
     searchPlaceholder: 'Ask anything...',
     quickSkills: ['Extract Invoice Data', 'Check upcoming events', 'Summarize', 'Rewrite professionally', 'Categorize Expense', 'Calculate Totals', 'Explain this', 'Fix grammar', 'Format for Spreadsheet'],
@@ -152,8 +152,8 @@ const CONTENT = {
       'Language: English'
     ],
     emailSubject: 'Week 24 Sales Summary',
-    emailTo: 'sales@salescom',
-    emailBody: 'Dear Team,\n\nPlease find below the executive summary for our sales performance during Week 24, 2026.\n\n**Overall Performance**\nTotal company-wide sales reached **$92,000**, with a strong finish — Friday alone accounted for $22,600, the highest single day.'
+    emailTo: 'sales@sales.com',
+    emailBody: 'Dear Team,\n\nPlease find below the executive summary for our sales performance during Week 24, 2026.\n\n**Overall Performance**\nTotal company-wide sales for the week reached **$92,000**, with a strong finish — Friday alone accounted for $22,600, the highest single day of the week.\n\n**Regional Breakdown**\n- **East** was the top-performing region with $28,200 (+strongest contributor)\n- **North** followed with $23,900\n- **South** delivered $21,400\n- **West** was the weakest region at $18,500 (–6% vs. last week)\n\n**Highlights**\n- 📈 **Top product:** Enterprise licences, up **+18%** versus last week\n- ⚠️ **Area of attention:** West region, down 6% week-on-week — follow-up recommended\n\n**Daily Trend**\nSales showed a consistent upward trend throughout the week, growing from $15,700 on Monday to $22,600 on Friday — a strong positive momentum heading into Week 25.\n\nPlease don\'t hesitate to reach out if you have any questions or require further detail.'
   },
 
   ru: {
@@ -301,8 +301,8 @@ const CONTENT = {
       'Язык: Английский'
     ],
     emailSubject: 'Week 24 Sales Summary',
-    emailTo: 'sales@salescom',
-    emailBody: 'Dear Team,\n\nPlease find below the executive summary for our sales performance during Week 24, 2026.\n\n**Overall Performance**\nTotal company-wide sales reached **$92,000**, with a strong finish — Friday alone accounted for $22,600, the highest single day.'
+    emailTo: 'sales@sales.com',
+    emailBody: 'Dear Team,\n\nPlease find below the executive summary for our sales performance during Week 24, 2026.\n\n**Overall Performance**\nTotal company-wide sales for the week reached **$92,000**, with a strong finish — Friday alone accounted for $22,600, the highest single day of the week.\n\n**Regional Breakdown**\n- **East** was the top-performing region with $28,200 (+strongest contributor)\n- **North** followed with $23,900\n- **South** delivered $21,400\n- **West** was the weakest region at $18,500 (–6% vs. last week)\n\n**Highlights**\n- 📈 **Top product:** Enterprise licences, up **+18%** versus last week\n- ⚠️ **Area of attention:** West region, down 6% week-on-week — follow-up recommended\n\n**Daily Trend**\nSales showed a consistent upward trend throughout the week, growing from $15,700 on Monday to $22,600 on Friday — a strong positive momentum heading into Week 25.\n\nPlease don\'t hesitate to reach out if you have any questions or require further detail.'
   },
 } as const
 
@@ -312,16 +312,9 @@ export default function LandingPage() {
   const [lang, setLang] = useState<Lang>('en')
   const t = CONTENT[lang]
 
-  // ── Расширенный таймлайн шагов (0 по 5)
-  // 0: App baseline (OpenOffice Grid)
-  // 1: Shortcut triggered & Palette surfaces
-  // 2: Typing user's primary prompt (demoQuery)
-  // 3: [НОВЫЙ ШАГ] ИИ выводит вопросы, пользователь вбивает параметры почты
-  // 4: AI processes everything, reads grid data, runs pipeline
-  // 5: Final output window triggers (Outlook layout overlay)
   const [step, setStep] = useState(0)
   const [typed, setTyped] = useState(0)
-  const [inputSubStep, setInputSubStep] = useState(0) // Индикатор заполнения полей на шаге 3
+  const [inputSubStep, setInputSubStep] = useState(0) 
   const CHAR_DELAY = 25
 
   useEffect(() => {
@@ -329,7 +322,7 @@ export default function LandingPage() {
       2200, 
       1000, 
       t.demoQuery.length * CHAR_DELAY + 500, 
-      3800, // Время на симуляцию интерактивного ответа пользователя
+      3800, 
       2500, 
       4500
     ]
@@ -348,7 +341,6 @@ export default function LandingPage() {
     return () => clearInterval(id)
   }, [step, lang, t.demoQuery.length])
 
-  // Симуляция поэтапного заполнения полей ввода на новом шаге 3
   useEffect(() => {
     if (step !== 3) { setInputSubStep(0); return }
     const t1 = setTimeout(() => setInputSubStep(1), 1000)
@@ -385,7 +377,6 @@ export default function LandingPage() {
         
         .kbd { display: inline-block; background: #1c1c24; border: 1px solid #2d2d3d; border-bottom-width: 2px; border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.75em; font-family: monospace; color: #a0a0b0; }
         
-        /* Native App Simulation Styling */
         .openoffice-grid {
           width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Segoe UI', Tahoma, sans-serif; color: #333;
         }
@@ -410,9 +401,28 @@ export default function LandingPage() {
         }
         
         .native-email-window {
-          background: #1e1e24; border: 1px solid #323242; border-radius: 8px; width: 100%; height: 100%;
-          box-shadow: 0 30px 70px rgba(0,0,0,0.8); font-family: system-ui, sans-serif; color: #e5e5ed;
+          background: #23232e; 
+          border: 1px solid #323242; 
+          border-radius: 8px; 
+          width: 100%; 
+          height: 100%;
+          box-shadow: 0 30px 70px rgba(0,0,0,0.8); 
+          font-family: system-ui, sans-serif; 
+          color: #e5e5ed;
           animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+          overflow: hidden;
+        }
+
+        .email-content-area {
+          background: #ffffff !important; 
+          color: #1a1a1a !important; 
+          padding: 16px; 
+          overflow-y: auto; 
+          flex: 1;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          font-size: 12px;
+          line-height: 1.6;
+          text-align: left;
         }
       `}</style>
 
@@ -450,7 +460,6 @@ export default function LandingPage() {
 
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 2rem', display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: '4rem', alignItems: 'center' }}>
 
-            {/* Left side info block */}
             <div>
               <div className="hero-fade hero-fade-1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', borderRadius: '100px', padding: '0.3rem 0.875rem', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '1.75rem' }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
@@ -477,7 +486,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right side interactive live-application simulation */}
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <div style={{ position: 'relative', width: '100%', maxWidth: '490px', height: '410px' }}>
 
@@ -486,34 +494,33 @@ export default function LandingPage() {
                   position: 'absolute', inset: 0, background: '#ffffff', border: '1px solid #b5b5b5', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
                   filter: step >= 1 && step < 5 ? 'brightness(0.7)' : 'none', transition: 'filter 0.3s'
                 }}>
-                  {/* Fake OpenOffice Menu Chrome */}
                   <div style={{ background: '#f6f6f6', borderBottom: '1px solid #d5d5d5', padding: '5px 8px', fontSize: '11px', color: '#444', display: 'flex', gap: '10px' }}>
                     <span>Файл</span><span>Правка</span><span>Вид</span><span>Вставка</span><span>Формат</span><span>Сервис</span>
                   </div>
-                  {/* Spreadsheet Grid Mock with verified exact code values */}
                   <div style={{ padding: '8px' }}>
                     <table className="openoffice-grid">
                       <thead>
                         <tr>
-                          <th style={{ width: '25px' }}></th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>TOTAL</th>
+                          <th style={{ width: '25px' }}></th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>TOTAL</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr><th>2</th><td style={{ textAlign: 'left', fontWeight: 'bold' }}>Region</td><td>Mon</td><td>Tue</td><td>Wed</td><td>Thu</td><td style={{ fontWeight: 'bold' }}>$92,000.00</td></tr>
-                        <tr><th>3</th><td style={{ textAlign: 'left' }}>North</td><td>$4,200</td><td>$3,800</td><td>$5,100</td><td>$4,600</td><td>$23,900</td></tr>
-                        <tr><th>4</th><td style={{ textAlign: 'left' }}>South</td><td>$3,100</td><td>$4,400</td><td>$3,900</td><td>$5,200</td><td>$21,400</td></tr>
-                        <tr><th>5</th><td style={{ textAlign: 'left' }}>East</td><td>$5,500</td><td>$5,100</td><td>$4,700</td><td>$5,800</td><td>$28,200</td></tr>
+                        <tr><th>2</th><td style={{ textAlign: 'left', fontWeight: 'bold' }}>Region</td><td>Mon</td><td>Tue</td><td>Wed</td><td>Thu</td><td>Fri</td><td style={{ fontWeight: 'bold' }}>TOTAL</td></tr>
+                        <tr><th>3</th><td style={{ textAlign: 'left' }}>North</td><td>$4,200</td><td>$3,800</td><td>$5,100</td><td>$4,600</td><td>$6,200</td><td>$23,900</td></tr>
+                        <tr><th>4</th><td style={{ textAlign: 'left' }}>South</td><td>$3,100</td><td>$4,400</td><td>$3,900</td><td>$5,200</td><td>$4,800</td><td>$21,400</td></tr>
+                        <tr><th>5</th><td style={{ textAlign: 'left' }}>East</td><td>$5,500</td><td>$5,100</td><td>$4,700</td><td>$5,800</td><td>$7,100</td><td>$28,200</td></tr>
+                        <tr><th>6</th><td style={{ textAlign: 'left' }}>West</td><td>$2,900</td><td>$3,300</td><td>$4,100</td><td>$3,700</td><td>$4,500</td><td>$18,500</td></tr>
+                        <tr style={{ fontWeight: 'bold' }}><th>7</th><td style={{ textAlign: 'left' }}>TOTAL</td><td>$15,700</td><td>$16,600</td><td>$17,800</td><td>$19,300</td><td>$22,600</td><td>$92,000</td></tr>
                       </tbody>
                     </table>
                   </div>
                 </div>
 
-                {/* Layer 2: Real Assistant24 Overlay Panel (Active steps 1 to 4) */}
+                {/* Layer 2: Assistant24 Overlay Panel (Active steps 1 to 4) */}
                 {step >= 1 && step <= 4 && (
                   <div className="palette-float" style={{ position: 'absolute', top: '25px', right: '15px', width: '370px', zIndex: 10 }}>
                     <div className="assistant-panel">
                       
-                      {/* Header Layout */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#09090d', borderBottom: '1px solid #1a1a26' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#10ffd4', background: 'rgba(16,255,212,0.1)', padding: '2px 5px', borderRadius: '4px', letterSpacing: '0.03em' }}>
@@ -526,7 +533,6 @@ export default function LandingPage() {
                         </div>
                       </div>
 
-                      {/* Quick Skills Button Field */}
                       <div style={{ padding: '10px 12px 6px', display: 'flex', flexWrap: 'wrap', gap: '5px', background: '#0c0c12' }}>
                         {t.quickSkills.slice(0, 4).map((skill, idx) => (
                           <span key={idx} className="quick-skill-tag" style={{ borderColor: idx === 2 && step >= 2 ? '#10ffd4' : '#2c2c3e' }}>
@@ -535,10 +541,9 @@ export default function LandingPage() {
                         ))}
                       </div>
 
-                      {/* Search Bar matching reality */}
                       <div style={{ padding: '8px 12px', borderBottom: '1px solid #1c1c28', display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
                         <span style={{ color: '#686878', fontSize: '12px' }}>🔍</span>
-                        <div style={{ flex: 1, fontSize: '12px', color: '#ffffff' }}>
+                        <div style={{ flex: 1, fontSize: '12px', color: '#ffffff', textAlign: 'left' }}>
                           {step === 1 ? (
                             <span style={{ color: '#525265' }}>{t.searchPlaceholder}</span>
                           ) : (
@@ -548,15 +553,13 @@ export default function LandingPage() {
                         </div>
                       </div>
 
-                      {/* NEW STEP 3: User inputs parameters before full email draft generation */}
                       {step === 3 && (
-                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', borderTop: '1px solid #181824' }}>
+                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', borderTop: '1px solid #181824', textAlign: 'left' }}>
                           <div style={{ color: '#10ffd4', fontWeight: '600', marginBottom: '8px' }}>{t.demoAnalysisTitle}</div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             {t.demoAnalysisLines.map((line, idx) => (
-                              <div key={idx} style={{ background: '#12121a', padding: '6px', borderRadius: '4px', border: '1px solid #1d1d29', position: 'relative' }}>
+                              <div key={idx} style={{ background: '#12121a', padding: '6px', borderRadius: '4px', border: '1px solid #1d1d29' }}>
                                 <div style={{ color: '#a2a2b0' }}>{line}</div>
-                                {/* Симуляция живого ввода текста пользователем поочередно */}
                                 {inputSubStep > idx && (
                                   <div style={{ marginTop: '4px', paddingLeft: '12px', color: '#10ffd4', fontWeight: '500', fontFamily: 'monospace' }}>
                                     &gt; {t.demoUserTypedInputs[idx]}
@@ -568,16 +571,14 @@ export default function LandingPage() {
                         </div>
                       )}
 
-                      {/* Dynamic Output State (Step 4: final execution pipeline loading) */}
                       {step === 4 && (
-                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', borderTop: '1px solid #181824' }}>
+                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', borderTop: '1px solid #181824', textAlign: 'left' }}>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '12px', color: '#a0a0b2' }}>
-                            <span className="demo-dots"><span></span><span></span><span></span></span> Synchronizing with mail application layers...
+                            <span className="demo-dots"><span></span><span></span><span></span></span> Generating execution context loops...
                           </div>
                         </div>
                       )}
 
-                      {/* Bottom Context Info bar */}
                       <div style={{ padding: '6px 12px', background: '#07070a', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#525266' }}>
                         <span>Esc — закрыть</span>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -590,24 +591,53 @@ export default function LandingPage() {
                   </div>
                 )}
 
-                {/* Layer 3: Completed Target Action Window Overlay (Step 5 - Em Client Window) */}
+                {/* Layer 3: Completed Target Action Window Overlay (Step 5 - eM Client White Body) */}
                 {step === 5 && (
-                  <div style={{ position: 'absolute', top: '40px', left: '25px', right: '25px', height: '320px', zIndex: 20 }}>
+                  <div style={{ position: 'absolute', top: '25px', left: '15px', right: '15px', height: '360px', zIndex: 20 }}>
                     <div className="native-email-window" style={{ display: 'flex', flexDirection: 'column' }}>
-                      {/* Window Header */}
-                      <div style={{ background: '#17171d', padding: '8px 12px', fontSize: '11px', borderBottom: '1px solid #2b2b3a', display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontWeight: '500' }}>{t.emailSubject} — New Message</span>
-                        <div style={{ display: 'flex', gap: '4px' }}><span style={{ color: '#666' }}>‒</span><span style={{ color: '#666' }}>❑</span><span style={{ color: '#ea5454' }}>✕</span></div>
+                      
+                      <div style={{ background: '#22222b', padding: '8px 12px', fontSize: '11px', borderBottom: '1px solid #2d2d3d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: '500', color: '#d1d1d6' }}>{t.emailSubject} — New Message</span>
+                        <div style={{ display: 'flex', gap: '8px' }}><span style={{ color: '#8e8e93' }}>‒</span><span style={{ color: '#8e8e93' }}>❑</span><span style={{ color: '#ea5454' }}>✕</span></div>
                       </div>
-                      {/* Address Fields */}
-                      <div style={{ padding: '8px 12px', borderBottom: '1px solid #262635', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <div><span style={{ color: '#808090', marginRight: '8px' }}>To:</span><span style={{ background: '#2d2d3d', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>{t.emailTo}</span></div>
-                        <div><span style={{ color: '#808090', marginRight: '8px' }}>Subject:</span><span>{t.emailSubject}</span></div>
+
+                      <div style={{ background: '#1c1c24', padding: '10px 12px', borderBottom: '1px solid #2d2d3d', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <span style={{ color: '#8e8e93', width: '60px' }}>To:</span>
+                          <span style={{ background: '#2d2d3e', color: '#10ffd4', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', border: '1px solid #3d3d52' }}>
+                            {t.emailTo} <span style={{ marginLeft: '4px', color: '#8e8e93', cursor: 'pointer' }}>✕</span>
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', borderTop: '1px solid #252533', paddingTop: '6px' }}>
+                          <span style={{ color: '#8e8e93', width: '60px' }}>Subject:</span>
+                          <span style={{ color: '#ffffff', fontWeight: '500' }}>{t.emailSubject}</span>
+                        </div>
                       </div>
-                      {/* Generated Email Content Box */}
-                      <div style={{ padding: '12px', fontSize: '11.5px', color: '#dfdfea', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1, background: '#1a1a20', lineHeight: '1.5' }}>
-                        {t.emailBody}
+
+                      <div style={{ background: '#252530', borderBottom: '1px solid #323245', padding: '6px 12px', display: 'flex', gap: '12px', color: '#a0a0b0', fontSize: '11px' }}>
+                        <span><b>B</b></span> <span><i>I</i></span> <span><u>U</u></span> <span>⌸ Type</span> <span>📎 Attach</span>
                       </div>
+
+                      {/* WHITE WORKING AREA (From 1-5_2.png) */}
+                      <div className="email-content-area">
+                        <div style={{ color: '#0066cc', marginBottom: '12px' }}>
+                          <b>To:</b> <a href={`mailto:${t.emailTo}`} style={{ color: '#0066cc', textDecoration: 'underline' }}>{t.emailTo}</a><br />
+                          <b>Subject:</b> {t.emailSubject}
+                        </div>
+                        
+                        <div style={{ whiteSpace: 'pre-wrap', color: '#1a1a1a' }}>
+                          {t.emailBody}
+                        </div>
+
+                        {/* Professional Signature Block (From 1-5_2.png) */}
+                        <div style={{ marginTop: '24px', paddingTop: '12px', borderTop: '1px solid #e0e0e0', fontSize: '11px', color: '#555555', lineHeight: '1.5' }}>
+                          <b>Aristides D.</b><br />
+                          <span style={{ color: '#dd3b3b' }}>📞</span> +7 9919 57 56 47<br />
+                          ✉ support@assistant24.tech<br />
+                          🌐 <a href="https://assistant24.tech/index.html" target="_blank" rel="noreferrer" style={{ color: '#0066cc' }}>https://assistant24.tech/index.html</a>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 )}
@@ -630,8 +660,8 @@ export default function LandingPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
             {t.features.map((f, i) => (
-              <div key={i} className="feature-card" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '2rem' }}>
-                <div className="feature-icon" style={{ fontSize: '1.5rem', marginBottom: '1.25rem', color: 'var(--text-muted)', transition: 'color 0.2s' }}>{f.icon}</div>
+              <div key={i} className="feature-card" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '2rem', textAlign: 'left' }}>
+                <div className="feature-icon" style={{ fontSize: '1.5rem', marginBottom: '1.25rem', color: 'var(--text-muted)' }}>{f.icon}</div>
                 <p style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{f.eyebrow}</p>
                 <h3 style={{ fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: '1.15rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '0.875rem', lineHeight: 1.25 }}>{f.title}</h3>
                 <p style={{ fontSize: '0.875rem', lineHeight: 1.65, color: 'var(--text-secondary)' }}>{f.body}</p>
@@ -647,7 +677,7 @@ export default function LandingPage() {
               <h2 style={{ fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{t.vsTitle}</h2>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', textAlign: 'left' }}>
               <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem' }}>
                 <p style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '1rem' }}>{t.vsLabelBad}</p>
                 {t.vsBad.map((item, i) => (
@@ -695,9 +725,9 @@ export default function LandingPage() {
                 <tbody>
                   {t.differentTable.map((row, i) => (
                     <tr key={i} style={{ borderBottom: i < t.differentTable.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
-                      <td style={{ padding: '1.2rem 1.5rem', fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem', verticalAlign: 'top' }}>{row.feature}</td>
-                      <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.5, borderLeft: '1px solid var(--border)', verticalAlign: 'top' }}>{row.traditional}</td>
-                      <td style={{ padding: '1.2rem 1.5rem', color: 'var(--accent)', fontWeight: 500, fontSize: '0.88rem', lineHeight: 1.5, borderLeft: '1px solid var(--border)', verticalAlign: 'top' }}>{row.you}</td>
+                      <td style={{ padding: '1.2rem 1.5rem', fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem', verticalAlign: 'top', textAlign: 'left' }}>{row.feature}</td>
+                      <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.5, borderLeft: '1px solid var(--border)', verticalAlign: 'top', textAlign: 'left' }}>{row.traditional}</td>
+                      <td style={{ padding: '1.2rem 1.5rem', color: 'var(--accent)', fontWeight: 500, fontSize: '0.88rem', lineHeight: 1.5, borderLeft: '1px solid var(--border)', verticalAlign: 'top', textAlign: 'left' }}>{row.you}</td>
                     </tr>
                   ))}
                 </tbody>
