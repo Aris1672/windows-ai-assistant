@@ -11,7 +11,7 @@ const CONTENT = {
     headline2:  'lives in',
     sub:        "A contextual AI command palette for Windows. Hit the shortcut from any app — it sees what you're doing, surfaces the right actions, and gets it done. Not a chatbot. A co-worker.",
     download:   'Download for Windows',
-    freeBeta:   'Free during beta',
+    freeBeta:   '7-day free trial',
     signIn:     'Sign in',
     getStarted: 'Get started',
 
@@ -28,87 +28,110 @@ const CONTENT = {
       {
         eyebrow: 'Context-aware',
         title:   "It already knows what you're working on",
-        body:    'Active app, open folder, selected text — all captured the moment you press the shortcut. No describing the situation. It sees what you see.',
+        body:    'Active app, open folder, selected text, calendar — all captured the moment you press the shortcut. It even reads your files and sees your screen. No describing the situation.',
         icon:    '◎',
       },
       {
         eyebrow: 'Personalised',
         title:   'Compounds with every instruction',
-        body:    "Set rules once — \"keep it brief\", \"use Dutch\", \"always format as bullet points\" — and they're silently applied forever. Skills surface automatically based on context.",
+        body:    "Set rules once — \"keep it brief\", \"use Dutch\", \"always format as bullet points\" — and they're silently applied forever. Skills surface automatically based on what you're doing.",
         icon:    '✦',
+      },
+      {
+        eyebrow: 'Gets smarter',
+        title:   'Learns your workflows over time',
+        body:    'As you work, it detects recurring multi-step patterns in your actions and proactively suggests turning them into Skills — so the things you do every day take one click instead of ten.',
+        icon:    '◈',
+      },
+      {
+        eyebrow: 'Proactive',
+        title:   'Runs on your schedule, not just on demand',
+        body:    'Schedule any Skill to fire automatically — daily briefings, weekly summaries, end-of-day cleanup. It delivers results as a Windows notification while you focus on other things.',
+        icon:    '▷',
+      },
+      {
+        eyebrow: 'Actually acts',
+        title:   'Reads, writes, and works alongside you',
+        body:    "Attach a file, read a document, pin a response as a floating note, or have it write directly into your app. Read-only actions fire instantly. Destructive ones ask first.",
+        icon:    '◇',
       },
     ],
 
     vsTitle:    'Not a chatbot. Not a copilot. Something better.',
-    vsBad:      ['You go to it', 'Generic responses', 'You describe everything', 'Talks, doesn\'t act', 'Same for everyone'],
-    vsGood:     ['Always one keystroke away', 'Context-aware actions', 'It already knows', 'Reads AND executes', 'Personalised to you'],
+    vsBad:      [
+      'You go to it',
+      'Generic responses',
+      'You describe everything',
+      'Talks, doesn\'t act',
+      'Same for everyone',
+      'Waits for you',
+    ],
+    vsGood:     [
+      'Always one keystroke away',
+      'Context-aware actions',
+      'It already knows',
+      'Reads AND executes',
+      'Personalised — and learns',
+      'Runs on a schedule',
+    ],
     vsLabelBad: 'Typical AI chatbot',
-    vsLabelGood:'This',
-    competitorEyebrow: 'VS THE COMPETITION',
-competitorTitle: 'Why users choose us over ZupFlash',
+    vsLabelGood:'Assistant24',
 
-competitorTable: [
-  {
-    feature: 'Core Experience',
-    zup: 'Floating chat overlay',
-    you: 'Focused Command Palette with smart suggestions',
-  },
-  {
-    feature: 'Personalization',
-    zup: 'Basic memory',
-    you: 'Deep Instructions + Reusable Skills with context rules',
-  },
-  {
-    feature: 'Context Awareness',
-    zup: 'App + screenshots + clipboard',
-    you: 'App + file/folder path + selected text + smart matching',
-  },
-  {
-    feature: 'Management',
-    zup: 'None (local only)',
-    you: 'Full web dashboard (Skills, History, Analytics)',
-  },
-  {
-    feature: 'Setup',
-    zup: 'BYO API keys',
-    you: 'Simple login + zero key management',
-  },
-  {
-    feature: 'Action Safety',
-    zup: 'Consent-based tools',
-    you: 'Clear read vs destructive + confirmation flow',
-  },
-  {
-    feature: 'Multi-device Sync',
-    zup: 'None',
-    you: 'Full sync via Supabase',
-  },
-  {
-    feature: 'Long-term Value',
-    zup: 'Lightweight agent',
-    you: 'Personal AI co-worker that gets smarter',
-  },
-],
-
-competitorFooter: 'ZupFlash is a fast, lightweight AI agent.',
-competitorFooterStrong:
-  'Assistant24 is the personal co-worker that deeply understands your workflows.',
+    differentEyebrow: 'Why it feels different',
+    differentTitle:   'Why Assistant24 feels different',
+    differentTable: [
+      {
+        feature:     'Getting started',
+        traditional: 'Open a new tab or window',
+        you:         'One keystroke from any app',
+      },
+      {
+        feature:     'Context',
+        traditional: 'You explain the situation every time',
+        you:         'It already knows your app, file, and calendar',
+      },
+      {
+        feature:     'Working with files',
+        traditional: 'Copy and paste content manually',
+        you:         'Reads files, attaches documents, works with your data',
+      },
+      {
+        feature:     'Output',
+        traditional: 'Returns text you copy somewhere else',
+        you:         'Writes into your app, pins a note, copies to clipboard',
+      },
+      {
+        feature:     'Personalisation',
+        traditional: 'Same for everyone',
+        you:         'Your instructions and Skills, always active',
+      },
+      {
+        feature:     'Memory',
+        traditional: 'Forgets after each session',
+        you:         'Remembers your workflows and builds on them',
+      },
+      {
+        feature:     'Initiative',
+        traditional: 'Waits to be asked',
+        you:         'Detects patterns, suggests Skills, runs on schedule',
+      },
+    ],
 
     howEyebrow: 'How it works',
     howTitle:   'Three seconds from thought to done',
     steps: [
-      { n: '01', title: 'Press Ctrl + Space',    body: 'From anywhere on Windows. The palette appears instantly.' },
-      { n: '02', title: "See what's relevant",   body: 'Skills for your current app and folder surface automatically.' },
+      { n: '01', title: 'Press Ctrl + Space',    body: 'From anywhere on Windows. The palette appears instantly with context already loaded.' },
+      { n: '02', title: "See what's relevant",   body: 'Skills for your current app, folder, and calendar surface automatically. Or attach a file and ask anything about it.' },
       { n: '03', title: 'Act',                   body: 'Type a message, pick a skill, or just ask. Read-only actions fire immediately. Destructive ones ask first.' },
     ],
 
     ctaTitle:    'Ready to work differently?',
-    ctaSub:      'Free during beta. No credit card. Works on Windows 10 and 11.',
-    ctaBtn:      "Download for Windows — it's free",
+    ctaSub:      '7-day free trial. No credit card. Works on Windows 10 and 11.',
+    ctaBtn:      'Download for Windows — free trial',
     ctaSignIn:   'Already have an account?',
     ctaSignInLk: 'Sign in →',
 
-    footerSub:  'Windows only · © 2025 - 2026 Assistant24. All rights reserved..',
+    footerSub:  'Windows only · © 2025 - 2026 Assistant24. All rights reserved.',
 
     paletteContext: 'Microsoft Excel · Q3 Report.xlsx',
     paletteFolder:  '/Work/Finance',
@@ -126,9 +149,9 @@ competitorFooterStrong:
     badge:      'Windows',
     headline1:  'Ваш ИИ-помощник',
     headline2:  'живёт в',
-    sub:        'Контекстная AI-палитра команд для Windows. Нажмите горячую клавишу из любого приложения — она видит, что вы делаете, предлагает нужные действия и выполняет их. Не чат-бот. умный помощник.',
+    sub:        'Контекстная AI-палитра команд для Windows. Нажмите горячую клавишу из любого приложения — она видит, что вы делаете, предлагает нужные действия и выполняет их. Не чат-бот. Умный помощник.',
     download:   'Скачать для Windows',
-    freeBeta:   'Бесплатно в бета-период',
+    freeBeta:   '7 дней бесплатно',
     signIn:     'Войти',
     getStarted: 'Начать',
 
@@ -139,13 +162,13 @@ competitorFooterStrong:
       {
         eyebrow: 'Всегда рядом',
         title:   'Один горячий клавиш из любого места',
-        body:    'Нажмите Ctrl + Space из любого приложения, любого окна, в любой момент. Никаких переключений вкладок. Никаких чат-ботов. Ваш AI- помощник уже готов.',
+        body:    'Нажмите Ctrl + Space из любого приложения, любого окна, в любой момент. Никаких переключений вкладок. Никаких чат-ботов. Ваш AI-помощник уже готов.',
         icon:    '⌨',
       },
       {
         eyebrow: 'Понимает контекст',
         title:   'Он уже знает, над чем вы работаете',
-        body:    'Активное приложение, открытая папка, выделенный текст — всё захватывается в момент нажатия. Не нужно ничего объяснять. Он видит то же, что и вы.',
+        body:    'Активное приложение, открытая папка, выделенный текст, календарь — всё захватывается в момент нажатия. Читает файлы и видит экран. Не нужно ничего объяснять.',
         icon:    '◎',
       },
       {
@@ -154,75 +177,97 @@ competitorFooterStrong:
         body:    'Задайте правила один раз — «отвечай кратко», «используй русский», «форматируй списком» — и они применяются автоматически навсегда. Навыки появляются сами в нужном контексте.',
         icon:    '✦',
       },
+      {
+        eyebrow: 'Учится',
+        title:   'Запоминает ваши рабочие процессы',
+        body:    'По мере работы он обнаруживает повторяющиеся многошаговые паттерны и проактивно предлагает превратить их в Навыки — чтобы рутина занимала один клик вместо десяти.',
+        icon:    '◈',
+      },
+      {
+        eyebrow: 'Проактивен',
+        title:   'Работает по расписанию, не только по запросу',
+        body:    'Запланируйте любой Навык на автоматический запуск — утренняя сводка, еженедельный отчёт, уборка в конце дня. Результат приходит уведомлением Windows, пока вы занимаетесь другим.',
+        icon:    '▷',
+      },
+      {
+        eyebrow: 'Действует',
+        title:   'Читает, пишет и работает рядом с вами',
+        body:    'Прикрепите файл, прочитайте документ, закрепите ответ как плавающую заметку или пусть он сам вставит текст в приложение. Безопасные действия — мгновенно. Опасные — с подтверждением.',
+        icon:    '◇',
+      },
     ],
 
     vsTitle:    'Не чат-бот. Не копилот. Нечто лучшее.',
-    vsBad:      ['Вы идёте к нему', 'Общие ответы', 'Вы всё описываете', 'Говорит, но не делает', 'Одинаков для всех'],
-    vsGood:     ['Всегда в одном нажатии', 'Контекстные действия', 'Он уже знает', 'Читает И выполняет', 'Персонализирован под вас'],
+    vsBad:      [
+      'Вы идёте к нему',
+      'Общие ответы',
+      'Вы всё описываете',
+      'Говорит, но не делает',
+      'Одинаков для всех',
+      'Ждёт вас',
+    ],
+    vsGood:     [
+      'Всегда в одном нажатии',
+      'Контекстные действия',
+      'Он уже знает',
+      'Читает И выполняет',
+      'Персонализирован — и учится',
+      'Работает по расписанию',
+    ],
     vsLabelBad: 'Обычный AI-чат',
-    vsLabelGood:'Это',
+    vsLabelGood:'Assistant24',
 
-        competitorEyebrow: 'СРАВНЕНИЕ С КОНКУРЕНТАМИ',
-    competitorTitle: 'Почему пользователи выбирают нас вместо ZupFlash',
-
-    competitorTable: [
+    differentEyebrow: 'Почему это другое',
+    differentTitle:   'Почему Assistant24 ощущается иначе',
+    differentTable: [
       {
-        feature: 'Основной опыт',
-        zup: 'Плавающий чат-оверлей',
-        you: 'Сфокусированная палитра команд с умными подсказками',
+        feature:     'Запуск',
+        traditional: 'Открыть новую вкладку или окно',
+        you:         'Одна горячая клавиша из любого приложения',
       },
       {
-        feature: 'Персонализация',
-        zup: 'Базовая память',
-        you: 'Глубокие инструкции + переиспользуемые навыки и контекстные правила',
+        feature:     'Контекст',
+        traditional: 'Объясняете ситуацию каждый раз',
+        you:         'Уже знает ваше приложение, файл и календарь',
       },
       {
-        feature: 'Понимание контекста',
-        zup: 'Приложение + скриншоты + буфер обмена',
-        you: 'Приложение + путь к файлу/папке + выделенный текст + умное сопоставление',
+        feature:     'Работа с файлами',
+        traditional: 'Вручную копировать и вставлять содержимое',
+        you:         'Читает файлы, принимает документы, работает с вашими данными',
       },
       {
-        feature: 'Управление',
-        zup: 'Нет (только локально)',
-        you: 'Полная веб-панель (Навыки, История, Аналитика)',
+        feature:     'Результат',
+        traditional: 'Возвращает текст, который нужно куда-то скопировать',
+        you:         'Вставляет в приложение, закрепляет заметку, копирует в буфер',
       },
       {
-        feature: 'Настройка',
-        zup: 'Свои API-ключи',
-        you: 'Простой вход + без управления ключами',
+        feature:     'Персонализация',
+        traditional: 'Одинаков для всех',
+        you:         'Ваши инструкции и Навыки, всегда активны',
       },
       {
-        feature: 'Безопасность действий',
-        zup: 'Инструменты с подтверждением',
-        you: 'Чёткое разделение чтения и опасных действий + подтверждение',
+        feature:     'Память',
+        traditional: 'Забывает после каждой сессии',
+        you:         'Запоминает рабочие процессы и развивается вместе с вами',
       },
       {
-        feature: 'Синхронизация между устройствами',
-        zup: 'Нет',
-        you: 'Полная синхронизация через Supabase',
-      },
-      {
-        feature: 'Долгосрочная ценность',
-        zup: 'Лёгкий AI-агент',
-        you: 'Персональный AI-помощник, который становится умнее',
+        feature:     'Инициатива',
+        traditional: 'Ждёт запроса',
+        you:         'Замечает паттерны, предлагает Навыки, работает по расписанию',
       },
     ],
-
-    competitorFooter: 'ZupFlash — быстрый и лёгкий AI-агент.',
-    competitorFooterStrong:
-      'Assistant24 — персональный AI-помощник, который глубоко понимает ваши рабочие процессы.',
 
     howEyebrow: 'Как это работает',
     howTitle:   'От мысли до результата — три секунды',
     steps: [
-      { n: '01', title: 'Нажмите Ctrl + Space',   body: 'Из любого места в Windows. Палитра появляется мгновенно.' },
-      { n: '02', title: 'Видите нужное',           body: 'Навыки для текущего приложения и папки появляются автоматически.' },
+      { n: '01', title: 'Нажмите Ctrl + Space',   body: 'Из любого места в Windows. Палитра появляется мгновенно — контекст уже загружен.' },
+      { n: '02', title: 'Видите нужное',           body: 'Навыки для текущего приложения, папки и календаря появляются автоматически. Или прикрепите файл и спросите о чём угодно.' },
       { n: '03', title: 'Действуйте',              body: 'Напишите сообщение, выберите навык или просто спросите. Безопасные действия — сразу. Деструктивные — с подтверждением.' },
     ],
 
     ctaTitle:    'Готовы работать иначе?',
-    ctaSub:      'Бесплатно в бета-период. Без карты. Работает на Windows 10 и 11.',
-    ctaBtn:      'Скачать для Windows — бесплатно',
+    ctaSub:      '7 дней бесплатно. Без карты. Работает на Windows 10 и 11.',
+    ctaBtn:      'Скачать для Windows — 7 дней бесплатно',
     ctaSignIn:   'Уже есть аккаунт?',
     ctaSignInLk: 'Войти →',
 
@@ -280,6 +325,8 @@ export default function LandingPage() {
         .lang-btn.active { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
         .lang-btn:not(.active):hover { border-color: var(--border); color: var(--text-secondary); }
         .kbd { display: inline-block; background: var(--surface-3); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 0.1rem 0.45rem; font-size: 0.8em; font-family: monospace; color: var(--text-secondary); line-height: 1.5; }
+        .diff-row-you { color: var(--accent); font-weight: 500; }
+        .diff-row-traditional { color: var(--text-secondary); }
       `}</style>
 
       <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--text-primary)', fontFamily: 'var(--font-body), system-ui, sans-serif' }}>
@@ -424,7 +471,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Comparison ───────────────────────────────────────────────────── */}
+        {/* ── Comparison (vs generic AI chat) ──────────────────────────────── */}
         <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto', padding: '80px 2rem' }}>
             <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
@@ -435,7 +482,7 @@ export default function LandingPage() {
               <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem' }}>
                 <p style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '1rem' }}>{t.vsLabelBad}</p>
                 {t.vsBad.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0', borderBottom: i < 4 ? '1px solid var(--border-subtle)' : 'none' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0', borderBottom: i < t.vsBad.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
                     <span style={{ color: 'var(--error)', fontSize: '0.75rem' }}>✕</span>
                     <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{item}</span>
                   </div>
@@ -445,7 +492,7 @@ export default function LandingPage() {
               <div style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', borderRadius: '12px', padding: '1.5rem' }}>
                 <p style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '1rem' }}>{t.vsLabelGood}</p>
                 {t.vsGood.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0', borderBottom: i < 4 ? '1px solid var(--accent-border)' : 'none' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.5rem 0', borderBottom: i < t.vsGood.length - 1 ? '1px solid var(--accent-border)' : 'none' }}>
                     <span style={{ color: 'var(--accent)', fontSize: '0.75rem' }}>✓</span>
                     <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)' }}>{item}</span>
                   </div>
@@ -455,126 +502,111 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Competitor Comparison ───────────────────────────────────────────── */}
-<section style={{ borderTop: '1px solid var(--border)', background: 'var(--surface-1)', padding: '100px 2rem' }}>
-  <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+        {/* ── Why it feels different (replaces ZupFlash comparison) ────────── */}
+        <section style={{ borderTop: '1px solid var(--border)', background: 'var(--surface-1)', padding: '100px 2rem' }}>
+          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
 
-    <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-      <p style={{
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        color: 'var(--accent)',
-        marginBottom: '0.875rem'
-      }}>
-        {t.competitorEyebrow}
-      </p>
-
-      <h2 style={{
-        fontFamily: 'var(--font-display), system-ui, sans-serif',
-        fontSize: 'clamp(1.7rem, 3vw, 2.4rem)',
-        fontWeight: 700,
-        letterSpacing: '-0.025em',
-        color: 'var(--text-primary)',
-        lineHeight: 1.15
-      }}>
-        {t.competitorTitle}
-      </h2>
-    </div>
-
-    <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '920px', background: 'var(--surface-1)' }}>
-        <thead>
-          <tr style={{ borderBottom: '2px solid var(--border)' }}>
-            <th style={{
-              textAlign: 'left',
-              padding: '1.25rem 1.75rem',
-              fontWeight: 600,
-              color: 'var(--text-muted)',
-              fontSize: '0.8rem',
-              width: '28%'
-            }}></th>
-
-            <th style={{
-              textAlign: 'center',
-              padding: '1.25rem 1rem',
-              fontWeight: 600,
-              color: 'var(--text-muted)',
-              fontSize: '0.82rem',
-              borderBottom: '3px solid #555'
-            }}>
-              ZupFlash
-            </th>
-
-            <th style={{
-              textAlign: 'center',
-              padding: '1.25rem 1rem',
-              fontWeight: 700,
-              color: 'var(--accent)',
-              fontSize: '0.95rem',
-              borderBottom: '3px solid var(--accent)'
-            }}>
-              Assistant24 <span style={{ fontSize: '0.75rem', fontWeight: 500, opacity: 0.9 }}>
-                ({lang === 'ru' ? 'Это' : 'This'})
-              </span>
-            </th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {t.competitorTable.map((row, i) => (
-            <tr key={i} style={{ borderBottom: i < 7 ? '1px solid var(--border-subtle)' : 'none' }}>
-              <td style={{
-                padding: '1.35rem 1.75rem',
+            <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+              <p style={{
+                fontSize: '0.75rem',
                 fontWeight: 600,
-                color: 'var(--text-primary)',
-                fontSize: '0.95rem'
-              }}>
-                {row.feature}
-              </td>
-
-              <td style={{
-                padding: '1.35rem 1rem',
-                textAlign: 'center',
-                color: 'var(--text-secondary)',
-                fontSize: '0.9rem',
-                borderLeft: '1px solid var(--border)'
-              }}>
-                {row.zup}
-              </td>
-
-              <td style={{
-                padding: '1.35rem 1rem',
-                textAlign: 'center',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
                 color: 'var(--accent)',
-                fontWeight: 500,
-                fontSize: '0.9rem',
-                borderLeft: '1px solid var(--border)'
+                marginBottom: '0.875rem'
               }}>
-                {row.you}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                {t.differentEyebrow}
+              </p>
+              <h2 style={{
+                fontFamily: 'var(--font-display), system-ui, sans-serif',
+                fontSize: 'clamp(1.7rem, 3vw, 2.4rem)',
+                fontWeight: 700,
+                letterSpacing: '-0.025em',
+                color: 'var(--text-primary)',
+                lineHeight: 1.15
+              }}>
+                {t.differentTitle}
+              </h2>
+            </div>
 
-    <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-      <p style={{
-        fontSize: '1.05rem',
-        color: 'var(--text-secondary)',
-        maxWidth: '620px',
-        margin: '0 auto',
-        lineHeight: 1.6
-      }}>
-        {t.competitorFooter}<br />
-        <strong>{t.competitorFooterStrong}</strong>
-      </p>
-    </div>
+            <div style={{ borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--surface-1)' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                    <th style={{
+                      textAlign: 'left',
+                      padding: '1.1rem 1.5rem',
+                      fontWeight: 600,
+                      color: 'var(--text-muted)',
+                      fontSize: '0.78rem',
+                      width: '22%',
+                    }}></th>
+                    <th style={{
+                      textAlign: 'left',
+                      padding: '1.1rem 1.5rem',
+                      fontWeight: 600,
+                      color: 'var(--text-muted)',
+                      fontSize: '0.82rem',
+                      borderLeft: '1px solid var(--border)',
+                      width: '39%',
+                    }}>
+                      {lang === 'ru' ? 'Обычный AI-чат' : 'Traditional AI chat'}
+                    </th>
+                    <th style={{
+                      textAlign: 'left',
+                      padding: '1.1rem 1.5rem',
+                      fontWeight: 700,
+                      color: 'var(--accent)',
+                      fontSize: '0.95rem',
+                      borderLeft: '1px solid var(--border)',
+                      borderBottom: '3px solid var(--accent)',
+                      width: '39%',
+                    }}>
+                      Assistant24
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {t.differentTable.map((row, i) => (
+                    <tr key={i} style={{ borderBottom: i < t.differentTable.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
+                      <td style={{
+                        padding: '1.2rem 1.5rem',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        fontSize: '0.9rem',
+                        verticalAlign: 'top',
+                      }}>
+                        {row.feature}
+                      </td>
+                      <td style={{
+                        padding: '1.2rem 1.5rem',
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.88rem',
+                        lineHeight: 1.5,
+                        borderLeft: '1px solid var(--border)',
+                        verticalAlign: 'top',
+                      }}>
+                        {row.traditional}
+                      </td>
+                      <td style={{
+                        padding: '1.2rem 1.5rem',
+                        color: 'var(--accent)',
+                        fontWeight: 500,
+                        fontSize: '0.88rem',
+                        lineHeight: 1.5,
+                        borderLeft: '1px solid var(--border)',
+                        verticalAlign: 'top',
+                      }}>
+                        {row.you}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-  </div>
-</section>
+          </div>
+        </section>
 
         {/* ── How it works ─────────────────────────────────────────────────── */}
         <section style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 2rem' }}>
