@@ -146,6 +146,11 @@ const CONTENT = {
       '2. **Recipient** — Who is this going to?',
       '3. **Language** — Which language should the email be composed in?'
     ],
+    demoUserTypedInputs: [
+      'Subject: Week 24 Sales Summary',
+      'To: sales@salescom',
+      'Language: English'
+    ],
     emailSubject: 'Week 24 Sales Summary',
     emailTo: 'sales@salescom',
     emailBody: 'Dear Team,\n\nPlease find below the executive summary for our sales performance during Week 24, 2026.\n\n**Overall Performance**\nTotal company-wide sales reached **$92,000**, with a strong finish — Friday alone accounted for $22,600, the highest single day.'
@@ -229,10 +234,10 @@ const CONTENT = {
       {
         feature:     'Запуск',
         traditional: 'Открыть новую вкладку или окно',
-        you:         'Одна горячая клавиша из любого приложения',
+        you:         'Одна горячая копия из любого приложения',
       },
       {
-        feature:     'Контекст',
+        feature:     'Context',
         traditional: 'Объясняете ситуацию каждый раз',
         you:         'Уже знает ваше приложение, файл и календарь',
       },
@@ -290,6 +295,11 @@ const CONTENT = {
       '2. **Получатель** — Кому отправить письмо?',
       '3. **Язык** — На каком языке составить текст?'
     ],
+    demoUserTypedInputs: [
+      'Тема: Week 24 Sales Summary',
+      'Кому: sales@salescom',
+      'Язык: Английский'
+    ],
     emailSubject: 'Week 24 Sales Summary',
     emailTo: 'sales@salescom',
     emailBody: 'Dear Team,\n\nPlease find below the executive summary for our sales performance during Week 24, 2026.\n\n**Overall Performance**\nTotal company-wide sales reached **$92,000**, with a strong finish — Friday alone accounted for $22,600, the highest single day.'
@@ -302,19 +312,28 @@ export default function LandingPage() {
   const [lang, setLang] = useState<Lang>('en')
   const t = CONTENT[lang]
 
-  // ── Flow Steps matching screenshots 1-1 to 1-5
-  // 0: App baseline (1-1)
-  // 1: Shortcut triggered & Palette appears empty with Quick actions (1-2 overlay)
-  // 2: Typing prompt (1-2 query typed)
-  // 3: AI processes & queries context, prints analysis (1-3 / 1-4)
-  // 4: Final action executed - Outlook/EM Client Window overlays (1-5)
+  // ── Расширенный таймлайн шагов (0 по 5)
+  // 0: App baseline (OpenOffice Grid)
+  // 1: Shortcut triggered & Palette surfaces
+  // 2: Typing user's primary prompt (demoQuery)
+  // 3: [НОВЫЙ ШАГ] ИИ выводит вопросы, пользователь вбивает параметры почты
+  // 4: AI processes everything, reads grid data, runs pipeline
+  // 5: Final output window triggers (Outlook layout overlay)
   const [step, setStep] = useState(0)
   const [typed, setTyped] = useState(0)
-  const CHAR_DELAY = 30
+  const [inputSubStep, setInputSubStep] = useState(0) // Индикатор заполнения полей на шаге 3
+  const CHAR_DELAY = 25
 
   useEffect(() => {
-    const durations = [2200, 1000, t.demoQuery.length * CHAR_DELAY + 800, 4000, 4500]
-    const id = setTimeout(() => setStep(s => (s + 1) % 5), durations[step])
+    const durations = [
+      2200, 
+      1000, 
+      t.demoQuery.length * CHAR_DELAY + 500, 
+      3800, // Время на симуляцию интерактивного ответа пользователя
+      2500, 
+      4500
+    ]
+    const id = setTimeout(() => setStep(s => (s + 1) % 6), durations[step])
     return () => clearTimeout(id)
   }, [step, lang, t.demoQuery.length])
 
@@ -328,6 +347,15 @@ export default function LandingPage() {
     }, CHAR_DELAY)
     return () => clearInterval(id)
   }, [step, lang, t.demoQuery.length])
+
+  // Симуляция поэтапного заполнения полей ввода на новом шаге 3
+  useEffect(() => {
+    if (step !== 3) { setInputSubStep(0); return }
+    const t1 = setTimeout(() => setInputSubStep(1), 1000)
+    const t2 = setTimeout(() => setInputSubStep(2), 2000)
+    const t3 = setTimeout(() => setInputSubStep(3), 3000)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); }
+  }, [step])
 
   return (
     <>
@@ -456,13 +484,13 @@ export default function LandingPage() {
                 {/* Base Layer: Host App (OpenOffice Calc Canvas) */}
                 <div style={{
                   position: 'absolute', inset: 0, background: '#ffffff', border: '1px solid #b5b5b5', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
-                  filter: step >= 1 && step < 4 ? 'brightness(0.7)' : 'none', transition: 'filter 0.3s'
+                  filter: step >= 1 && step < 5 ? 'brightness(0.7)' : 'none', transition: 'filter 0.3s'
                 }}>
                   {/* Fake OpenOffice Menu Chrome */}
                   <div style={{ background: '#f6f6f6', borderBottom: '1px solid #d5d5d5', padding: '5px 8px', fontSize: '11px', color: '#444', display: 'flex', gap: '10px' }}>
                     <span>Файл</span><span>Правка</span><span>Вид</span><span>Вставка</span><span>Формат</span><span>Сервис</span>
                   </div>
-                  {/* Spreadsheet Grid Mock */}
+                  {/* Spreadsheet Grid Mock with verified exact code values */}
                   <div style={{ padding: '8px' }}>
                     <table className="openoffice-grid">
                       <thead>
@@ -480,13 +508,13 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Layer 2: Real Assistant24 Overlay Panel (Active steps 1, 2, 3) */}
-                {step >= 1 && step <= 3 && (
+                {/* Layer 2: Real Assistant24 Overlay Panel (Active steps 1 to 4) */}
+                {step >= 1 && step <= 4 && (
                   <div className="palette-float" style={{ position: 'absolute', top: '25px', right: '15px', width: '370px', zIndex: 10 }}>
                     <div className="assistant-panel">
                       
-                      {/* Real Header Layout matching Screenshot 1-2 */}
-                      <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', padding: '8px 12px', background: '#09090d', borderBottom: '1px solid #1a1a26' }}>
+                      {/* Header Layout */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#09090d', borderBottom: '1px solid #1a1a26' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#10ffd4', background: 'rgba(16,255,212,0.1)', padding: '2px 5px', borderRadius: '4px', letterSpacing: '0.03em' }}>
                             {t.appContextName}
@@ -520,17 +548,31 @@ export default function LandingPage() {
                         </div>
                       </div>
 
-                      {/* Dynamic Output States (1-3 / 1-4 markdown outputs) */}
+                      {/* NEW STEP 3: User inputs parameters before full email draft generation */}
                       {step === 3 && (
-                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', maxHeight: '180px', overflowY: 'auto', borderTop: '1px solid #181824' }}>
-                          <div style={{ color: '#10ffd4', fontWeight: '600', marginBottom: '6px' }}>{t.demoAnalysisTitle}</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', color: '#c0c0d0' }}>
-                            {t.demoAnalysisLines.map((line, lIdx) => (
-                              <div key={lIdx} style={{ background: '#12121a', padding: '6px', borderRadius: '4px', border: '1px solid #222' }}>{line}</div>
+                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', borderTop: '1px solid #181824' }}>
+                          <div style={{ color: '#10ffd4', fontWeight: '600', marginBottom: '8px' }}>{t.demoAnalysisTitle}</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            {t.demoAnalysisLines.map((line, idx) => (
+                              <div key={idx} style={{ background: '#12121a', padding: '6px', borderRadius: '4px', border: '1px solid #1d1d29', position: 'relative' }}>
+                                <div style={{ color: '#a2a2b0' }}>{line}</div>
+                                {/* Симуляция живого ввода текста пользователем поочередно */}
+                                {inputSubStep > idx && (
+                                  <div style={{ marginTop: '4px', paddingLeft: '12px', color: '#10ffd4', fontWeight: '500', fontFamily: 'monospace' }}>
+                                    &gt; {t.demoUserTypedInputs[idx]}
+                                  </div>
+                                )}
+                              </div>
                             ))}
                           </div>
-                          <div style={{ marginTop: '8px', display: 'flex', gap: '4px', alignItems: 'center', fontSize: '11px', color: '#707080' }}>
-                            <span className="demo-dots"><span></span><span></span><span></span></span> Generating execution context...
+                        </div>
+                      )}
+
+                      {/* Dynamic Output State (Step 4: final execution pipeline loading) */}
+                      {step === 4 && (
+                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', borderTop: '1px solid #181824' }}>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '12px', color: '#a0a0b2' }}>
+                            <span className="demo-dots"><span></span><span></span><span></span></span> Synchronizing with mail application layers...
                           </div>
                         </div>
                       )}
@@ -548,8 +590,8 @@ export default function LandingPage() {
                   </div>
                 )}
 
-                {/* Layer 3: Completed Target Action Window Overlay (Step 4 - EM Client/Outlook match) */}
-                {step === 4 && (
+                {/* Layer 3: Completed Target Action Window Overlay (Step 5 - Em Client Window) */}
+                {step === 5 && (
                   <div style={{ position: 'absolute', top: '40px', left: '25px', right: '25px', height: '320px', zIndex: 20 }}>
                     <div className="native-email-window" style={{ display: 'flex', flexDirection: 'column' }}>
                       {/* Window Header */}
@@ -643,7 +685,7 @@ export default function LandingPage() {
                   <tr style={{ borderBottom: '2px solid var(--border)' }}>
                     <th style={{ textAlign: 'left', padding: '1.1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.78rem', width: '22%' }}></th>
                     <th style={{ textAlign: 'left', padding: '1.1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.82rem', borderLeft: '1px solid var(--border)', width: '39%' }}>
-                      {lang === 'ru' ? 'Обычный AI-чат' : 'Traditional AI chat'}
+                      Traditional AI chat
                     </th>
                     <th style={{ textAlign: 'left', padding: '1.1rem 1.5rem', fontWeight: 700, color: 'var(--accent)', fontSize: '0.95rem', borderLeft: '1px solid var(--border)', borderBottom: '3px solid var(--accent)', width: '39%' }}>
                       Assistant24
