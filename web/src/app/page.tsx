@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 // ── Content ───────────────────────────────────────────────────────────────────
@@ -143,6 +143,25 @@ const CONTENT = {
       { label: 'Translate to Dutch',     icon: '◇', active: false },
       { label: 'Prepare meeting notes',  icon: '▷', active: false },
     ],
+
+    // Hero "magic moment" demo
+    demoExcelTitle:   'Q3 Report.xlsx',
+    demoExcelHeaders: ['', 'Q2', 'Q3', 'Δ'],
+    demoExcelRows: [
+      ['Revenue',        '$1.42M', '$1.68M', '+18%'],
+      ['Gross margin',   '33%',    '34%',    '+1pt'],
+      ['Headcount',      '58',     '65',     '+12%'],
+      ['New customers',  '24',     '31',     '+29%'],
+    ],
+    demoQuery:        'Summarize this report',
+    demoReading:      'Reading Q3 Report.xlsx…',
+    demoResultTitle:  'Summary',
+    demoBullets: [
+      'Revenue up 18% QoQ, led by EU expansion',
+      'Gross margin holding steady at 34%',
+      'Headcount grew 12%, mostly engineering',
+    ],
+    demoAction: 'Inserted into Excel',
   },
 
   ru: {
@@ -283,6 +302,25 @@ const CONTENT = {
       { label: 'Перевести на русский',       icon: '◇', active: false },
       { label: 'Подготовить протокол',       icon: '▷', active: false },
     ],
+
+    // Hero "magic moment" demo
+    demoExcelTitle:   'Отчёт Q3.xlsx',
+    demoExcelHeaders: ['', 'Q2', 'Q3', 'Δ'],
+    demoExcelRows: [
+      ['Выручка',         '$1.42М', '$1.68М', '+18%'],
+      ['Рентабельность',  '33%',    '34%',    '+1пт'],
+      ['Сотрудники',      '58',     '65',     '+12%'],
+      ['Новые клиенты',   '24',     '31',     '+29%'],
+    ],
+    demoQuery:        'Суммировать этот отчёт',
+    demoReading:      'Читаю Отчёт Q3.xlsx…',
+    demoResultTitle:  'Сводка',
+    demoBullets: [
+      'Выручка выросла на 18% — рост за счёт ЕС',
+      'Рентабельность стабильна на уровне 34%',
+      'Штат вырос на 12%, в основном инженеры',
+    ],
+    demoAction: 'Вставлено в Excel',
   },
 } as const
 
@@ -291,6 +329,30 @@ type Lang = 'en' | 'ru'
 export default function LandingPage() {
   const [lang, setLang] = useState<Lang>('en')
   const t = CONTENT[lang]
+
+  // ── Hero "magic moment" demo: 0 screen · 1 hotkey · 2 typing · 3 thinking · 4 result
+  const [step, setStep] = useState(0)
+  const [typed, setTyped] = useState(0)
+  const CHAR_DELAY = 45
+
+  useEffect(() => {
+    const durations = [2400, 650, t.demoQuery.length * CHAR_DELAY + 550, 950, 2900]
+    const id = setTimeout(() => setStep(s => (s + 1) % 5), durations[step])
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, lang])
+
+  useEffect(() => {
+    if (step !== 2) { setTyped(0); return }
+    let i = 0
+    const id = setInterval(() => {
+      i += 1
+      setTyped(i)
+      if (i >= t.demoQuery.length) clearInterval(id)
+    }, CHAR_DELAY)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, lang])
 
   return (
     <>
@@ -327,6 +389,20 @@ export default function LandingPage() {
         .kbd { display: inline-block; background: var(--surface-3); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 0.1rem 0.45rem; font-size: 0.8em; font-family: monospace; color: var(--text-secondary); line-height: 1.5; }
         .diff-row-you { color: var(--accent); font-weight: 500; }
         .diff-row-traditional { color: var(--text-secondary); }
+        @keyframes keyPulse {
+          0%   { transform: scale(0.85); opacity: 0; }
+          35%  { transform: scale(1.04); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes dotPulse {
+          0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+          40%            { opacity: 1;    transform: scale(1); }
+        }
+        .demo-key { animation: keyPulse 0.4s ease both; }
+        .demo-dots { display: inline-flex; gap: 4px; }
+        .demo-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); display: inline-block; animation: dotPulse 1.1s ease-in-out infinite; }
+        .demo-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .demo-dots span:nth-child(3) { animation-delay: 0.3s; }
       `}</style>
 
       <div style={{ background: 'var(--bg)', minHeight: '100vh', color: 'var(--text-primary)', fontFamily: 'var(--font-body), system-ui, sans-serif' }}>
@@ -400,51 +476,162 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right: palette illustration */}
+            {/* Right: "magic moment" demo — Excel → Ctrl+Space → query → AI result */}
             <div style={{ display: 'flex', justifyContent: 'center' }} className="palette-float">
-              <div style={{ width: '100%', maxWidth: '380px', background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(255,255,255,0.03) inset, 0 32px 80px rgba(0,0,0,0.7), 0 0 60px rgba(15,255,212,0.04)' }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: '380px', height: '430px' }}>
 
-                {/* Window chrome */}
-                <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
-                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
-                  <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
-                  <div style={{ flex: 1, textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-                    {t.paletteContext}
+                {/* Background layer: the user's actual screen (Excel) */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px',
+                  overflow: 'hidden',
+                  boxShadow: '0 32px 80px rgba(0,0,0,0.55)',
+                  filter: step >= 1 ? 'blur(2px) brightness(0.45)' : 'none',
+                  transform: step >= 1 ? 'scale(0.97)' : 'scale(1)',
+                  transition: 'filter 0.5s ease, transform 0.5s ease',
+                }}>
+                  <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
+                    <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
+                    <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
+                    <div style={{ flex: 1, textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>{t.demoExcelTitle}</div>
+                  </div>
+                  <div style={{ padding: '1.25rem 1.1rem' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem' }}>
+                      <thead>
+                        <tr>
+                          {t.demoExcelHeaders.map((h, i) => (
+                            <th key={i} style={{ textAlign: i === 0 ? 'left' : 'right', padding: '0.4rem 0.3rem', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {t.demoExcelRows.map((row, ri) => (
+                          <tr key={ri}>
+                            {row.map((cell, ci) => (
+                              <td key={ci} style={{
+                                textAlign: ci === 0 ? 'left' : 'right',
+                                padding: '0.45rem 0.3rem',
+                                borderBottom: '1px solid var(--border-subtle)',
+                                fontWeight: ci === 0 ? 600 : 400,
+                                color: ci === 0 ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                outline: (ri === 0 && ci === 2) ? '1.5px solid var(--accent)' : 'none',
+                                outlineOffset: '-1px',
+                                background: (ri === 0 && ci === 2) ? 'var(--accent-dim)' : 'transparent',
+                              }}>{cell}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
-                {/* Search input */}
-                <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ color: 'var(--accent)', fontSize: '0.9rem' }}>⌘</span>
-                  <span style={{ flex: 1, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                    {t.palettePlaceholder}<span className="cursor" style={{ color: 'var(--accent)' }}>▌</span>
-                  </span>
-                  <span className="kbd">Esc</span>
-                </div>
-
-                {/* Context chips */}
-                <div style={{ padding: '0.5rem 1rem', display: 'flex', gap: '0.4rem' }}>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.15rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <span style={{ color: 'var(--accent)', fontSize: '0.6rem' }}>◎</span> Excel
-                  </span>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.15rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <span style={{ fontSize: '0.6rem' }}>📁</span> {t.paletteFolder}
-                  </span>
-                </div>
-
-                {/* Skill list */}
-                <div style={{ padding: '0.25rem 0.5rem 0.75rem' }}>
-                  {t.paletteItems.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 0.625rem', borderRadius: '8px', background: item.active ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${item.active ? 'var(--accent-border)' : 'transparent'}`, marginBottom: '0.125rem' }}>
-                      <span style={{ color: item.active ? 'var(--accent)' : 'var(--text-muted)', fontSize: '0.8rem', width: '16px', textAlign: 'center' }}>{item.icon}</span>
-                      <span style={{ fontSize: '0.875rem', color: item.active ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: item.active ? 500 : 400 }}>{item.label}</span>
-                      {item.active && <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-muted)' }}>↵</span>}
+                {/* Hotkey press indicator */}
+                <div style={{
+                  position: 'absolute', top: '50%', left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  opacity: step === 1 ? 1 : 0,
+                  transition: 'opacity 0.2s ease',
+                  pointerEvents: 'none', zIndex: 5,
+                }}>
+                  {step === 1 && (
+                    <div className="demo-key" style={{ background: 'var(--surface-2)', border: '1px solid var(--accent-border)', borderRadius: '10px', padding: '0.6rem 1.1rem', boxShadow: '0 10px 30px rgba(0,0,0,0.55)' }}>
+                      <span className="kbd" style={{ fontSize: '0.95rem', color: 'var(--accent)' }}>Ctrl + Space</span>
                     </div>
-                  ))}
+                  )}
                 </div>
+
+                {/* Foreground layer: the command palette overlay */}
+                <div style={{
+                  position: 'absolute', left: 0, right: 0, bottom: step === 0 ? '4px' : '22px',
+                  margin: '0 auto', width: '92%',
+                  opacity: step === 0 ? 0 : 1,
+                  transform: step === 0 ? 'translateY(14px) scale(0.96)' : 'translateY(0) scale(1)',
+                  transition: 'opacity 0.4s ease, transform 0.4s ease, bottom 0.4s ease',
+                  zIndex: 4,
+                }}>
+                  <div style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 0 0 1px rgba(255,255,255,0.03) inset, 0 32px 80px rgba(0,0,0,0.7), 0 0 60px rgba(15,255,212,0.06)' }}>
+
+                    {/* Window chrome */}
+                    <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
+                      <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
+                      <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#3A3A44' }} />
+                      <div style={{ flex: 1, textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                        {t.paletteContext}
+                      </div>
+                    </div>
+
+                    {/* Search input */}
+                    <div style={{ padding: '0.875rem 1rem', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <span style={{ color: 'var(--accent)', fontSize: '0.9rem' }}>⌘</span>
+                      <span style={{ flex: 1, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                        {step >= 2 ? t.demoQuery.slice(0, step === 2 ? typed : t.demoQuery.length) : t.palettePlaceholder}
+                        {step === 2 && <span className="cursor" style={{ color: 'var(--accent)' }}>▌</span>}
+                      </span>
+                      <span className="kbd">Esc</span>
+                    </div>
+
+                    {/* Context chips */}
+                    <div style={{ padding: '0.5rem 1rem', display: 'flex', gap: '0.4rem' }}>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.15rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <span style={{ color: 'var(--accent)', fontSize: '0.6rem' }}>◎</span> Excel
+                      </span>
+                      <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '4px', padding: '0.15rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <span style={{ fontSize: '0.6rem' }}>📁</span> {t.paletteFolder}
+                      </span>
+                    </div>
+
+                    {/* Body: idle skill list → reading/thinking → AI result */}
+                    <div style={{ padding: '0.25rem 0.5rem 0.875rem', minHeight: '142px' }}>
+                      {step <= 1 && t.paletteItems.slice(0, 3).map((item, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 0.625rem', borderRadius: '8px', background: item.active ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${item.active ? 'var(--accent-border)' : 'transparent'}`, marginBottom: '0.125rem' }}>
+                          <span style={{ color: item.active ? 'var(--accent)' : 'var(--text-muted)', fontSize: '0.8rem', width: '16px', textAlign: 'center' }}>{item.icon}</span>
+                          <span style={{ fontSize: '0.875rem', color: item.active ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: item.active ? 500 : 400 }}>{item.label}</span>
+                          {item.active && <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-muted)' }}>↵</span>}
+                        </div>
+                      ))}
+
+                      {step === 2 && (
+                        <div style={{ padding: '0.75rem 0.625rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.55rem 0.625rem', borderRadius: '8px', background: 'var(--accent-dim)', border: '1px solid var(--accent-border)' }}>
+                            <span style={{ color: 'var(--accent)', fontSize: '0.8rem', width: '16px', textAlign: 'center' }}>◈</span>
+                            <span style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontWeight: 500 }}>{t.paletteItems[0].label}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {step === 3 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.875rem 0.625rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                          <span className="demo-dots"><span /><span /><span /></span>
+                          {t.demoReading}
+                        </div>
+                      )}
+
+                      {step === 4 && (
+                        <div style={{ padding: '0.75rem 0.625rem', animation: 'fadeUp 0.35s ease' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                            <span style={{ color: 'var(--accent)', fontSize: '0.8rem' }}>✓</span>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-primary)' }}>{t.demoResultTitle}</span>
+                          </div>
+                          <ul style={{ margin: 0, paddingLeft: '1.1rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                            {t.demoBullets.map((b, i) => (
+                              <li key={i} style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{b}</li>
+                            ))}
+                          </ul>
+                          <div style={{ marginTop: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.7rem', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', borderRadius: '100px', padding: '0.2rem 0.6rem' }}>
+                            <span>↳</span>{t.demoAction}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
+
 
           </div>
         </section>
