@@ -581,17 +581,20 @@ export default function LandingPage() {
                   </div>
                 )}
 
-                {/* ── Palette panel (slides in from right) ── */}
+                {/* ── Palette panel (slides in from right, compact then grows) ── */}
                 <div style={{
-                  position: 'absolute', top: 0, right: 0, bottom: 0, width: '62%',
+                  position: 'absolute', top: 28, right: 0, width: '62%',
                   background: '#1a1a1f',
                   borderLeft: '1px solid #2a2a35',
+                  borderBottom: '1px solid #2a2a35',
+                  borderBottomLeftRadius: '8px',
                   display: 'flex', flexDirection: 'column',
                   transform: step >= 2 ? 'translateX(0)' : 'translateX(100%)',
                   opacity: step >= 2 ? 1 : 0,
                   transition: 'transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
                   zIndex: 4,
                   fontFamily: 'system-ui, sans-serif',
+                  boxShadow: '-8px 8px 32px rgba(0,0,0,0.5)',
                 }}>
                   {/* Header */}
                   <div style={{ padding: '5px 8px', borderBottom: '1px solid #2a2a35', display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
@@ -634,8 +637,8 @@ export default function LandingPage() {
                     </span>
                     <span style={{ fontSize: '12px', color: '#555' }}>📎</span>
                   </div>
-                  {/* Body */}
-                  <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '7px 8px', gap: '6px' }}>
+                  {/* Body — natural height, palette grows as content appears */}
+                  <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: step >= 3 ? '7px 8px' : '0', gap: '6px', transition: 'padding 0.3s ease' }}>
                     {/* Thinking dots — step 3 */}
                     {step === 3 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#555', fontSize: '10px' }}>
@@ -665,7 +668,7 @@ export default function LandingPage() {
                     )}
                   </div>
                   {/* Footer */}
-                  <div style={{ padding: '4px 8px', borderTop: '1px solid #2a2a35', display: 'flex', justifyContent: 'space-between', background: '#141418', flexShrink: 0 }}>
+                  <div style={{ padding: '4px 8px', borderTop: '1px solid #2a2a35', display: 'flex', justifyContent: 'space-between', background: '#141418', flexShrink: 0, marginTop: '1px' }}>
                     {['Esc — close','EN','Panel ↗','Exit'].map(f => (
                       <span key={f} style={{ fontSize: '8.5px', color: f === 'Panel ↗' ? '#0fffd4' : '#444' }}>{f}</span>
                     ))}
@@ -674,8 +677,8 @@ export default function LandingPage() {
 
                 {/* ── Email client overlay — step 7 ── */}
                 {step === 7 && (
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', zIndex: 20 }}>
-                    <div className="demo-email" style={{ width: '75%', height: '92%', marginRight: '10px', marginTop: '10px', background: '#1e1e24', border: '1px solid #3a3a50', borderRadius: '6px', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.8)', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', zIndex: 20, paddingTop: '10px', paddingRight: '10px' }}>
+                    <div className="demo-email" style={{ width: '75%', height: '92%', background: '#1e1e24', border: '1px solid #3a3a50', borderRadius: '6px', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.8)', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
                       {/* Email title bar */}
                       <div style={{ background: '#252530', borderBottom: '1px solid #32323f', padding: '4px 8px', display: 'flex', alignItems: 'center', fontSize: '9px', color: '#aaa', flexShrink: 0 }}>
                         <span style={{ flex: 1, textAlign: 'center', color: '#ccc', fontSize: '9px' }}>Week 24 Sales Summary — New Message</span>
