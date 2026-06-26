@@ -133,27 +133,35 @@ const CONTENT = {
 
     footerSub:  'Windows only · © 2025 - 2026 Assistant24. All rights reserved.',
 
-    // App constraints
-    appContextName: 'OPENOFFICE 4.1.16',
-    searchPlaceholder: 'Ask anything...',
-    quickSkills: ['Extract Invoice Data', 'Check upcoming events', 'Summarize', 'Rewrite professionally', 'Categorize Expense', 'Calculate Totals', 'Explain this', 'Fix grammar', 'Format for Spreadsheet'],
-    
-    // Dynamic Animation Data
-    demoQuery: 'Turn these figures into an executive summary email',
-    demoAnalysisTitle: 'I need a few details before drafting the email:',
-    demoAnalysisLines: [
-      '1. **Subject** — What should the subject line be?',
-      '2. **Recipient** — Who is this going to?',
-      '3. **Language** — Which language should the email be composed in?'
+    paletteContext: 'Microsoft Excel · Q3 Report.xlsx',
+    paletteFolder:  '/Work/Finance',
+    palettePlaceholder: 'What do you need?',
+    paletteItems: [
+      { label: 'Summarize this',         icon: '◈', active: true  },
+      { label: 'Rewrite professionally', icon: '✦', active: false },
+      { label: 'Explain this error',     icon: '◎', active: false },
+      { label: 'Translate to Dutch',     icon: '◇', active: false },
+      { label: 'Prepare meeting notes',  icon: '▷', active: false },
     ],
-    demoUserTypedInputs: [
-      'Subject: Week 24 Sales Summary',
-      'To: sales@salescom',
-      'Language: English'
+
+    // Hero "magic moment" demo
+    demoExcelTitle:   'Q3 Report.xlsx',
+    demoExcelHeaders: ['', 'Q2', 'Q3', 'Δ'],
+    demoExcelRows: [
+      ['Revenue',        '$1.42M', '$1.68M', '+18%'],
+      ['Gross margin',   '33%',    '34%',    '+1pt'],
+      ['Headcount',      '58',     '65',     '+12%'],
+      ['New customers',  '24',     '31',     '+29%'],
     ],
-    emailSubject: 'Week 24 Sales Summary',
-    emailTo: 'sales@sales.com',
-    emailBody: 'Dear Team,\n\nPlease find below the executive summary for our sales performance during Week 24, 2026.\n\n**Overall Performance**\nTotal company-wide sales for the week reached **$92,000**, with a strong finish — Friday alone accounted for $22,600, the highest single day of the week.\n\n**Regional Breakdown**\n- **East** was the top-performing region with $28,200 (+strongest contributor)\n- **North** followed with $23,900\n- **South** delivered $21,400\n- **West** was the weakest region at $18,500 (–6% vs. last week)\n\n**Highlights**\n- 📈 **Top product:** Enterprise licences, up **+18%** versus last week\n- ⚠️ **Area of attention:** West region, down 6% week-on-week — follow-up recommended\n\n**Daily Trend**\nSales showed a consistent upward trend throughout the week, growing from $15,700 on Monday to $22,600 on Friday — a strong positive momentum heading into Week 25.\n\nPlease don\'t hesitate to reach out if you have any questions or require further detail.'
+    demoQuery:        'Summarize this report',
+    demoReading:      'Reading Q3 Report.xlsx…',
+    demoResultTitle:  'Summary',
+    demoBullets: [
+      'Revenue up 18% QoQ, led by EU expansion',
+      'Gross margin holding steady at 34%',
+      'Headcount grew 12%, mostly engineering',
+    ],
+    demoAction: 'Inserted into Excel',
   },
 
   ru: {
@@ -234,10 +242,10 @@ const CONTENT = {
       {
         feature:     'Запуск',
         traditional: 'Открыть новую вкладку или окно',
-        you:         'Одна горячая копия из любого приложения',
+        you:         'Одна горячая клавиша из любого приложения',
       },
       {
-        feature:     'Context',
+        feature:     'Контекст',
         traditional: 'Объясняете ситуацию каждый раз',
         you:         'Уже знает ваше приложение, файл и календарь',
       },
@@ -276,33 +284,43 @@ const CONTENT = {
       { n: '03', title: 'Действуйте',              body: 'Напишите сообщение, выберите навык или просто спросите. Безопасные действия — сразу. Деструктивные — с подтверждением.' },
     ],
 
-    ctaTitle: 'Готовы работать иначе?',
-    ctaSub:   '7 дней бесплатно. Без карты. Работает на Windows 10 и 11.',
-    ctaBtn:   'Скачать для Windows — 7 дней бесплатно',
+    ctaTitle:    'Готовы работать иначе?',
+    ctaSub:      '7 дней бесплатно. Без карты. Работает на Windows 10 и 11.',
+    ctaBtn:      'Скачать для Windows — 7 дней бесплатно',
     ctaSignIn:   'Уже есть аккаунт?',
     ctaSignInLk: 'Войти →',
 
     footerSub:  'Только для Windows · © 2025 - 2026 Assistant24. Все права защищены.',
 
-    appContextName: 'OPENOFFICE 4.1.16',
-    searchPlaceholder: 'Спросите что угодно...',
-    quickSkills: ['Извлечь инвойс', 'Ближайшие события', 'Суммировать', 'Переписать профи', 'Категории расходов', 'Посчитать итоги', 'Объяснить это', 'Исправить грамматику', 'Формат таблицы'],
-    
-    demoQuery: 'Turn these figures into an executive summary email',
-    demoAnalysisTitle: 'Мне нужны детали перед составлением письма:',
-    demoAnalysisLines: [
-      '1. **Тема** — Какая должна быть тема письма?',
-      '2. **Получатель** — Кому отправить письмо?',
-      '3. **Язык** — На каком языке составить текст?'
+    paletteContext: 'Microsoft Excel · Отчёт Q3.xlsx',
+    paletteFolder:  '/Работа/Финансы',
+    palettePlaceholder: 'Что вам нужно?',
+    paletteItems: [
+      { label: 'Суммировать',               icon: '◈', active: true  },
+      { label: 'Переписать профессионально', icon: '✦', active: false },
+      { label: 'Объяснить эту ошибку',      icon: '◎', active: false },
+      { label: 'Перевести на русский',       icon: '◇', active: false },
+      { label: 'Подготовить протокол',       icon: '▷', active: false },
     ],
-    demoUserTypedInputs: [
-      'Тема: Week 24 Sales Summary',
-      'Кому: sales@salescom',
-      'Язык: Английский'
+
+    // Hero "magic moment" demo
+    demoExcelTitle:   'Отчёт Q3.xlsx',
+    demoExcelHeaders: ['', 'Q2', 'Q3', 'Δ'],
+    demoExcelRows: [
+      ['Выручка',         '$1.42М', '$1.68М', '+18%'],
+      ['Рентабельность',  '33%',    '34%',    '+1пт'],
+      ['Сотрудники',      '58',     '65',     '+12%'],
+      ['Новые клиенты',   '24',     '31',     '+29%'],
     ],
-    emailSubject: 'Week 24 Sales Summary',
-    emailTo: 'sales@sales.com',
-    emailBody: 'Dear Team,\n\nPlease find below the executive summary for our sales performance during Week 24, 2026.\n\n**Overall Performance**\nTotal company-wide sales for the week reached **$92,000**, with a strong finish — Friday alone accounted for $22,600, the highest single day of the week.\n\n**Regional Breakdown**\n- **East** was the top-performing region with $28,200 (+strongest contributor)\n- **North** followed with $23,900\n- **South** delivered $21,400\n- **West** was the weakest region at $18,500 (–6% vs. last week)\n\n**Highlights**\n- 📈 **Top product:** Enterprise licences, up **+18%** versus last week\n- ⚠️ **Area of attention:** West region, down 6% week-on-week — follow-up recommended\n\n**Daily Trend**\nSales showed a consistent upward trend throughout the week, growing from $15,700 on Monday to $22,600 on Friday — a strong positive momentum heading into Week 25.\n\nPlease don\'t hesitate to reach out if you have any questions or require further detail.'
+    demoQuery:        'Суммировать этот отчёт',
+    demoReading:      'Читаю Отчёт Q3.xlsx…',
+    demoResultTitle:  'Сводка',
+    demoBullets: [
+      'Выручка выросла на 18% — рост за счёт ЕС',
+      'Рентабельность стабильна на уровне 34%',
+      'Штат вырос на 12%, в основном инженеры',
+    ],
+    demoAction: 'Вставлено в Excel',
   },
 } as const
 
@@ -312,41 +330,53 @@ export default function LandingPage() {
   const [lang, setLang] = useState<Lang>('en')
   const t = CONTENT[lang]
 
+  // ── Hero demo animation
+  // Steps:
+  //  0 – idle spreadsheet
+  //  1 – Ctrl+Space hotkey toast
+  //  2 – typing query 1
+  //  3 – AI thinking (dots)
+  //  4 – AI asks clarifying questions
+  //  5 – user types answers (query 2)
+  //  6 – AI thinking again
+  //  7 – email client overlay
+  const QUERY1 = 'Summarise these sales numbers into a short email report'
+  const QUERY2_LINES = ['Sales - June 2026', 'sales@sales.com', 'English', 'highlights']
+  const QUERY2 = QUERY2_LINES.join('\n')
+  const CHAR_DELAY_1 = 38
+  const CHAR_DELAY_2 = 55
+
   const [step, setStep] = useState(0)
   const [typed, setTyped] = useState(0)
-  const [inputSubStep, setInputSubStep] = useState(0) 
-  const CHAR_DELAY = 25
 
   useEffect(() => {
-    const durations = [
-      2200, 
-      1000, 
-      t.demoQuery.length * CHAR_DELAY + 500, 
-      3800, 
-      2500, 
-      4500
-    ]
-    const id = setTimeout(() => setStep(s => (s + 1) % 6), durations[step])
+    let id: ReturnType<typeof setTimeout>
+    if (step === 0) id = setTimeout(() => setStep(1), 2200)
+    else if (step === 1) id = setTimeout(() => { setStep(2); setTyped(0) }, 700)
+    else if (step === 3) id = setTimeout(() => setStep(4), 1100)
+    else if (step === 4) id = setTimeout(() => { setStep(5); setTyped(0) }, 1900)
+    else if (step === 6) id = setTimeout(() => setStep(7), 1200)
+    else if (step === 7) id = setTimeout(() => { setStep(0); setTyped(0) }, 3800)
     return () => clearTimeout(id)
-  }, [step, lang, t.demoQuery.length])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
 
   useEffect(() => {
-    if (step !== 2) { setTyped(0); return }
+    if (step !== 2 && step !== 5) return
+    const query = step === 2 ? QUERY1 : QUERY2
+    const delay = step === 2 ? CHAR_DELAY_1 : CHAR_DELAY_2
+    setTyped(0)
     let i = 0
     const id = setInterval(() => {
       i += 1
       setTyped(i)
-      if (i >= t.demoQuery.length) clearInterval(id)
-    }, CHAR_DELAY)
+      if (i >= query.length) {
+        clearInterval(id)
+        setTimeout(() => setStep(step === 2 ? 3 : 6), 450)
+      }
+    }, delay)
     return () => clearInterval(id)
-  }, [step, lang, t.demoQuery.length])
-
-  useEffect(() => {
-    if (step !== 3) { setInputSubStep(0); return }
-    const t1 = setTimeout(() => setInputSubStep(1), 1000)
-    const t2 = setTimeout(() => setInputSubStep(2), 2000)
-    const t3 = setTimeout(() => setInputSubStep(3), 3000)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
 
   return (
@@ -356,73 +386,73 @@ export default function LandingPage() {
           from { opacity: 0; transform: translateY(18px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-4px); } }
-        
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-6px); }
+        }
         .hero-fade   { animation: fadeUp 0.7s ease both; }
         .hero-fade-1 { animation-delay: 0.05s; }
         .hero-fade-2 { animation-delay: 0.15s; }
         .hero-fade-3 { animation-delay: 0.28s; }
         .hero-fade-4 { animation-delay: 0.42s; }
-        
         .palette-float { animation: float 4s ease-in-out infinite; }
         .cursor { animation: blink 1.1s step-start infinite; }
         .feature-card { transition: border-color 0.2s; }
         .feature-card:hover { border-color: var(--accent-border) !important; }
-        
+        .feature-card:hover .feature-icon { color: var(--accent) !important; }
         .cta-btn { transition: background 0.15s, transform 0.15s; }
         .cta-btn:hover { background: var(--accent-hover) !important; transform: translateY(-1px); }
-        .lang-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; font-weight: 600; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; transition: all 0.15s; }
+        .cta-btn:active { transform: translateY(0); }
+        .ghost-btn:hover { border-color: var(--accent-border) !important; color: var(--text-primary) !important; }
+        .lang-btn { background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; padding: 0.3rem 0.6rem; border-radius: 6px; cursor: pointer; transition: all 0.15s; font-family: var(--font-body), system-ui, sans-serif; }
         .lang-btn.active { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); }
-        
-        .kbd { display: inline-block; background: #1c1c24; border: 1px solid #2d2d3d; border-bottom-width: 2px; border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.75em; font-family: monospace; color: #a0a0b0; }
-        
-        .openoffice-grid {
-          width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'Segoe UI', Tahoma, sans-serif; color: #333;
+        .lang-btn:not(.active):hover { border-color: var(--border); color: var(--text-secondary); }
+        .kbd { display: inline-block; background: var(--surface-3); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 0.1rem 0.45rem; font-size: 0.8em; font-family: monospace; color: var(--text-secondary); line-height: 1.5; }
+        .diff-row-you { color: var(--accent); font-weight: 500; }
+        .diff-row-traditional { color: var(--text-secondary); }
+        @keyframes keyPulse {
+          0%   { transform: scale(0.85); opacity: 0; }
+          35%  { transform: scale(1.04); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
         }
-        .openoffice-grid th, .openoffice-grid td {
-          border: 1px solid #d0d0d0; padding: 4px 6px; text-align: right;
+        @keyframes dotPulse {
+          0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+          40%            { opacity: 1;    transform: scale(1); }
         }
-        .openoffice-grid th { background: #f0f0f0; font-weight: normal; text-align: left; }
-        
-        .assistant-panel {
-          background: #0f0f14;
-          border: 1px solid #23232e;
-          border-radius: 12px;
-          box-shadow: 0 24px 64px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.02) inset;
-          color: #e2e2e9;
-          font-family: system-ui, -apple-system, sans-serif;
-          overflow: hidden;
-          width: 100%;
+        .demo-key { animation: keyPulse 0.4s ease both; }
+        .demo-dots { display: inline-flex; gap: 4px; }
+        .demo-dots span { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); display: inline-block; animation: dotPulse 1.1s ease-in-out infinite; }
+        .demo-dots span:nth-child(2) { animation-delay: 0.15s; }
+        .demo-dots span:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes bubbleIn {
+          from { opacity: 0; transform: translateY(8px) scale(0.97); }
+          to   { opacity: 1; transform: none; }
         }
-        
-        .quick-skill-tag {
-          font-size: 11px; background: #161622; border: 1px solid #2c2c3e; border-radius: 6px; padding: 4px 8px; color: #b0b0c2; white-space: nowrap;
+        @keyframes emailSlideIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.97); }
+          to   { opacity: 1; transform: none; }
         }
-        
-        .native-email-window {
-          background: #23232e; 
-          border: 1px solid #323242; 
-          border-radius: 8px; 
-          width: 100%; 
-          height: 100%;
-          box-shadow: 0 30px 70px rgba(0,0,0,0.8); 
-          font-family: system-ui, sans-serif; 
-          color: #e5e5ed;
-          animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-          overflow: hidden;
+        .demo-bubble { animation: bubbleIn 0.3s ease both; }
+        .demo-ai-card { animation: fadeUp 0.35s ease both; }
+        .demo-email { animation: emailSlideIn 0.45s cubic-bezier(0.4,0,0.2,1) both; }
+        .demo-skill-btn {
+          background: var(--surface-2);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 2px 7px;
+          font-size: 0.65rem;
+          color: var(--text-secondary);
+          white-space: nowrap;
+          font-family: var(--font-body), system-ui, sans-serif;
         }
-
-        .email-content-area {
-          background: #ffffff !important; 
-          color: #1a1a1a !important; 
-          padding: 16px; 
-          overflow-y: auto; 
-          flex: 1;
-          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          font-size: 12px;
-          line-height: 1.6;
-          text-align: left;
+        .demo-skill-btn.active-skill {
+          background: var(--accent-dim);
+          border-color: var(--accent-border);
+          color: var(--accent);
         }
       `}</style>
 
@@ -432,24 +462,34 @@ export default function LandingPage() {
         <nav style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
           borderBottom: '1px solid var(--border-subtle)',
-          backdropFilter: 'blur(16px)', background: 'rgba(7,7,9,0.8)',
-          padding: '0 2rem', height: '56px',
+          backdropFilter: 'blur(16px)',
+          background: 'rgba(7,7,9,0.8)',
+          padding: '0 2rem',
+          height: '56px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <a href="https://assistant24.tech/index.html" style={{ textDecoration: 'none' }}>
-            <span className="wordmark">ASSISTANT <span>24</span></span>
+            <span className="wordmark">
+  ASSISTANT <span>24</span>
+</span>
           </a>
 
           <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
+            {/* Language switcher */}
             <div style={{ display: 'flex', gap: '0.25rem', marginRight: '0.5rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.2rem' }}>
               <button className={`lang-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')}>EN</button>
               <button className={`lang-btn${lang === 'ru' ? ' active' : ''}`} onClick={() => setLang('ru')}>RU</button>
             </div>
+
             <Link href="/login" style={{ textDecoration: 'none' }}>
-              <button className="btn-ghost ghost-btn" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}>{t.signIn}</button>
+              <button className="btn-ghost ghost-btn" style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
+                {t.signIn}
+              </button>
             </Link>
             <Link href="/register" style={{ textDecoration: 'none' }}>
-              <button className="btn-primary cta-btn" style={{ width: 'auto', padding: '0.45rem 1rem', fontSize: '0.85rem' }}>{t.getStarted}</button>
+              <button className="btn-primary cta-btn" style={{ width: 'auto', padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
+                {t.getStarted}
+              </button>
             </Link>
           </div>
         </nav>
@@ -458,8 +498,9 @@ export default function LandingPage() {
         <section className="bg-grid" style={{ paddingTop: '140px', paddingBottom: '100px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '60px', left: '50%', transform: 'translateX(-50%)', width: '600px', height: '300px', borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(15,255,212,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-          <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 2rem', display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: '4rem', alignItems: 'center' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem', alignItems: 'center' }}>
 
+            {/* Left: copy */}
             <div>
               <div className="hero-fade hero-fade-1" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', borderRadius: '100px', padding: '0.3rem 0.875rem', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '1.75rem' }}>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
@@ -486,164 +527,195 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div style={{ position: 'relative', width: '100%', maxWidth: '490px', height: '410px' }}>
+            {/* Right: realistic palette demo */}
+            <div style={{ display: 'flex', justifyContent: 'center' }} className="palette-float">
+              <div style={{ position: 'relative', width: '100%', maxWidth: '480px', height: '480px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
 
-                {/* Base Layer: Host App (OpenOffice Calc Canvas) */}
+                {/* ── Spreadsheet background ── */}
                 <div style={{
-                  position: 'absolute', inset: 0, background: '#ffffff', border: '1px solid #b5b5b5', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
-                  filter: step >= 1 && step < 5 ? 'brightness(0.7)' : 'none', transition: 'filter 0.3s'
+                  position: 'absolute', inset: 0,
+                  background: '#f0f0eb',
+                  filter: step >= 2 ? 'blur(1.5px) brightness(0.5)' : 'none',
+                  transform: step >= 2 ? 'scale(0.98)' : 'scale(1)',
+                  transition: 'filter 0.5s ease, transform 0.5s ease',
+                  fontFamily: 'system-ui, sans-serif',
                 }}>
-                  <div style={{ background: '#f6f6f6', borderBottom: '1px solid #d5d5d5', padding: '5px 8px', fontSize: '11px', color: '#444', display: 'flex', gap: '10px' }}>
-                    <span>Файл</span><span>Правка</span><span>Вид</span><span>Вставка</span><span>Формат</span><span>Сервис</span>
+                  {/* Title bar */}
+                  <div style={{ background: '#e8e8e4', borderBottom: '1px solid #bbb', padding: '3px 8px', fontSize: '10px', color: '#333', display: 'flex', alignItems: 'center' }}>
+                    <span style={{ flex: 1, textAlign: 'center' }}>Электронная таблица OpenDocument.ods — OpenOffice Calc</span>
+                    <span style={{ color: '#888' }}>— □ ✕</span>
                   </div>
-                  <div style={{ padding: '8px' }}>
-                    <table className="openoffice-grid">
-                      <thead>
-                        <tr>
-                          <th style={{ width: '25px' }}></th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>TOTAL</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr><th>2</th><td style={{ textAlign: 'left', fontWeight: 'bold' }}>Region</td><td>Mon</td><td>Tue</td><td>Wed</td><td>Thu</td><td>Fri</td><td style={{ fontWeight: 'bold' }}>TOTAL</td></tr>
-                        <tr><th>3</th><td style={{ textAlign: 'left' }}>North</td><td>$4,200</td><td>$3,800</td><td>$5,100</td><td>$4,600</td><td>$6,200</td><td>$23,900</td></tr>
-                        <tr><th>4</th><td style={{ textAlign: 'left' }}>South</td><td>$3,100</td><td>$4,400</td><td>$3,900</td><td>$5,200</td><td>$4,800</td><td>$21,400</td></tr>
-                        <tr><th>5</th><td style={{ textAlign: 'left' }}>East</td><td>$5,500</td><td>$5,100</td><td>$4,700</td><td>$5,800</td><td>$7,100</td><td>$28,200</td></tr>
-                        <tr><th>6</th><td style={{ textAlign: 'left' }}>West</td><td>$2,900</td><td>$3,300</td><td>$4,100</td><td>$3,700</td><td>$4,500</td><td>$18,500</td></tr>
-                        <tr style={{ fontWeight: 'bold' }}><th>7</th><td style={{ textAlign: 'left' }}>TOTAL</td><td>$15,700</td><td>$16,600</td><td>$17,800</td><td>$19,300</td><td>$22,600</td><td>$92,000</td></tr>
-                      </tbody>
-                    </table>
+                  {/* Menu bar */}
+                  <div style={{ background: '#f5f5f0', borderBottom: '1px solid #ccc', padding: '2px 8px', fontSize: '10px', color: '#333', display: 'flex', gap: '10px' }}>
+                    {['Файл','Правка','Вид','Вставка','Формат','Сервис','Данные','Окно'].map(m => <span key={m}>{m}</span>)}
                   </div>
+                  {/* Column headers */}
+                  <div style={{ display: 'flex', borderBottom: '1px solid #ccc' }}>
+                    <div style={{ width: '32px', background: '#e8e8e4', borderRight: '1px solid #ccc', height: '16px' }} />
+                    {['B','C','D','E','F','G','H'].map((c, i) => (
+                      <div key={c} style={{ flex: 1, background: '#e8e8e4', borderRight: '1px solid #ccc', textAlign: 'center', fontSize: '9px', color: '#333', height: '16px', lineHeight: '16px' }}>{c}</div>
+                    ))}
+                  </div>
+                  {/* Data rows */}
+                  {[
+                    ['', 'Region', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'TOTAL'],
+                    ['', 'North', '$4,200', '$3,800', '$5,100', '$4,600', '$6,200', '$23,900'],
+                    ['', 'South', '$3,100', '$4,400', '$3,900', '$5,200', '$4,800', '$21,400'],
+                    ['', 'East',  '$5,500', '$5,100', '$4,700', '$5,800', '$7,100', '$28,200'],
+                    ['', 'West',  '$2,900', '$3,300', '$4,100', '$3,700', '$4,500', '$18,500'],
+                    ['', 'TOTAL', '$15,700','$16,600','$17,800','$19,300','$22,600','$92,000'],
+                  ].map((row, ri) => (
+                    <div key={ri} style={{ display: 'flex', borderBottom: '1px solid #eee' }}>
+                      <div style={{ width: '32px', background: '#e8e8e4', borderRight: '1px solid #ccc', textAlign: 'center', fontSize: '9px', color: '#555', lineHeight: '17px' }}>{ri + 2}</div>
+                      {row.slice(1).map((cell, ci) => (
+                        <div key={ci} style={{ flex: 1, height: '17px', borderRight: '1px solid #ddd', fontSize: '9px', padding: '0 3px', lineHeight: '17px', background: '#fff', color: '#222', fontWeight: (ri === 0 || ri === 5 || ci === 6) ? 700 : 400, textAlign: ci === 0 ? 'left' : 'right', whiteSpace: 'nowrap', overflow: 'hidden' }}>{cell}</div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
 
-                {/* Layer 2: Assistant24 Overlay Panel (Active steps 1 to 4) */}
-                {step >= 1 && step <= 4 && (
-                  <div className="palette-float" style={{ position: 'absolute', top: '25px', right: '15px', width: '370px', zIndex: 10 }}>
-                    <div className="assistant-panel">
-                      
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#09090d', borderBottom: '1px solid #1a1a26' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#10ffd4', background: 'rgba(16,255,212,0.1)', padding: '2px 5px', borderRadius: '4px', letterSpacing: '0.03em' }}>
-                            {t.appContextName}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px', fontSize: '10px', color: '#787885' }}>
-                          <span style={{ color: '#10ffd4' }}>● vision</span>
-                          <span>● sonnet 4.6</span>
-                        </div>
-                      </div>
-
-                      <div style={{ padding: '10px 12px 6px', display: 'flex', flexWrap: 'wrap', gap: '5px', background: '#0c0c12' }}>
-                        {t.quickSkills.slice(0, 4).map((skill, idx) => (
-                          <span key={idx} className="quick-skill-tag" style={{ borderColor: idx === 2 && step >= 2 ? '#10ffd4' : '#2c2c3e' }}>
-                            {skill}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div style={{ padding: '8px 12px', borderBottom: '1px solid #1c1c28', display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
-                        <span style={{ color: '#686878', fontSize: '12px' }}>🔍</span>
-                        <div style={{ flex: 1, fontSize: '12px', color: '#ffffff', textAlign: 'left' }}>
-                          {step === 1 ? (
-                            <span style={{ color: '#525265' }}>{t.searchPlaceholder}</span>
-                          ) : (
-                            <span>{t.demoQuery.slice(0, step === 2 ? typed : t.demoQuery.length)}</span>
-                          )}
-                          {step === 2 && <span className="cursor" style={{ color: '#10ffd4' }}>▌</span>}
-                        </div>
-                      </div>
-
-                      {step === 3 && (
-                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', borderTop: '1px solid #181824', textAlign: 'left' }}>
-                          <div style={{ color: '#10ffd4', fontWeight: '600', marginBottom: '8px' }}>{t.demoAnalysisTitle}</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            {t.demoAnalysisLines.map((line, idx) => (
-                              <div key={idx} style={{ background: '#12121a', padding: '6px', borderRadius: '4px', border: '1px solid #1d1d29' }}>
-                                <div style={{ color: '#a2a2b0' }}>{line}</div>
-                                {inputSubStep > idx && (
-                                  <div style={{ marginTop: '4px', paddingLeft: '12px', color: '#10ffd4', fontWeight: '500', fontFamily: 'monospace' }}>
-                                    &gt; {t.demoUserTypedInputs[idx]}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {step === 4 && (
-                        <div style={{ padding: '12px', fontSize: '12px', background: '#0a0a0f', borderTop: '1px solid #181824', textAlign: 'left' }}>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', fontSize: '12px', color: '#a0a0b2' }}>
-                            <span className="demo-dots"><span></span><span></span><span></span></span> Generating execution context loops...
-                          </div>
-                        </div>
-                      )}
-
-                      <div style={{ padding: '6px 12px', background: '#07070a', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#525266' }}>
-                        <span>Esc — закрыть</span>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <span>EN</span>
-                          <span className="kbd">Ctrl + Space</span>
-                        </div>
-                      </div>
-
-                    </div>
+                {/* ── Hotkey toast ── */}
+                {step === 1 && (
+                  <div className="demo-key" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: 'var(--surface-2)', border: '1px solid var(--accent-border)', borderRadius: '10px', padding: '0.6rem 1.2rem', boxShadow: '0 10px 30px rgba(0,0,0,0.6)', zIndex: 10 }}>
+                    <span className="kbd" style={{ fontSize: '0.95rem', color: 'var(--accent)' }}>Ctrl + Space</span>
                   </div>
                 )}
 
-                {/* Layer 3: Completed Target Action Window Overlay (Step 5 - eM Client White Body) */}
-                {step === 5 && (
-                  <div style={{ position: 'absolute', top: '25px', left: '15px', right: '15px', height: '360px', zIndex: 20 }}>
-                    <div className="native-email-window" style={{ display: 'flex', flexDirection: 'column' }}>
-                      
-                      <div style={{ background: '#22222b', padding: '8px 12px', fontSize: '11px', borderBottom: '1px solid #2d2d3d', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: '500', color: '#d1d1d6' }}>{t.emailSubject} — New Message</span>
-                        <div style={{ display: 'flex', gap: '8px' }}><span style={{ color: '#8e8e93' }}>‒</span><span style={{ color: '#8e8e93' }}>❑</span><span style={{ color: '#ea5454' }}>✕</span></div>
+                {/* ── Palette panel (slides in from right) ── */}
+                <div style={{
+                  position: 'absolute', top: 0, right: 0, bottom: 0, width: '62%',
+                  background: '#1a1a1f',
+                  borderLeft: '1px solid #2a2a35',
+                  display: 'flex', flexDirection: 'column',
+                  transform: step >= 2 ? 'translateX(0)' : 'translateX(100%)',
+                  opacity: step >= 2 ? 1 : 0,
+                  transition: 'transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease',
+                  zIndex: 4,
+                  fontFamily: 'system-ui, sans-serif',
+                }}>
+                  {/* Header */}
+                  <div style={{ padding: '5px 8px', borderBottom: '1px solid #2a2a35', display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                    <span style={{ background: '#2a2a35', border: '1px solid #3a3a45', borderRadius: '5px', padding: '1px 6px', fontSize: '8px', fontWeight: 700, color: '#aaa', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>OPENOFFICE 4.1.16</span>
+                    <span style={{ flex: 1, fontSize: '8px', color: '#555', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {step >= 3 ? '"Summarise these sales numbers…"' : ''}
+                    </span>
+                    <span style={{ background: '#2a2a35', border: '1px solid #3a3a45', borderRadius: '4px', padding: '1px 5px', fontSize: '7.5px', color: '#f5a623', whiteSpace: 'nowrap' }}>● vision</span>
+                    <span style={{ background: '#2a2a35', border: '1px solid #3a3a45', borderRadius: '4px', padding: '1px 5px', fontSize: '7.5px', color: '#0fffd4', whiteSpace: 'nowrap' }}>● sonnet 4.6</span>
+                  </div>
+                  {/* Skills strip */}
+                  <div style={{ padding: '5px 6px', borderBottom: '1px solid #2a2a35', display: 'flex', flexWrap: 'wrap', gap: '3px', flexShrink: 0 }}>
+                    {['Extract Invoice Data','Check upcoming events','Summarize','Rewrite professionally','Calculate Totals','Explain this','Fix grammar','Draft Response','Create FAQ'].map(s => (
+                      <span key={s} className={`demo-skill-btn${s === 'Summarize' ? ' active-skill' : ''}`}>{s}</span>
+                    ))}
+                  </div>
+                  {/* Input */}
+                  <div style={{ padding: '6px 8px', borderBottom: '1px solid #2a2a35', display: 'flex', alignItems: 'flex-start', gap: '6px', flexShrink: 0, minHeight: step === 5 ? '68px' : '32px', transition: 'min-height 0.3s ease' }}>
+                    <span style={{ fontSize: '11px', color: '#555', marginTop: '1px' }}>🔍</span>
+                    <span style={{ flex: 1, fontSize: '11px', color: '#e8e8e0', lineHeight: 1.5 }}>
+                      {step === 2 && <>{QUERY1.slice(0, typed)}<span className="cursor" style={{ background: 'var(--accent)', width: '2px', height: '12px', display: 'inline-block', verticalAlign: 'text-bottom', marginLeft: '1px' }} /></>}
+                      {step >= 3 && step <= 4 && QUERY1}
+                      {step === 5 && (
+                        <>
+                          {QUERY2.slice(0, typed).split('\n').map((line, i, arr) => (
+                            <span key={i} style={{ display: 'block' }}>
+                              <span style={{ color: '#666', fontSize: '10px' }}>{i + 1}.</span>{' '}{line}
+                              {i === arr.length - 1 && <span className="cursor" style={{ background: 'var(--accent)', width: '2px', height: '11px', display: 'inline-block', verticalAlign: 'text-bottom', marginLeft: '1px' }} />}
+                            </span>
+                          ))}
+                        </>
+                      )}
+                      {step >= 6 && (
+                        QUERY2_LINES.map((line, i) => (
+                          <span key={i} style={{ display: 'block' }}><span style={{ color: '#666', fontSize: '10px' }}>{i + 1}.</span>{' '}{line}</span>
+                        ))
+                      )}
+                      {step === 2 || step >= 3 ? null : <span style={{ color: '#444' }}>Ask anything...</span>}
+                      {step < 2 && <span style={{ color: '#444' }}>Ask anything...</span>}
+                    </span>
+                    <span style={{ fontSize: '12px', color: '#555' }}>📎</span>
+                  </div>
+                  {/* Body */}
+                  <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '7px 8px', gap: '6px' }}>
+                    {/* Thinking dots — step 3 */}
+                    {step === 3 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#555', fontSize: '10px' }}>
+                        <span className="demo-dots"><span /><span /><span /></span> Reading spreadsheet data…
                       </div>
-
-                      <div style={{ background: '#1c1c24', padding: '10px 12px', borderBottom: '1px solid #2d2d3d', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left' }}>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <span style={{ color: '#8e8e93', width: '60px' }}>To:</span>
-                          <span style={{ background: '#2d2d3e', color: '#10ffd4', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', border: '1px solid #3d3d52' }}>
-                            {t.emailTo} <span style={{ marginLeft: '4px', color: '#8e8e93', cursor: 'pointer' }}>✕</span>
-                          </span>
+                    )}
+                    {/* AI clarifying questions — steps 4, 5, 6, 7 */}
+                    {step >= 4 && (
+                      <>
+                        <div className="demo-bubble" style={{ alignSelf: 'flex-end', background: '#0d8a6a', color: '#fff', borderRadius: '10px 10px 2px 10px', padding: '5px 9px', fontSize: '10px', maxWidth: '95%', lineHeight: 1.4 }}>
+                          Summarise these sales numbers into a short email report
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', borderTop: '1px solid #252533', paddingTop: '6px' }}>
-                          <span style={{ color: '#8e8e93', width: '60px' }}>Subject:</span>
-                          <span style={{ color: '#ffffff', fontWeight: '500' }}>{t.emailSubject}</span>
+                        <div className="demo-ai-card" style={{ background: '#22222c', border: '1px solid #2e2e3e', borderRadius: '8px', padding: '7px 9px', fontSize: '10px', color: '#d0d0cc', lineHeight: 1.55 }}>
+                          <div style={{ color: '#888', marginBottom: '4px' }}>I need a few details:</div>
+                          <div style={{ marginBottom: '2px' }}>1. <strong style={{ color: '#e8e8e0' }}>Subject</strong> — subject line?</div>
+                          <div style={{ marginBottom: '2px' }}>2. <strong style={{ color: '#e8e8e0' }}>Recipient</strong> — email address?</div>
+                          <div style={{ marginBottom: '2px' }}>3. <strong style={{ color: '#e8e8e0' }}>Language</strong> — EN / RU / other?</div>
+                          <div>4. <strong style={{ color: '#e8e8e0' }}>Context</strong> — period, highlights?</div>
                         </div>
+                      </>
+                    )}
+                    {/* Thinking again — step 6 */}
+                    {step === 6 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#555', fontSize: '10px' }}>
+                        <span className="demo-dots"><span /><span /><span /></span> Composing email &amp; opening EM Client…
                       </div>
+                    )}
+                  </div>
+                  {/* Footer */}
+                  <div style={{ padding: '4px 8px', borderTop: '1px solid #2a2a35', display: 'flex', justifyContent: 'space-between', background: '#141418', flexShrink: 0 }}>
+                    {['Esc — close','EN','Panel ↗','Exit'].map(f => (
+                      <span key={f} style={{ fontSize: '8.5px', color: f === 'Panel ↗' ? '#0fffd4' : '#444' }}>{f}</span>
+                    ))}
+                  </div>
+                </div>
 
-                      <div style={{ background: '#252530', borderBottom: '1px solid #323245', padding: '6px 12px', display: 'flex', gap: '12px', color: '#a0a0b0', fontSize: '11px' }}>
-                        <span><b>B</b></span> <span><i>I</i></span> <span><u>U</u></span> <span>⌸ Type</span> <span>📎 Attach</span>
+                {/* ── Email client overlay — step 7 ── */}
+                {step === 7 && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', zIndex: 20 }}>
+                    <div className="demo-email" style={{ width: '75%', height: '92%', marginRight: '10px', marginTop: '10px', background: '#1e1e24', border: '1px solid #3a3a50', borderRadius: '6px', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.8)', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
+                      {/* Email title bar */}
+                      <div style={{ background: '#252530', borderBottom: '1px solid #32323f', padding: '4px 8px', display: 'flex', alignItems: 'center', fontSize: '9px', color: '#aaa', flexShrink: 0 }}>
+                        <span style={{ flex: 1, textAlign: 'center', color: '#ccc', fontSize: '9px' }}>Week 24 Sales Summary — New Message</span>
+                        <span style={{ color: '#555' }}>— □ ✕</span>
                       </div>
-
-                      {/* WHITE WORKING AREA (From 1-5_2.png) */}
-                      <div className="email-content-area">
-                        <div style={{ color: '#0066cc', marginBottom: '12px' }}>
-                          <b>To:</b> <a href={`mailto:${t.emailTo}`} style={{ color: '#0066cc', textDecoration: 'underline' }}>{t.emailTo}</a><br />
-                          <b>Subject:</b> {t.emailSubject}
-                        </div>
-                        
-                        <div style={{ whiteSpace: 'pre-wrap', color: '#1a1a1a' }}>
-                          {t.emailBody}
-                        </div>
-
-                        {/* Professional Signature Block (From 1-5_2.png) */}
-                        <div style={{ marginTop: '24px', paddingTop: '12px', borderTop: '1px solid #e0e0e0', fontSize: '11px', color: '#555555', lineHeight: '1.5' }}>
-                          <b>Aristides D.</b><br />
-                          <span style={{ color: '#dd3b3b' }}>📞</span> +7 9919 57 56 47<br />
-                          ✉ support@assistant24.tech<br />
-                          🌐 <a href="https://assistant24.tech/index.html" target="_blank" rel="noreferrer" style={{ color: '#0066cc' }}>https://assistant24.tech/index.html</a>
-                        </div>
+                      {/* Toolbar */}
+                      <div style={{ background: '#252530', borderBottom: '1px solid #2a2a35', padding: '3px 8px', display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                        <span style={{ background: '#e8931a', color: '#fff', borderRadius: '4px', padding: '2px 8px', fontSize: '9px', fontWeight: 700 }}>📤 Send</span>
+                        <span style={{ fontSize: '8.5px', color: '#777' }}>🖊 "Assistant24" &lt;support@assistant24.tech&gt;</span>
                       </div>
-
+                      {/* To */}
+                      <div style={{ padding: '3px 8px', borderBottom: '1px solid #252530', display: 'flex', alignItems: 'center', gap: '5px', background: '#1a1a1f', flexShrink: 0 }}>
+                        <span style={{ fontSize: '8.5px', color: '#777', minWidth: '36px' }}>To:</span>
+                        <span style={{ background: '#2a4a6a', border: '1px solid #3a6a9a', borderRadius: '3px', padding: '1px 5px', fontSize: '8.5px', color: '#8ad4ff' }}>sales@sales.com ✕</span>
+                      </div>
+                      {/* Subject */}
+                      <div style={{ padding: '3px 8px', borderBottom: '1px solid #252530', display: 'flex', alignItems: 'center', gap: '5px', background: '#1a1a1f', flexShrink: 0 }}>
+                        <span style={{ fontSize: '8.5px', color: '#777', minWidth: '36px' }}>Subject:</span>
+                        <span style={{ fontSize: '8.5px', color: '#ddd' }}>Week 24 Sales Summary</span>
+                      </div>
+                      {/* Body */}
+                      <div style={{ flex: 1, padding: '8px 10px', fontSize: '8.5px', color: '#d0d0cc', lineHeight: 1.6, overflow: 'hidden' }}>
+                        <p style={{ marginBottom: '5px' }}>Dear Team,</p>
+                        <p style={{ marginBottom: '5px' }}>Please find below the executive summary for Week 24, 2026.</p>
+                        <p style={{ marginBottom: '3px' }}><strong style={{ color: '#e8e8e0' }}>Overall Performance</strong><br />Total sales reached <strong>$92,000</strong> — Friday was the strongest day at $22,600.</p>
+                        <p style={{ marginBottom: '2px', marginTop: '5px' }}><strong style={{ color: '#e8e8e0' }}>Regional Breakdown</strong></p>
+                        <p style={{ marginBottom: '1px' }}>– <strong>East</strong> led at $28,200 &nbsp;– <strong>North</strong> $23,900</p>
+                        <p style={{ marginBottom: '1px' }}>– <strong>South</strong> $21,400 &nbsp;– <strong>West</strong> $18,500 (−6%)</p>
+                        <p style={{ marginBottom: '2px', marginTop: '5px' }}><strong style={{ color: '#e8e8e0' }}>Highlights</strong></p>
+                        <p style={{ marginBottom: '1px' }}>🏆 Enterprise licences up <strong>+18%</strong> vs last week</p>
+                        <p style={{ marginBottom: '5px' }}>⚠️ West region down 6% — follow-up recommended</p>
+                        <p>Best regards,<br />Aristides D.<br /><span style={{ color: '#5cb8ff' }}>support@assistant24.tech</span></p>
+                      </div>
                     </div>
                   </div>
                 )}
 
               </div>
             </div>
+
 
           </div>
         </section>
@@ -660,8 +732,8 @@ export default function LandingPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
             {t.features.map((f, i) => (
-              <div key={i} className="feature-card" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '2rem', textAlign: 'left' }}>
-                <div className="feature-icon" style={{ fontSize: '1.5rem', marginBottom: '1.25rem', color: 'var(--text-muted)' }}>{f.icon}</div>
+              <div key={i} className="feature-card" style={{ background: 'var(--surface-1)', border: '1px solid var(--border)', borderRadius: '14px', padding: '2rem' }}>
+                <div className="feature-icon" style={{ fontSize: '1.5rem', marginBottom: '1.25rem', color: 'var(--text-muted)', transition: 'color 0.2s' }}>{f.icon}</div>
                 <p style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{f.eyebrow}</p>
                 <h3 style={{ fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: '1.15rem', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: '0.875rem', lineHeight: 1.25 }}>{f.title}</h3>
                 <p style={{ fontSize: '0.875rem', lineHeight: 1.65, color: 'var(--text-secondary)' }}>{f.body}</p>
@@ -670,14 +742,14 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Comparison Box ──────────────────────────────── */}
+        {/* ── Comparison (vs generic AI chat) ──────────────────────────────── */}
         <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: 'var(--surface-1)' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto', padding: '80px 2rem' }}>
             <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
               <h2 style={{ fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: 'clamp(1.5rem, 2.5vw, 2rem)', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)' }}>{t.vsTitle}</h2>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', textAlign: 'left' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem' }}>
                 <p style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '1rem' }}>{t.vsLabelBad}</p>
                 {t.vsBad.map((item, i) => (
@@ -701,23 +773,66 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── Table Matrix ────────────────── */}
+        {/* ── Why it feels different (replaces ZupFlash comparison) ────────── */}
         <section style={{ borderTop: '1px solid var(--border)', background: 'var(--surface-1)', padding: '100px 2rem' }}>
           <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+
             <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-              <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '0.875rem' }}>{t.differentEyebrow}</p>
-              <h2 style={{ fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: 'clamp(1.7rem, 3vw, 2.4rem)', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-primary)', lineHeight: 1.15 }}>{t.differentTitle}</h2>
+              <p style={{
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'var(--accent)',
+                marginBottom: '0.875rem'
+              }}>
+                {t.differentEyebrow}
+              </p>
+              <h2 style={{
+                fontFamily: 'var(--font-display), system-ui, sans-serif',
+                fontSize: 'clamp(1.7rem, 3vw, 2.4rem)',
+                fontWeight: 700,
+                letterSpacing: '-0.025em',
+                color: 'var(--text-primary)',
+                lineHeight: 1.15
+              }}>
+                {t.differentTitle}
+              </h2>
             </div>
 
-            <div style={{ borderRadius: '8px', border: '1px solid var(--border)', overflow: 'hidden' }}>
+            <div style={{ borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', background: 'var(--surface-1)' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                    <th style={{ textAlign: 'left', padding: '1.1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.78rem', width: '22%' }}></th>
-                    <th style={{ textAlign: 'left', padding: '1.1rem 1.5rem', fontWeight: 600, color: 'var(--text-muted)', fontSize: '0.82rem', borderLeft: '1px solid var(--border)', width: '39%' }}>
-                      Traditional AI chat
+                    <th style={{
+                      textAlign: 'left',
+                      padding: '1.1rem 1.5rem',
+                      fontWeight: 600,
+                      color: 'var(--text-muted)',
+                      fontSize: '0.78rem',
+                      width: '22%',
+                    }}></th>
+                    <th style={{
+                      textAlign: 'left',
+                      padding: '1.1rem 1.5rem',
+                      fontWeight: 600,
+                      color: 'var(--text-muted)',
+                      fontSize: '0.82rem',
+                      borderLeft: '1px solid var(--border)',
+                      width: '39%',
+                    }}>
+                      {lang === 'ru' ? 'Обычный AI-чат' : 'Traditional AI chat'}
                     </th>
-                    <th style={{ textAlign: 'left', padding: '1.1rem 1.5rem', fontWeight: 700, color: 'var(--accent)', fontSize: '0.95rem', borderLeft: '1px solid var(--border)', borderBottom: '3px solid var(--accent)', width: '39%' }}>
+                    <th style={{
+                      textAlign: 'left',
+                      padding: '1.1rem 1.5rem',
+                      fontWeight: 700,
+                      color: 'var(--accent)',
+                      fontSize: '0.95rem',
+                      borderLeft: '1px solid var(--border)',
+                      borderBottom: '3px solid var(--accent)',
+                      width: '39%',
+                    }}>
                       Assistant24
                     </th>
                   </tr>
@@ -725,18 +840,46 @@ export default function LandingPage() {
                 <tbody>
                   {t.differentTable.map((row, i) => (
                     <tr key={i} style={{ borderBottom: i < t.differentTable.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
-                      <td style={{ padding: '1.2rem 1.5rem', fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem', verticalAlign: 'top', textAlign: 'left' }}>{row.feature}</td>
-                      <td style={{ padding: '1.2rem 1.5rem', color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.5, borderLeft: '1px solid var(--border)', verticalAlign: 'top', textAlign: 'left' }}>{row.traditional}</td>
-                      <td style={{ padding: '1.2rem 1.5rem', color: 'var(--accent)', fontWeight: 500, fontSize: '0.88rem', lineHeight: 1.5, borderLeft: '1px solid var(--border)', verticalAlign: 'top', textAlign: 'left' }}>{row.you}</td>
+                      <td style={{
+                        padding: '1.2rem 1.5rem',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        fontSize: '0.9rem',
+                        verticalAlign: 'top',
+                      }}>
+                        {row.feature}
+                      </td>
+                      <td style={{
+                        padding: '1.2rem 1.5rem',
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.88rem',
+                        lineHeight: 1.5,
+                        borderLeft: '1px solid var(--border)',
+                        verticalAlign: 'top',
+                      }}>
+                        {row.traditional}
+                      </td>
+                      <td style={{
+                        padding: '1.2rem 1.5rem',
+                        color: 'var(--accent)',
+                        fontWeight: 500,
+                        fontSize: '0.88rem',
+                        lineHeight: 1.5,
+                        borderLeft: '1px solid var(--border)',
+                        verticalAlign: 'top',
+                      }}>
+                        {row.you}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
           </div>
         </section>
 
-        {/* ── Steps ─────────────────────────────────────────────────── */}
+        {/* ── How it works ─────────────────────────────────────────────────── */}
         <section style={{ maxWidth: '900px', margin: '0 auto', padding: '100px 2rem' }}>
           <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
             <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '0.875rem' }}>{t.howEyebrow}</p>
@@ -745,6 +888,7 @@ export default function LandingPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0', position: 'relative' }}>
             <div style={{ position: 'absolute', top: '28px', left: 'calc(16.6% + 1rem)', right: 'calc(16.6% + 1rem)', height: '1px', background: 'var(--accent-border)', zIndex: 0 }} />
+
             {t.steps.map((step, i) => (
               <div key={i} style={{ textAlign: 'center', padding: '0 1.5rem', position: 'relative', zIndex: 1 }}>
                 <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--surface-1)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)', letterSpacing: '-0.01em' }}>
@@ -760,17 +904,24 @@ export default function LandingPage() {
         {/* ── CTA ──────────────────────────────────────────────────────────── */}
         <section style={{ borderTop: '1px solid var(--border)', background: 'var(--surface-1)' }}>
           <div style={{ maxWidth: '600px', margin: '0 auto', padding: '100px 2rem', textAlign: 'center' }}>
+            <div style={{ width: '160px', height: '1px', background: 'linear-gradient(90deg, transparent, var(--accent), transparent)', margin: '0 auto 3rem' }} />
             <h2 style={{ fontFamily: 'var(--font-display), system-ui, sans-serif', fontSize: 'clamp(1.8rem, 3vw, 2.5rem)', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '1rem' }}>{t.ctaTitle}</h2>
             <p style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '2.5rem' }}>{t.ctaSub}</p>
             <Link href="/register" style={{ textDecoration: 'none' }}>
               <button className="btn-primary cta-btn" style={{ width: 'auto', padding: '0.875rem 2.5rem', fontSize: '1rem' }}>{t.ctaBtn}</button>
             </Link>
+            <p style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {t.ctaSignIn}{' '}
+              <Link href="/login" style={{ color: 'var(--accent)', textDecoration: 'none' }}>{t.ctaSignInLk}</Link>
+            </p>
           </div>
         </section>
 
         {/* ── Footer ───────────────────────────────────────────────────────── */}
         <footer style={{ borderTop: '1px solid var(--border-subtle)', padding: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '1100px', margin: '0 auto' }}>
-          <span className="wordmark">ASSISTANT <span>24</span></span>
+          <span className="wordmark">
+  ASSISTANT <span>24</span>
+</span>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t.footerSub}</p>
         </footer>
 

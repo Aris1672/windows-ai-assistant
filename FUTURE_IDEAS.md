@@ -90,6 +90,7 @@ Tiny token/quota indicator at the bottom of the palette showing monthly usage.
 - Track in a new `referrals` table
 - **Why:** Low cost to build, organic acquisition, rewards loyal beta users.
 
+### 12. Personal informaion filter
 ---
 
 ## Priority Order (suggested)
