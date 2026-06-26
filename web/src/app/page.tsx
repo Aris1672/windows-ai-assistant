@@ -697,17 +697,17 @@ export default function LandingPage() {
                         <span style={{ fontSize: '8.5px', color: '#ddd' }}>Week 24 Sales Summary</span>
                       </div>
                       {/* Body */}
-                      <div style={{ flex: 1, padding: '8px 10px', fontSize: '8.5px', color: '#d0d0cc', lineHeight: 1.6, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, padding: '8px 10px', fontSize: '8.5px', color: '#222', lineHeight: 1.6, overflow: 'hidden', background: '#fff' }}>
                         <p style={{ marginBottom: '5px' }}>Dear Team,</p>
                         <p style={{ marginBottom: '5px' }}>Please find below the executive summary for Week 24, 2026.</p>
-                        <p style={{ marginBottom: '3px' }}><strong style={{ color: '#e8e8e0' }}>Overall Performance</strong><br />Total sales reached <strong>$92,000</strong> — Friday was the strongest day at $22,600.</p>
-                        <p style={{ marginBottom: '2px', marginTop: '5px' }}><strong style={{ color: '#e8e8e0' }}>Regional Breakdown</strong></p>
+                        <p style={{ marginBottom: '3px' }}><strong style={{ color: '#111' }}>Overall Performance</strong><br />Total sales reached <strong>$92,000</strong> — Friday was the strongest day at $22,600.</p>
+                        <p style={{ marginBottom: '2px', marginTop: '5px' }}><strong style={{ color: '#111' }}>Regional Breakdown</strong></p>
                         <p style={{ marginBottom: '1px' }}>– <strong>East</strong> led at $28,200 &nbsp;– <strong>North</strong> $23,900</p>
                         <p style={{ marginBottom: '1px' }}>– <strong>South</strong> $21,400 &nbsp;– <strong>West</strong> $18,500 (−6%)</p>
-                        <p style={{ marginBottom: '2px', marginTop: '5px' }}><strong style={{ color: '#e8e8e0' }}>Highlights</strong></p>
+                        <p style={{ marginBottom: '2px', marginTop: '5px' }}><strong style={{ color: '#111' }}>Highlights</strong></p>
                         <p style={{ marginBottom: '1px' }}>🏆 Enterprise licences up <strong>+18%</strong> vs last week</p>
                         <p style={{ marginBottom: '5px' }}>⚠️ West region down 6% — follow-up recommended</p>
-                        <p>Best regards,<br />Aristides D.<br /><span style={{ color: '#5cb8ff' }}>support@assistant24.tech</span></p>
+                        <p>Best regards,<br />Aristides D.<br /><span style={{ color: '#1a6abf' }}>support@assistant24.tech</span></p>
                       </div>
                     </div>
                   </div>
