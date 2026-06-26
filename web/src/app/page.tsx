@@ -583,7 +583,7 @@ export default function LandingPage() {
 
                 {/* ── Palette panel (slides in from right, compact then grows) ── */}
                 <div style={{
-                  position: 'absolute', top: 28, right: 0, width: '62%',
+                  position: 'absolute', top: 28, right: 0, width: '85%',
                   background: '#1a1a1f',
                   borderLeft: '1px solid #2a2a35',
                   borderBottom: '1px solid #2a2a35',
