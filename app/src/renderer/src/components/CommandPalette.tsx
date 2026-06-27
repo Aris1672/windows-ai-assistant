@@ -329,6 +329,13 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [mode, setMode]       = useState<Mode>('idle')
   const [visible, setVisible] = useState(false)
 
+  // ── Vision (screen capture) state ─────────────────────────────────────────
+  // Off by default — screenshotBase64 in `context` is only populated when the
+  // user enables auto-vision in settings, or presses "Read my screen" for
+  // this one query.
+  const [autoVision, setAutoVision]               = useState(false)
+  const [capturingScreen, setCapturingScreen]      = useState(false)
+
   // Action state
   const [pendingAction, setPendingAction] = useState<Action | null>(null)
   const [displayText, setDisplayText]     = useState('')
@@ -429,6 +436,11 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // ── Load saved hotkey on mount ────────────────────────────────────────────
   useEffect(() => {
     window.electronAPI.getHotkey().then(setHotkey).catch(() => {})
+  }, [])
+
+  // ── Load saved auto-vision preference on mount ───────────────────────────
+  useEffect(() => {
+    window.electronAPI.getAutoVision().then(setAutoVision).catch(() => {})
   }, [])
 
   // ── Hotkey recorder ───────────────────────────────────────────────────────
@@ -578,6 +590,27 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       return [...prev, fileRef]
     })
   }, [])
+
+  // ── Manual "Read my screen" capture ──────────────────────────────────────
+  // On-demand only: the user explicitly asked us to look at their screen for
+  // this query. Nothing is captured unless this is called (or autoVision is
+  // enabled in settings).
+  const captureScreenNow = useCallback(async () => {
+    setCapturingScreen(true)
+    try {
+      const screenshotBase64 = await window.electronAPI.captureScreenshotNow()
+      setContext(prev => prev ? { ...prev, screenshotBase64 } : prev)
+    } finally {
+      setCapturingScreen(false)
+    }
+  }, [])
+
+  // ── Auto-vision toggle (settings) ────────────────────────────────────────
+  const toggleAutoVision = useCallback(async () => {
+    const next = !autoVision
+    const ok = await window.electronAPI.setAutoVision(next)
+    if (ok) setAutoVision(next)
+  }, [autoVision])
 
   // ── Voice input ───────────────────────────────────────────────────────────
   const toggleVoice = useCallback(() => {
@@ -1053,18 +1086,53 @@ if (e.key === 'Escape') {
               </button>
             )}
 
-            {context.screenshotBase64 && (
+            <button
+              onClick={captureScreenNow}
+              disabled={capturingScreen}
+              title={
+                context?.screenshotBase64
+                  ? 'Screen captured — click to refresh'
+                  : 'Let Claude see your screen for this query'
+              }
+              style={{
+                marginLeft: trayClips.length > 0 || canAddToTray ? '0.3rem' : 'auto',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                padding: '0.15rem 0.45rem',
+                borderRadius: '4px',
+                border: `1px solid ${context?.screenshotBase64 ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255,255,255,0.12)'}`,
+                background: context?.screenshotBase64 ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.04)',
+                color: context?.screenshotBase64 ? '#f59e0b' : 'rgba(255,255,255,0.45)',
+                fontSize: '0.65rem',
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                cursor: capturingScreen ? 'default' : 'pointer',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+                opacity: capturingScreen ? 0.6 : 1,
+              }}
+            >
+              {capturingScreen
+                ? '… reading'
+                : context?.screenshotBase64
+                  ? '◉ vision'
+                  : 'read my screen'}
+            </button>
+
+            {autoVision && !context?.screenshotBase64 && (
               <span
-                title="Screen captured — Claude can see what you're working on"
+                title="Auto screen access is on — screen will be captured automatically"
                 style={{
-                  marginLeft: trayClips.length > 0 || canAddToTray ? '0.3rem' : 'auto',
-                  fontSize: '0.65rem',
-                  color: '#f59e0b',
-                  letterSpacing: '0.04em',
+                  marginLeft: '0.3rem',
+                  fontSize: '0.6rem',
+                  color: 'rgba(245, 158, 11, 0.55)',
+                  letterSpacing: '0.02em',
                   flexShrink: 0,
                 }}
               >
-                ◉ vision
+                auto
               </span>
             )}
 
@@ -1725,6 +1793,20 @@ if (e.key === 'Escape') {
             </button>
             <button className="footer-btn" onClick={() => window.electronAPI.openDashboard()}>
               {t('palette.footer.dashboard')}
+            </button>
+            <button
+              className="footer-btn"
+              title={
+                autoVision
+                  ? 'Screen is captured automatically on every palette open. Click to turn off.'
+                  : 'Screen is only captured when you click "read my screen". Click to enable automatic capture.'
+              }
+              style={{
+                color: autoVision ? 'rgba(245, 158, 11, 0.9)' : undefined,
+              }}
+              onClick={toggleAutoVision}
+            >
+              auto screen: {autoVision ? 'on' : 'off'}
             </button>
             <button className="footer-btn footer-btn--danger" onClick={onLogout}>
               {t('common.signOut')}
