@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -8,9 +9,10 @@ import { ArrowLeft } from 'lucide-react'
 
 export default function NewSkillPage() {
   const router = useRouter()
-  const [name, setName]                 = useState('')
-  const [description, setDescription]   = useState('')
-  const [prompt, setPrompt]             = useState('')
+  const searchParams = useSearchParams()
+  const [name, setName]                 = useState(searchParams.get('name') || '')
+  const [description, setDescription]   = useState(searchParams.get('description') || '')
+  const [prompt, setPrompt]             = useState(searchParams.get('prompt') || '')
   const [contextApp, setContextApp]     = useState('')
   const [contextFolder, setContextFolder] = useState('')
   const [isDestructive, setIsDestructive] = useState(false)
