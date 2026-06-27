@@ -13,10 +13,10 @@ export async function GET(req: NextRequest) {
 
   const supabase = createUserClient(accessToken)
 
-  // Fetch last 50 actions — we want app_context, query, action_type, created_at
+  // Fetch last 50 actions — we want context_app, action_label, action_type, created_at
   const { data: actions, error } = await supabase
     .from('actions')
-    .select('app_context, query, action_type, status, created_at')
+    .select('context_app, action_label, action_type, status, created_at')
     .eq('user_id', userId)
     .eq('status', 'completed')
     .order('created_at', { ascending: false })
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       const date = new Date(a.created_at).toLocaleDateString('en-US', {
         weekday: 'short', month: 'short', day: 'numeric',
       })
-      return `${i + 1}. [${date}] App: ${a.app_context || 'Unknown'} | Type: ${a.action_type || 'query'} | Query: "${(a.query || '').slice(0, 80)}"`
+      return `${i + 1}. [${date}] App: ${a.context_app || 'Unknown'} | Type: ${a.action_type || 'query'} | Query: "${(a.action_label || '').slice(0, 80)}"`
     })
     .join('\n')
 
