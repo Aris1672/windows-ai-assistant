@@ -830,8 +830,6 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   const openSkillFromPattern = useCallback((): void => {
     if (!patternSuggestion) return
-    const hash = simpleHash(patternSuggestion.name)
-    window.electronAPI.dismissPattern(hash).catch(() => {})
     const params = new URLSearchParams({
       name:   patternSuggestion.name,
       prompt: patternSuggestion.suggested_prompt,
@@ -875,8 +873,15 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
       const CACHE_TTL = 60 * 60 * 1000 // 1 hour
       const cached = patternCacheRef.current
       if (cached && Date.now() - cached.ts < CACHE_TTL) {
-        // Use cached result — don't call API
-        setPatternSuggestion(cached.pattern)
+        // Use cached result — but still check dismiss state
+        if (cached.pattern) {
+          const hash = simpleHash(cached.pattern.name)
+          window.electronAPI.isPatternDismissed(hash).then(isDismissed => {
+            if (!isDismissed) setPatternSuggestion(cached.pattern)
+          }).catch(() => {
+            setPatternSuggestion(cached.pattern)
+          })
+        }
       } else {
         // Fire in background — palette opens instantly regardless
         window.electronAPI.apiRequest({
