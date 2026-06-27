@@ -1122,10 +1122,10 @@ if (e.key === 'Escape') {
               }}
             >
               {capturingScreen
-                ? '… reading'
+                ? t('palette.vision.reading')
                 : context?.screenshotBase64
-                  ? '◉ vision'
-                  : 'read my screen'}
+                  ? t('palette.vision.active')
+                  : t('palette.vision.readScreen')}
             </button>
 
             {autoVision && !context?.screenshotBase64 && (
@@ -1805,15 +1805,15 @@ if (e.key === 'Escape') {
               className="footer-btn"
               title={
                 autoVision
-                  ? 'Screen is captured automatically on every palette open. Click to turn off.'
-                  : 'Screen is only captured when you click "read my screen". Click to enable automatic capture.'
+                  ? t('palette.vision.autoTitleOn')
+                  : t('palette.vision.autoTitleOff')
               }
               style={{
                 color: autoVision ? 'rgba(245, 158, 11, 0.9)' : undefined,
               }}
               onClick={toggleAutoVision}
             >
-              auto screen: {autoVision ? 'on' : 'off'}
+              {autoVision ? t('palette.vision.autoOn') : t('palette.vision.autoOff')}
             </button>
             <button className="footer-btn footer-btn--danger" onClick={onLogout}>
               {t('common.signOut')}
