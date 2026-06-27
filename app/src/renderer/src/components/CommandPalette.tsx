@@ -830,6 +830,8 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
 
   const openSkillFromPattern = useCallback((): void => {
     if (!patternSuggestion) return
+    const hash = simpleHash(patternSuggestion.name)
+    window.electronAPI.dismissPattern(hash).catch(() => {})
     const params = new URLSearchParams({
       name:   patternSuggestion.name,
       prompt: patternSuggestion.suggested_prompt,
