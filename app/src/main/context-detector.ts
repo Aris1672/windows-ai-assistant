@@ -16,13 +16,23 @@ export interface ContextBundle {
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-export async function getContext(): Promise<ContextBundle> {
-  // Capture all three in parallel — screenshot must happen BEFORE the palette
-  // window is shown (caller guarantees this: getContext() → showPalette()).
+/**
+ * captureVision controls whether the screen is captured at all.
+ *
+ * SECURITY: screen capture is NOT something we want to do unconditionally on
+ * every hotkey press — the palette can be opened while sensitive content
+ * (banking, passwords, private messages) is visible behind it. Capture only
+ * happens when the caller explicitly asks for it:
+ *   - the user has the "auto screen access" preference enabled, or
+ *   - the user pressed the "Read my screen" button for this one query.
+ *
+ * Default is false. Callers must opt in deliberately, not by omission.
+ */
+export async function getContext(captureVision: boolean = false): Promise<ContextBundle> {
   const [windowInfo, selectedText, screenshotBase64] = await Promise.all([
     getActiveWindow(),
     captureSelectedText(),
-    captureScreenshot(),
+    captureVision ? captureScreenshot() : Promise.resolve(null),
   ])
 
   // Try to get the file path from the window title first (works for VS Code,
@@ -46,7 +56,7 @@ export async function getContext(): Promise<ContextBundle> {
 
 // ─── Screenshot ───────────────────────────────────────────────────────────────
 
-async function captureScreenshot(): Promise<string | null> {
+export async function captureScreenshot(): Promise<string | null> {
   try {
     const sources = await desktopCapturer.getSources({
       types: ['screen'],

@@ -111,6 +111,11 @@ export interface ElectronAPI {
   getHotkey: () => Promise<string>
   setHotkey: (hotkey: string) => Promise<boolean>
 
+  // ── Vision (manual / auto screen capture) ──────────────────────────────────
+  captureScreenshotNow: () => Promise<string | null>
+  getAutoVision: () => Promise<boolean>
+  setAutoVision: (enabled: boolean) => Promise<boolean>
+
   // ── Workflow Pattern Dismiss ───────────────────────────────────────────────
   isPatternDismissed: (hash: string) => Promise<boolean>
   dismissPattern:     (hash: string) => Promise<void>
@@ -175,6 +180,11 @@ const api: ElectronAPI = {
   // ── Hotkey ────────────────────────────────────────────────────────────────
   getHotkey: () => ipcRenderer.invoke('get-hotkey'),
   setHotkey: (hotkey) => ipcRenderer.invoke('set-hotkey', hotkey),
+
+  // ── Vision (manual / auto screen capture) ───────────────────────────────────
+  captureScreenshotNow: () => ipcRenderer.invoke('capture-screenshot-now'),
+  getAutoVision: () => ipcRenderer.invoke('get-auto-vision'),
+  setAutoVision: (enabled) => ipcRenderer.invoke('set-auto-vision', enabled),
 
   // ── Workflow Pattern Dismiss ───────────────────────────────────────────────
   isPatternDismissed: (hash) => ipcRenderer.invoke('is-pattern-dismissed', hash),

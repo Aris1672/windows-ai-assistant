@@ -29,6 +29,7 @@ interface StoreData {
   contextTray?:       ContextClip[]
   hotkey?:            string   // Electron accelerator, e.g. "CommandOrControl+Space"
   dismissedPatterns?: DismissedPattern[]
+  autoVision?:        boolean  // if true, screenshot is captured automatically on every palette open. Default false — user must opt in or use the manual "Read my screen" button.
 }
 
 function getStorePath(): string {
@@ -72,6 +73,19 @@ export const store = {
 
   setHotkey(hotkey: string): void {
     write({ ...read(), hotkey })
+  },
+
+  // ── Auto-vision helpers ────────────────────────────────────────────────────
+  // Default OFF — screen is only captured automatically if the user has
+  // explicitly opted in via the settings toggle. Otherwise capture only
+  // happens on demand via the "Read my screen" button.
+
+  getAutoVision(): boolean {
+    return read().autoVision ?? false
+  },
+
+  setAutoVision(enabled: boolean): void {
+    write({ ...read(), autoVision: enabled })
   },
 
   // ── Context Tray helpers ──────────────────────────────────────────────────

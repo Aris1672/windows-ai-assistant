@@ -18,7 +18,7 @@ import log from 'electron-log'
 import { createTray, destroyTray } from './tray'
 import { registerHotkey, unregisterHotkey, reregisterHotkey } from './hotkey'
 import { createPaletteWindow, showPalette, hidePalette, getPaletteWindow, openPinWindow, closePinWindow } from './windows'
-import { getContext } from './context-detector'
+import { getContext, captureScreenshot } from './context-detector'
 import type { ContextBundle } from './context-detector'
 import { store } from './store'
 import type { ContextClip } from './store'
@@ -128,7 +128,7 @@ app.whenReady().then(async () => {
 
   createTray({
     onShowPalette: async () => {
-      const context = await getContext()
+      const context = await getContext(store.getAutoVision())
       lastContext = context
       showPalette(context)
     },
@@ -147,7 +147,7 @@ app.whenReady().then(async () => {
       if (win.isVisible()) {
         hidePalette()
       } else {
-        const context = await getContext()
+        const context = await getContext(store.getAutoVision())
         lastContext = context
         showPalette(context)
       }
@@ -164,7 +164,7 @@ app.whenReady().then(async () => {
 
 ipcMain.on('hide-palette', () => hidePalette())
 
-ipcMain.handle('get-context', async () => await getContext())
+ipcMain.handle('get-context', async () => await getContext(store.getAutoVision()))
 
 ipcMain.handle('get-token', () => store.get('authToken', undefined) ?? null)
 
@@ -201,6 +201,18 @@ ipcMain.handle('set-hotkey', (_event, hotkey: string) => {
   const ok = reregisterHotkey(hotkey)
   if (ok) store.setHotkey(hotkey)
   return ok
+})
+
+// ─── Vision IPC (manual capture + auto-vision preference) ─────────────────────
+// "Read my screen" button — captures on demand, independent of the
+// auto-vision setting. Nothing is captured unless this is explicitly called.
+ipcMain.handle('capture-screenshot-now', async () => await captureScreenshot())
+
+ipcMain.handle('get-auto-vision', () => store.getAutoVision())
+
+ipcMain.handle('set-auto-vision', (_event, enabled: boolean) => {
+  store.setAutoVision(enabled)
+  return true
 })
 
 // ─── Context Tray IPC ─────────────────────────────────────────────────────────
