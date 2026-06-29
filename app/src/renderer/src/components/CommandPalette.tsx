@@ -1010,11 +1010,7 @@ if (e.key === 'Escape') {
         {context?.activeApp && (
           <div className="context-strip">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0 }}>
-              <span
-                className="context-app"
-                title={context.activeApp}
-                style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
-              >{context.activeApp}</span>
+              <span className="context-app">{context.activeApp}</span>
               {deriveActiveFolder(context) && (
                 <span
                   title={deriveActiveFolder(context) ?? ''}
@@ -1372,7 +1368,7 @@ if (e.key === 'Escape') {
         )}
 
         {/* Query input */}
-        <div className="input-row">
+        <div className="input-row" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <span className="input-icon">
             {busy ? <SpinnerIcon /> : <SearchIcon />}
           </span>
