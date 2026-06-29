@@ -12,8 +12,10 @@
  *   open_url          — opens URL in default browser                            (no confirm)
  */
 
-import { shell, clipboard } from 'electron'
+import { app, shell, clipboard, dialog } from 'electron'
 import { exec } from 'child_process'
+import * as fs from 'fs'
+import * as path from 'path'
 import { hidePaletteForAction } from './windows'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,6 +26,7 @@ export type Action =
   | { type: 'open_folder';       path: string }
   | { type: 'open_file';         path: string }
   | { type: 'open_url';          url: string  }
+  | { type: 'save_file';         filename: string; content: string }
 
 /** Actions marked true must show a confirmation button before executing. */
 export const ACTION_REQUIRES_CONFIRM: Record<Action['type'], boolean> = {
@@ -32,6 +35,7 @@ export const ACTION_REQUIRES_CONFIRM: Record<Action['type'], boolean> = {
   open_folder:       false,
   open_file:         false,
   open_url:          false,
+  save_file:         true,
 }
 
 /** Human-readable label shown on the action button in the palette. */
@@ -41,6 +45,7 @@ export const ACTION_LABELS: Record<Action['type'], string> = {
   open_folder:       'Open folder',
   open_file:         'Open file',
   open_url:          'Open URL',
+  save_file:         'Save file',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -106,6 +111,22 @@ export async function executeAction(action: Action): Promise<void> {
     // ── Open URL ──────────────────────────────────────────────────────────
     case 'open_url': {
       await shell.openExternal(action.url)
+      break
+    }
+
+    // ── Save file to disk ──────────────────────────────────────────────────
+    // Shows a native Save dialog so the user picks the exact location.
+    // Defaults to the user's Downloads folder with the AI-suggested filename.
+    case 'save_file': {
+      const downloadsPath = app.getPath('downloads')
+      const { filePath, canceled } = await dialog.showSaveDialog({
+        title: 'Save file',
+        defaultPath: path.join(downloadsPath, action.filename),
+        buttonLabel: 'Save',
+      })
+      if (canceled || !filePath) break
+      await fs.promises.writeFile(filePath, action.content, 'utf-8')
+      await shell.openPath(path.dirname(filePath))
       break
     }
   }

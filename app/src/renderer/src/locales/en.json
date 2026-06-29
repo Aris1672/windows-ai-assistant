@@ -35,7 +35,8 @@
       "open_file": "Open file",
       "open_url": "Open URL",
       "running": "Running…",
-      "done": "✓ Done"
+      "done": "✓ Done",
+      "save_file": "Save file"
     },
     "confirm": {
       "prompt": "Run: {{label}}?",

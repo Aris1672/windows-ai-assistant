@@ -49,6 +49,7 @@ export type Action =
   | { type: 'open_folder';       path: string }
   | { type: 'open_file';         path: string }
   | { type: 'open_url';          url: string  }
+  | { type: 'save_file';         filename: string; content: string }
 
 export interface ActionResult {
   ok: boolean

@@ -96,6 +96,7 @@ const ACTION_REQUIRES_CONFIRM: Record<Action['type'], boolean> = {
   open_folder:       false,
   open_file:         false,
   open_url:          false,
+  save_file:         true,
 }
 
 function getActionLabel(type: Action['type'], t: (key: string) => string): string {
@@ -126,6 +127,13 @@ function parseActionFromResponse(raw: string): ParsedResponse {
         case 'open_folder':       action = { type: 'open_folder',       path: value }; break
         case 'open_file':         action = { type: 'open_file',         path: value }; break
         case 'open_url':          action = { type: 'open_url',          url:  value }; break
+        case 'save_file': {
+          const pipeIdx = value.indexOf('|')
+          if (pipeIdx !== -1) {
+            action = { type: 'save_file', filename: value.slice(0, pipeIdx).trim(), content: value.slice(pipeIdx + 1) }
+          }
+          break
+        }
       }
       return { displayText, action }
     }
@@ -143,6 +151,13 @@ function parseActionFromResponse(raw: string): ParsedResponse {
     case 'open_folder':       action = { type: 'open_folder',       path: value }; break
     case 'open_file':         action = { type: 'open_file',         path: value }; break
     case 'open_url':          action = { type: 'open_url',          url:  value }; break
+    case 'save_file': {
+      const pipeIdx = value.indexOf('|')
+      if (pipeIdx !== -1) {
+        action = { type: 'save_file', filename: value.slice(0, pipeIdx).trim(), content: value.slice(pipeIdx + 1) }
+      }
+      break
+    }
   }
 
   return { displayText, action }
@@ -994,7 +1009,11 @@ if (e.key === 'Escape') {
 
   const needsConfirm    = pendingAction ? ACTION_REQUIRES_CONFIRM[pendingAction.type] : false
   const showActionBtn   = pendingAction !== null && actionStatus !== 'done' && mode !== 'error'
-  const actionLabel     = pendingAction ? getActionLabel(pendingAction.type, t) : ''
+  const actionLabel     = pendingAction
+    ? pendingAction.type === 'save_file'
+      ? `${getActionLabel(pendingAction.type, t)}: ${pendingAction.filename}`
+      : getActionLabel(pendingAction.type, t)
+    : ''
   const actionIsRunning = actionStatus === 'running'
 
   const showSkillStrip   = !busy && matchingSkills.length > 0 && !pendingSkill
