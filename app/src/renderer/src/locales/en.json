@@ -61,6 +61,15 @@
       "explorer": "You can work with files directly — try \"Summarise report.pdf\" or \"Compare Q1.xlsx with Q2.xlsx\" without opening them",
       "generic": "Select and copy (Ctrl+C) any text, then press Ctrl+Space to work with it — or mention a file in your request, e.g. \"Summarise notes.docx\""
     },
+    "vision": {
+      "readScreen": "read my screen",
+      "reading": "… reading",
+      "active": "◉ vision",
+      "autoOn": "auto screen: on",
+      "autoOff": "auto screen: off",
+      "autoTitleOn": "Screen is captured automatically on every palette open. Click to turn off.",
+      "autoTitleOff": "Screen is only captured when you click \"read my screen\". Click to enable automatic capture."
+    },
     "pattern": {
       "title": "I noticed you often do: {{name}}",
       "create": "Create skill →",

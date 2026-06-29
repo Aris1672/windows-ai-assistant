@@ -1010,7 +1010,11 @@ if (e.key === 'Escape') {
         {context?.activeApp && (
           <div className="context-strip">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0 }}>
-              <span className="context-app">{context.activeApp}</span>
+              <span
+                className="context-app"
+                title={context.activeApp}
+                style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
+              >{context.activeApp}</span>
               {deriveActiveFolder(context) && (
                 <span
                   title={deriveActiveFolder(context) ?? ''}
