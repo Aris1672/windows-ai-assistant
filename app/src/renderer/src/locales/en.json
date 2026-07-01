@@ -75,6 +75,21 @@
       "title": "I noticed you often do: {{name}}",
       "create": "Create skill →",
       "dismiss": "Dismiss"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "close": "Close",
+      "theme": "Theme",
+      "dark": "Dark",
+      "light": "Light",
+      "accent": "Accent color",
+      "custom": "Custom",
+      "scale": "Interface size",
+      "scaleCompact": "Compact",
+      "scaleComfortable": "Comfortable",
+      "scaleLarge": "Large",
+      "reset": "Reset to default",
+      "footerLabel": "Appearance"
     }
   }
 }

@@ -215,6 +215,15 @@ ipcMain.handle('set-auto-vision', (_event, enabled: boolean) => {
   return true
 })
 
+// ─── Appearance IPC ────────────────────────────────────────────────────────────
+
+ipcMain.handle('get-appearance', () => store.getAppearance())
+
+ipcMain.handle('set-appearance', (_event, settings: ReturnType<typeof store.getAppearance>) => {
+  store.setAppearance(settings)
+  return true
+})
+
 // ─── Context Tray IPC ─────────────────────────────────────────────────────────
 
 ipcMain.handle('tray-get-clips', (): ContextClip[] => store.trayGetClips())

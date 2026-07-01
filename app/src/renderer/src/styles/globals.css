@@ -25,6 +25,25 @@
   --radius-lg:       14px;
   --font-display:    'Syne', system-ui, sans-serif;
   --font-body:       'Inter', system-ui, sans-serif;
+  --palette-bg:      rgba(13, 13, 17, 0.97);
+}
+
+/* ── Light theme override ─────────────────────────────────────────────────────
+   Toggled via [data-theme='light'] on <html>, set by applyAppearance() in
+   lib/appearance.ts. --accent and its derived shades are left alone here —
+   they're overridden live via inline style when the user picks a color, and
+   the default teal reads fine on both backgrounds. */
+:root[data-theme='light'] {
+  --bg:              #FAFAF8;
+  --surface-1:       #FFFFFF;
+  --surface-2:       #F4F4F2;
+  --surface-3:       #E9E9E6;
+  --border:          #DDDDD8;
+  --border-subtle:   #E5E5E1;
+  --text-primary:    #16161A;
+  --text-secondary:  #5B5B66;
+  --text-muted:      #97979F;
+  --palette-bg:      rgba(255, 255, 255, 0.97);
 }
 
 /* ── Base ──────────────────────────────────────────────────────────────────── */
@@ -245,7 +264,7 @@ body {
   max-height: 20vh; /* idle: just enough for input + context strip */
   display: flex;
   flex-direction: column;
-  background: rgba(13, 13, 17, 0.97);
+  background: var(--palette-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow:
@@ -587,6 +606,108 @@ body {
 }
 .footer-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); background: var(--surface-3); }
 .footer-btn--danger:hover { color: var(--error); border-color: var(--error); background: var(--error-dim); }
+
+/* ── Appearance settings panel ────────────────────────────────────────────── */
+.appearance-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 50;
+}
+.appearance-panel-wrap {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 51;
+}
+.appearance-panel {
+  width: 300px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.45), 0 24px 40px rgba(0,0,0,0.25);
+}
+.appearance-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+.appearance-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.appearance-close-btn:hover { background: var(--surface-3); color: var(--text-primary); }
+
+.appearance-section { margin-bottom: 0.85rem; }
+.appearance-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.appearance-row { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+
+.appearance-pill {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.appearance-pill:hover { color: var(--text-primary); border-color: var(--text-secondary); background: var(--surface-3); }
+.appearance-pill.active {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.appearance-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.appearance-swatch.active { border-color: var(--text-primary); box-shadow: 0 0 0 2px var(--surface-1); }
+
+.appearance-swatch-custom {
+  background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.appearance-swatch-custom input[type='color'] { opacity: 0; width: 22px; height: 22px; cursor: pointer; }
+
+.appearance-reset-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.3rem;
+}
+.appearance-reset-btn:hover { color: var(--text-primary); }
 
 /* ─── Update banner ─────────────────────────────────────────────────────── */
 

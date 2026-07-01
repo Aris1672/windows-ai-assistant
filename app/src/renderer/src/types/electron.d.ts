@@ -1,4 +1,4 @@
-import type { ElectronAPI, ContextBundle, Action } from '../../../preload'
+import type { ElectronAPI, ContextBundle, Action, AppearanceSettings } from '../../../preload'
 
 // Minimal constructor type for Web Speech API — not in all TS lib targets
 type SpeechRecognitionConstructor = new () => SpeechRecognition
@@ -11,4 +11,4 @@ declare global {
   }
 }
 
-export type { ContextBundle, Action }
+export type { ContextBundle, Action, AppearanceSettings }

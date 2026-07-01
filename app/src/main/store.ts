@@ -30,6 +30,21 @@ interface StoreData {
   hotkey?:            string   // Electron accelerator, e.g. "CommandOrControl+Space"
   dismissedPatterns?: DismissedPattern[]
   autoVision?:        boolean  // if true, screenshot is captured automatically on every palette open. Default false — user must opt in or use the manual "Read my screen" button.
+  appearance?:        AppearanceSettings  // theme, accent color, UI scale — defaults applied in getAppearance()
+}
+
+// ─── Appearance ────────────────────────────────────────────────────────────────
+
+interface AppearanceSettings {
+  theme:       'dark' | 'light'
+  accentColor: string   // hex, e.g. "#0FFFD4"
+  uiScale:     'compact' | 'comfortable' | 'large'
+}
+
+const DEFAULT_APPEARANCE: AppearanceSettings = {
+  theme: 'dark',
+  accentColor: '#0FFFD4',
+  uiScale: 'comfortable',
 }
 
 function getStorePath(): string {
@@ -86,6 +101,18 @@ export const store = {
 
   setAutoVision(enabled: boolean): void {
     write({ ...read(), autoVision: enabled })
+  },
+
+  // ── Appearance helpers ──────────────────────────────────────────────────────
+  // Default matches the hardcoded --accent in globals.css — existing users
+  // see zero visual change until they open Settings → Appearance.
+
+  getAppearance(): AppearanceSettings {
+    return read().appearance ?? DEFAULT_APPEARANCE
+  },
+
+  setAppearance(settings: AppearanceSettings): void {
+    write({ ...read(), appearance: settings })
   },
 
   // ── Context Tray helpers ──────────────────────────────────────────────────

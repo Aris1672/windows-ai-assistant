@@ -30,6 +30,12 @@ export interface FileRef {
   truncated: boolean
 }
 
+export interface AppearanceSettings {
+  theme:       'dark' | 'light'
+  accentColor: string
+  uiScale:     'compact' | 'comfortable' | 'large'
+}
+
 export type StreamEvent =
   | { type: 'chunk'; data: string }
   | { type: 'done' }
@@ -117,6 +123,10 @@ export interface ElectronAPI {
   getAutoVision: () => Promise<boolean>
   setAutoVision: (enabled: boolean) => Promise<boolean>
 
+  // ── Appearance (theme / accent color / UI scale) ───────────────────────────
+  getAppearance: () => Promise<AppearanceSettings>
+  setAppearance: (settings: AppearanceSettings) => Promise<boolean>
+
   // ── Workflow Pattern Dismiss ───────────────────────────────────────────────
   isPatternDismissed: (hash: string) => Promise<boolean>
   dismissPattern:     (hash: string) => Promise<void>
@@ -186,6 +196,10 @@ const api: ElectronAPI = {
   captureScreenshotNow: () => ipcRenderer.invoke('capture-screenshot-now'),
   getAutoVision: () => ipcRenderer.invoke('get-auto-vision'),
   setAutoVision: (enabled) => ipcRenderer.invoke('set-auto-vision', enabled),
+
+  // ── Appearance (theme / accent color / UI scale) ───────────────────────────
+  getAppearance: () => ipcRenderer.invoke('get-appearance'),
+  setAppearance: (settings) => ipcRenderer.invoke('set-appearance', settings),
 
   // ── Workflow Pattern Dismiss ───────────────────────────────────────────────
   isPatternDismissed: (hash) => ipcRenderer.invoke('is-pattern-dismissed', hash),

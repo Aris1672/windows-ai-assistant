@@ -5,6 +5,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ContextBundle, Action, ContextClip } from '../types/electron'
+import { applyAppearance, DEFAULT_APPEARANCE, ACCENT_PRESETS } from '../lib/appearance'
+import type { AppearanceSettings } from '../types/electron'
 
 // FileRef mirrors the type from file-reader.ts
 interface FileRef { filePath: string; fileName: string; content: string; truncated: boolean }
@@ -351,6 +353,10 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   const [autoVision, setAutoVision]               = useState(false)
   const [capturingScreen, setCapturingScreen]      = useState(false)
 
+  // Appearance
+  const [appearance, setAppearance]                = useState<AppearanceSettings>(DEFAULT_APPEARANCE)
+  const [showAppearance, setShowAppearance]        = useState(false)
+
   // Action state
   const [pendingAction, setPendingAction] = useState<Action | null>(null)
   const [displayText, setDisplayText]     = useState('')
@@ -456,6 +462,14 @@ export default function CommandPalette({ token, onLogout }: CommandPaletteProps)
   // ── Load saved auto-vision preference on mount ───────────────────────────
   useEffect(() => {
     window.electronAPI.getAutoVision().then(setAutoVision).catch(() => {})
+  }, [])
+
+  // ── Load saved appearance preference on mount and apply immediately ──────
+  useEffect(() => {
+    window.electronAPI.getAppearance().then((saved) => {
+      setAppearance(saved)
+      applyAppearance(saved)
+    }).catch(() => {})
   }, [])
 
   // ── Hotkey recorder ───────────────────────────────────────────────────────
@@ -1834,11 +1848,122 @@ if (e.key === 'Escape') {
             >
               {autoVision ? t('palette.vision.autoOn') : t('palette.vision.autoOff')}
             </button>
+            <button
+              className="footer-btn"
+              onClick={() => setShowAppearance(true)}
+              title={t('palette.appearance.title')}
+            >
+              {t('palette.appearance.footerLabel')}
+            </button>
             <button className="footer-btn footer-btn--danger" onClick={onLogout}>
               {t('common.signOut')}
             </button>
           </div>
         </div>
+
+        {/* Appearance settings panel */}
+        {showAppearance && (
+          <>
+            <div className="appearance-backdrop" onClick={() => setShowAppearance(false)} />
+            <div className="appearance-panel-wrap">
+              <div className="appearance-panel">
+                <div className="appearance-panel-header">
+                  <span>{t('palette.appearance.title')}</span>
+                  <button className="appearance-close-btn" onClick={() => setShowAppearance(false)}>
+                    {t('palette.appearance.close')}
+                  </button>
+                </div>
+
+                {/* Theme */}
+                <div className="appearance-section">
+                  <div className="appearance-label">{t('palette.appearance.theme')}</div>
+                  <div className="appearance-row">
+                    {(['dark', 'light'] as const).map((theme) => (
+                      <button
+                        key={theme}
+                        className={`appearance-pill ${appearance.theme === theme ? 'active' : ''}`}
+                        onClick={() => {
+                          const next = { ...appearance, theme }
+                          setAppearance(next)
+                          applyAppearance(next)
+                          window.electronAPI.setAppearance(next)
+                        }}
+                      >
+                        {t(`palette.appearance.${theme}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Accent color */}
+                <div className="appearance-section">
+                  <div className="appearance-label">{t('palette.appearance.accent')}</div>
+                  <div className="appearance-row">
+                    {ACCENT_PRESETS.map((preset) => (
+                      <button
+                        key={preset.value}
+                        className={`appearance-swatch ${appearance.accentColor === preset.value ? 'active' : ''}`}
+                        style={{ backgroundColor: preset.value }}
+                        title={preset.name}
+                        onClick={() => {
+                          const next = { ...appearance, accentColor: preset.value }
+                          setAppearance(next)
+                          applyAppearance(next)
+                          window.electronAPI.setAppearance(next)
+                        }}
+                      />
+                    ))}
+                    <label className="appearance-swatch appearance-swatch-custom" title={t('palette.appearance.custom')}>
+                      <input
+                        type="color"
+                        value={appearance.accentColor}
+                        onChange={(e) => {
+                          const next = { ...appearance, accentColor: e.target.value }
+                          setAppearance(next)
+                          applyAppearance(next)
+                          window.electronAPI.setAppearance(next)
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* UI scale */}
+                <div className="appearance-section">
+                  <div className="appearance-label">{t('palette.appearance.scale')}</div>
+                  <div className="appearance-row">
+                    {(['compact', 'comfortable', 'large'] as const).map((scale) => (
+                      <button
+                        key={scale}
+                        className={`appearance-pill ${appearance.uiScale === scale ? 'active' : ''}`}
+                        onClick={() => {
+                          const next = { ...appearance, uiScale: scale }
+                          setAppearance(next)
+                          applyAppearance(next)
+                          window.electronAPI.setAppearance(next)
+                        }}
+                      >
+                        {t(`palette.appearance.scale${scale.charAt(0).toUpperCase() + scale.slice(1)}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reset */}
+                <button
+                  className="appearance-reset-btn"
+                  onClick={() => {
+                    setAppearance(DEFAULT_APPEARANCE)
+                    applyAppearance(DEFAULT_APPEARANCE)
+                    window.electronAPI.setAppearance(DEFAULT_APPEARANCE)
+                  }}
+                >
+                  {t('palette.appearance.reset')}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
 
       </div>
     </div>
